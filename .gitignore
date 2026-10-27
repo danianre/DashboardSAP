@@ -1,0 +1,34 @@
+# ==========================================
+# SEGURIDAD CRÍTICA: Credenciales y secretos
+# NUNCA subir a repositorios públicos o privados
+# ==========================================
+.env
+.env.local
+.env.*.local
+
+# Dependencias de Node.js
+node_modules/
+package-lock.json.bak
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Base de datos local SQLite (contiene sesiones y telemetría local)
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+*.db
+
+# Archivos de logs de conexión RFC y del sistema
+*.log
+dev_rfc.log
+_noderfc.log
+
+# Scripts de scratch y utilidades temporales
+scratch/
+
+# Archivos de entorno del editor y sistema operativo
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

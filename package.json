@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "node-rfc": "^3.3.1",
+    "sqlite3": "^6.0.1"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true,
+    "node-rfc@3.3.1": true
+  }
+}
