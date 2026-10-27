@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analítica Inteligente de Inventarios · Optimizador IA SAP</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #0b1120;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(147, 51, 234, 0.14) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+      color: #f8fafc;
+    }
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    /* Responsive Table & Sticky Context (Modern Web Guidance) */
+    .table-region {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(560px, 72vh);
+      container-type: inline-size;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 900px auto 420px;
+    }
+    .table-region table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+    .table-region thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 20;
+    }
+    .table-region tbody th[scope="row"] {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 10;
+      background-color: #0f172a;
+    }
+    .table-region tbody tr:hover th[scope="row"] {
+      background-color: #1e293b;
+    }
+    /* Markdown Report Styling */
+    .md-report h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .md-report h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #c084fc;
+      margin-top: 1.25rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .md-report p {
+      font-size: 0.875rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 0.65rem;
+    }
+    .md-report ul, .md-report ol {
+      margin-left: 1.25rem;
+      margin-bottom: 0.85rem;
+      color: #cbd5e1;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+    .md-report ul { list-style-type: disc; }
+    .md-report ol { list-style-type: decimal; }
+    .md-report li { margin-bottom: 0.35rem; }
+    .md-report code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      background: rgba(15, 23, 42, 0.85);
+      color: #38bdf8;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.35rem;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .md-report blockquote {
+      border-left: 4px solid #a855f7;
+      background: rgba(88, 28, 135, 0.2);
+      padding: 0.75rem 1rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+      color: #e9d5ff;
+      font-size: 0.85rem;
+      margin: 0.75rem 0;
+    }
+    .md-report .md-table-wrap {
+      overflow-x: auto;
+      margin: 0.85rem 0;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+    }
+    .md-report table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    .md-report th {
+      background: rgba(15, 23, 42, 0.95);
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.7rem;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.9);
+      text-align: left;
+    }
+    .md-report td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+      color: #e2e8f0;
+    }
+    .md-report tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #aiModalPrintArea, #aiModalPrintArea * { visibility: visible; }
+      #aiModalPrintArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
+
+  <!-- Barra Superior Corporativa -->
+  <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <a href="/" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 transition flex items-center justify-center" title="Volver al Portal Principal">
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
+        </a>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-900/40 border border-purple-400/30">
+          <span class="material-symbols-outlined text-white text-2xl">neurology</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-purple-400 block leading-none">Grupo Daabon · Supply Chain &amp; MRP</span>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-950/90 text-purple-300 border border-purple-500/30">SAP RFC + IA</span>
+          </div>
+          <h1 class="text-sm sm:text-base font-bold text-white tracking-tight">Analítica Inteligente de Inventarios</h1>
+        </div>
+      </div>
+
+      <!-- Navegación Rápida entre Módulos -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl p-1 text-xs">
+          <a href="/" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">home</span> Portal
+          </a>
+          <a href="/monitor-sap" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-blue-300 hover:bg-slate-800 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">monitoring</span> Monitor SAP
+          </a>
+          <a href="/notificaciones-sap" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-emerald-300 hover:bg-slate-800 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">notifications_active</span> Notificaciones
+          </a>
+        </div>
+
+        <!-- Selector de Modelo IA -->
+        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5">
+          <span class="material-symbols-outlined text-purple-400 text-base">smart_toy</span>
+          <label for="aiModelSelect" class="sr-only">Seleccionar Modelo IA</label>
+          <select id="aiModelSelect" class="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer">
+            <option value="auto" class="bg-slate-900 text-slate-200">IA: Auto-Router (Óptimo)</option>
+            <option value="gemini-2.5-flash" class="bg-slate-900 text-slate-200">Gemini 2.5 Flash (Baja Latencia / Anti-429)</option>
+            <option value="gemini-2.5-pro" class="bg-slate-900 text-slate-200">Gemini 2.5 Pro (Series Temporales MVER)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Selector de Modo Operativo (Tabs Modo A vs Modo B) -->
+    <section class="glass-panel rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Selecciona el Proceso Analítico SAP MM</span>
+          <div class="inline-flex flex-wrap gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800" role="tablist">
+            <button type="button" id="tabModeExceso" onclick="switchMode('EXCESO_INV')" role="tab" aria-selected="true"
+              class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40">
+              <span class="material-symbols-outlined text-lg">inventory</span>
+              <span>Modo A: Excesos de Inventario</span>
+              <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 border border-purple-400/30">EXCESO_INV</span>
+            </button>
+
+            <button type="button" id="tabModeProyeccion" onclick="switchMode('PROYECCION_INV')" role="tab" aria-selected="false"
+              class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+              <span class="material-symbols-outlined text-lg">timeline</span>
+              <span>Modo B: Proyección y Demanda Estacional</span>
+              <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">PROYECCION_INV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Información técnica del RFC activo -->
+        <div class="flex items-center gap-3 bg-slate-950/60 border border-slate-800/90 rounded-xl px-4 py-2.5">
+          <span class="material-symbols-outlined text-emerald-400 text-2xl">cable</span>
+          <div class="text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">RFC Activo:</span>
+              <code id="activeRfcBadge" class="font-mono font-bold text-emerald-300 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30">ZFMM_STOCK_BY_WERKS</code>
+            </div>
+            <p id="activeModeDescription" class="text-slate-400 mt-0.5">
+              Auditoría de Stock Actual (`LABST`), Stock Máximo (`MABST`) y Stock de Seguridad (`EISBE`).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros SAP (MATNR y WERKS) -->
+      <form id="filterForm" onsubmit="handleConsultRfc(event)" class="mt-5 pt-5 border-t border-slate-800/80">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+
+          <!-- Centro (WERKS) -->
+          <div class="lg:col-span-2">
+            <label for="inputWerks" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Centro (`WERKS`) <span id="werksRequiredStar" class="text-rose-400">*</span></span>
+              <span class="font-mono text-[10px] text-slate-500">4 chars</span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined text-slate-500 text-base absolute left-3 top-2.5">factory</span>
+              <input type="text" id="inputWerks" value="0901" maxlength="4" placeholder="Ej: 0901"
+                class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 uppercase" />
+            </div>
+          </div>
+
+          <!-- Material Desde (MATNR Low) -->
+          <div class="lg:col-span-3">
+            <label for="inputMatnrLow" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Material Desde (`MATNR`) <span id="matnrRequiredStar" class="text-amber-400 text-[10px]">(Req. en Modo B)</span></span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined text-slate-500 text-base absolute left-3 top-2.5">qr_code_2</span>
+              <input type="text" id="inputMatnrLow" value="407800" placeholder="Ej: 407800 o lista con comas"
+                class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 uppercase" />
+            </div>
+          </div>
+
+          <!-- Material Hasta (MATNR High) -->
+          <div class="lg:col-span-3">
+            <label for="inputMatnrHigh" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Material Hasta (`MATNR`)</span>
+              <span class="text-[10px] text-slate-500">Opcional para rango BT</span>
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined text-slate-500 text-base absolute left-3 top-2.5">straighten</span>
+              <input type="text" id="inputMatnrHigh" value="408100" placeholder="Ej: 408100"
+                class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 uppercase" />
+            </div>
+          </div>
+
+          <!-- Botones de Acción (Consultar RFC + Ejecutar IA) -->
+          <div class="lg:col-span-4 flex flex-col sm:flex-row gap-2.5">
+            <button type="submit" id="btnConsultarRfc"
+              class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-bold text-xs sm:text-sm border border-slate-600/80 flex items-center justify-center gap-2 transition shadow">
+              <span class="material-symbols-outlined text-lg text-blue-400">search</span>
+              <span>Consultar SAP RFC</span>
+            </button>
+
+            <button type="button" id="btnRunAi" onclick="handleRunAiAnalysis()"
+              class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-900/40 flex items-center justify-center gap-2 transition">
+              <span class="material-symbols-outlined text-lg">auto_awesome</span>
+              <span id="btnRunAiLabel">Generar Auditoría con IA</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Presets Rápidos de Consulta Real SAP BOP -->
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-slate-400 font-medium flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm text-purple-400">bolt</span> Rangos reales sugeridos (SAP BOP):
+          </span>
+          <button type="button" onclick="applyPreset('0901', '407800', '408100')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
+            Centro 0901 · Repuestos (407800–408100)
+          </button>
+          <button type="button" onclick="applyPreset('0901', '408055', '408056')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
+            Centro 0901 · Espárragos MRP (408055–408056)
+          </button>
+          <button type="button" onclick="applyPreset('1707', '407840', '408100')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
+            Centro 1707 · Mantenimiento (407840–408100)
+          </button>
+          <button type="button" onclick="applyPreset('1602', '100020', '100030')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
+            Centro 1602 · Agrícola MVER (100020–100030)
+          </button>
+          <button type="button" onclick="applyPreset('3301', '100000', '100200')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
+            Centro 3301 · Planta Palma (100000–100200)
+          </button>
+        </div>
+      </form>
+
+      <!-- Alerta de Validación o Error -->
+      <div id="validationAlert" role="alert" class="hidden mt-4 p-3.5 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-200 text-xs sm:text-sm flex items-start gap-2.5">
+        <span class="material-symbols-outlined text-rose-400 text-lg mt-0.5">warning</span>
+        <div class="flex-1">
+          <p id="validationAlertTitle" class="font-bold text-white">Validación de Consulta SAP</p>
+          <p id="validationAlertMsg" class="text-rose-200/90 mt-0.5"></p>
+        </div>
+        <button type="button" onclick="hideValidationAlert()" class="text-rose-300 hover:text-white">
+          <span class="material-symbols-outlined text-base">close</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tarjetas de KPIs Dinámicos -->
+    <section id="kpiStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="glass-panel rounded-2xl border border-slate-800 p-4">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span id="kpi1Label">Materiales Auditados</span>
+          <span class="material-symbols-outlined text-blue-400 text-lg">dataset</span>
+        </div>
+        <div id="kpi1Value" class="text-2xl font-extrabold text-white font-mono">0</div>
+        <div id="kpi1Sub" class="text-[11px] text-slate-400 mt-1">Esperando consulta RFC</div>
+      </div>
+
+      <div class="glass-panel rounded-2xl border border-slate-800 p-4">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span id="kpi2Label">Alertas de Exceso / Sobrestock</span>
+          <span class="material-symbols-outlined text-amber-400 text-lg">trending_up</span>
+        </div>
+        <div id="kpi2Value" class="text-2xl font-extrabold text-amber-400 font-mono">0</div>
+        <div id="kpi2Sub" class="text-[11px] text-slate-400 mt-1">Capital inmovilizado</div>
+      </div>
+
+      <div class="glass-panel rounded-2xl border border-slate-800 p-4">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span id="kpi3Label">Quiebres / Bajo Seguridad</span>
+          <span class="material-symbols-outlined text-rose-400 text-lg">notification_important</span>
+        </div>
+        <div id="kpi3Value" class="text-2xl font-extrabold text-rose-400 font-mono">0</div>
+        <div id="kpi3Sub" class="text-[11px] text-slate-400 mt-1">Riesgo operativo (`EISBE`)</div>
+      </div>
+
+      <div class="glass-panel rounded-2xl border border-slate-800 p-4">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span id="kpi4Label">Optimizador de Tokens IA</span>
+          <span class="material-symbols-outlined text-purple-400 text-lg">compress</span>
+        </div>
+        <div id="kpi4Value" class="text-2xl font-extrabold text-purple-300 font-mono">~75%</div>
+        <div id="kpi4Sub" class="text-[11px] text-slate-400 mt-1">Minificación matricial activa</div>
+      </div>
+    </section>
+
+    <!-- Sección de Tabla Interactiva con Controles de Paginación y Búsqueda -->
+    <section class="glass-panel rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+      <!-- Barra de Herramientas de la Tabla -->
+      <div class="p-4 sm:px-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-slate-900/50">
+        <div class="flex items-center gap-3">
+          <h2 id="tableTitle" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span>
+            <span>Matriz de Stock por Centro (`ZFMM_STOCK_BY_WERKS`)</span>
+          </h2>
+          <span id="sourceBadge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
+            SAP_RFC_LIVE
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Buscador Rápido en Tabla -->
+          <div class="relative">
+            <span class="material-symbols-outlined text-slate-500 text-sm absolute left-3 top-2">filter_alt</span>
+            <input type="text" id="tableSearchInput" oninput="handleTableFilterChange()" placeholder="Filtrar material, texto, año..."
+              class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-48 sm:w-56" />
+          </div>
+
+          <!-- Filtro rápido por Estado (Modo A) / Año (Modo B) -->
+          <select id="statusFilterSelect" onchange="handleTableFilterChange()"
+            class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+            <option value="ALL">Todos los registros</option>
+          </select>
+
+          <!-- Tamaño de página -->
+          <select id="pageSizeSelect" onchange="handlePageSizeChange()" aria-label="Filas por página"
+            class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-300 font-mono focus:outline-none">
+            <option value="15">15 / pág</option>
+            <option value="30" selected>30 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
+          </select>
+
+          <!-- Botón Exportar CSV/Excel -->
+          <button type="button" onclick="exportTableToExcelCsv()"
+            class="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Exportar Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Región de Tabla Semántica con Sticky Headers -->
+      <div tabindex="0" role="region" aria-labelledby="tableTitle" class="table-region">
+        <table id="inventoryDataTable" class="text-left text-xs sm:text-sm">
+          <thead id="tableHead" class="bg-slate-950/95 text-slate-400 uppercase text-[11px] tracking-wider font-bold border-b border-slate-800">
+            <!-- Renderizado dinámicamente según Modo A o Modo B -->
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/70 bg-slate-900/30">
+            <tr>
+              <td colspan="7" class="py-12 text-center text-slate-400">
+                <span class="material-symbols-outlined text-3xl text-purple-400 animate-spin block mx-auto mb-2">sync</span>
+                Consultando datos en tiempo real desde SAP...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de Tabla y Controles de Paginación -->
+      <div class="px-4 sm:px-6 py-3 bg-slate-950/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+        <div id="paginationInfo">Mostrando 0 de 0 registros</div>
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="btnPrevPage" onclick="changePage(-1)" disabled
+            class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none text-slate-200 border border-slate-700 font-semibold flex items-center gap-1 transition">
+            <span class="material-symbols-outlined text-sm">chevron_left</span> Anterior
+          </button>
+          <span id="pageIndicator" class="px-3 py-1 font-mono text-slate-300">Pág. 1 / 1</span>
+          <button type="button" id="btnNextPage" onclick="changePage(1)" disabled
+            class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none text-slate-200 border border-slate-700 font-semibold flex items-center gap-1 transition">
+            Siguiente <span class="material-symbols-outlined text-sm">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL VISUALIZADOR DEL RESULTADO ANALÍTICO IA -->
+  <div id="aiResultModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-slate-900 border border-purple-500/40 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl shadow-purple-950/60 overflow-hidden">
+
+      <!-- Cabecera del Modal -->
+      <div class="px-5 py-4 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+            <span class="material-symbols-outlined text-2xl">psychology</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="aiModalTitle" class="text-base sm:text-lg font-bold text-white">Informe Analítico de Inventarios IA</h3>
+              <span id="aiModalProcessBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/30">EXCESO_INV</span>
+            </div>
+            <p id="aiModalSubtitle" class="text-xs text-slate-400">Generado por el Motor Analítico SAP + IA</p>
+          </div>
+        </div>
+
+        <!-- Botones de Exportación y Cierre -->
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnCopyReport" onclick="copyAiMarkdownReport()"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-sm">content_copy</span>
+            <span id="btnCopyReportText">Copiar Informe</span>
+          </button>
+
+          <button type="button" onclick="exportReportToPdf()"
+            class="px-3 py-1.5 rounded-xl bg-blue-950/90 hover:bg-blue-900 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+            <span>Exportar PDF</span>
+          </button>
+
+          <button type="button" onclick="exportTableToExcelCsv()"
+            class="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span class="material-symbols-outlined text-sm">table_view</span>
+            <span>Exportar Excel</span>
+          </button>
+
+          <button type="button" onclick="closeAiModal()" class="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/80 text-slate-400 hover:text-white transition" title="Cerrar">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Telemetría de Tokens y Selección de Arquitectura IA -->
+      <div class="px-5 py-2.5 bg-purple-950/30 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-4">
+          <span class="flex items-center gap-1 text-slate-300">
+            <span class="material-symbols-outlined text-sm text-purple-400">memory</span>
+            Modelo: <strong id="aiTelModel" class="font-mono text-purple-300">gemini-2.5-flash</strong>
+          </span>
+          <span class="flex items-center gap-1 text-slate-300">
+            <span class="material-symbols-outlined text-sm text-emerald-400">savings</span>
+            Optimización de Tokens: <strong id="aiTelTokens" class="font-mono text-emerald-300">-</strong>
+          </span>
+          <span class="flex items-center gap-1 text-slate-300">
+            <span class="material-symbols-outlined text-sm text-blue-400">speed</span>
+            Tiempo: <strong id="aiTelLatency" class="font-mono text-blue-300">-</strong>
+          </span>
+        </div>
+        <button type="button" onclick="toggleCompactPayloadPreview()" class="text-[11px] font-mono text-purple-300 hover:text-white underline">
+          Ver payload minificado enviado a IA
+        </button>
+      </div>
+
+      <!-- Vista previa colapsable del Payload Minificado -->
+      <div id="compactPayloadBox" class="hidden px-5 py-3 bg-slate-950 border-b border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto">
+        <div class="text-slate-400 mb-1 font-sans text-xs font-semibold">Vista previa del Payload Compactado (Pipe-Matrix sin claves JSON redundantes):</div>
+        <pre id="compactPayloadPre" class="text-emerald-300 leading-relaxed"></pre>
+      </div>
+
+      <!-- Cuerpo del Informe (Renderizado Markdown) -->
+      <div id="aiModalPrintArea" class="p-5 sm:p-7 overflow-y-auto flex-1 md-report">
+        <div id="aiReportContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Estado Global del Módulo
+    let currentMode = 'EXCESO_INV'; // 'EXCESO_INV' | 'PROYECCION_INV'
+    let rawRows = [];
+    let filteredRows = [];
+    let materialProfiles = [];
+    let currentSummary = {};
+    let currentFilters = { werks: '0901', matnrLow: '407800', matnrHigh: '408100' };
+    let currentPage = 1;
+    let pageSize = 30;
+    let lastAiMarkdown = '';
+
+    function showValidationAlert(title, message) {
+      const box = document.getElementById('validationAlert');
+      document.getElementById('validationAlertTitle').textContent = title;
+      document.getElementById('validationAlertMsg').textContent = message;
+      box.classList.remove('hidden');
+    }
+
+    function hideValidationAlert() {
+      document.getElementById('validationAlert').classList.add('hidden');
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      hideValidationAlert();
+
+      const tabExceso = document.getElementById('tabModeExceso');
+      const tabProy = document.getElementById('tabModeProyeccion');
+      const rfcBadge = document.getElementById('activeRfcBadge');
+      const modeDesc = document.getElementById('activeModeDescription');
+      const btnAiLabel = document.getElementById('btnRunAiLabel');
+      const tableTitle = document.getElementById('tableTitle');
+      const matnrReqStar = document.getElementById('matnrRequiredStar');
+
+      if (mode === 'EXCESO_INV') {
+        tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
+        tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
+        rfcBadge.textContent = 'ZFMM_STOCK_BY_WERKS';
+        modeDesc.textContent = 'Auditoría de Stock Actual (LABST), Stock Máximo (MABST) y Stock de Seguridad (EISBE).';
+        btnAiLabel.textContent = 'Generar Auditoría con IA';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span><span>Matriz de Stock por Centro (`ZFMM_STOCK_BY_WERKS`)</span>';
+        matnrReqStar.textContent = '(Opcional si filtra Centro)';
+        matnrReqStar.className = 'text-slate-400 text-[10px]';
+      } else {
+        tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
+        tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
+        rfcBadge.textContent = 'ZFMM_HISTORICO_CONSUMO';
+        modeDesc.textContent = 'Series históricas mensuales de consumo (MVER) y proyección estacional de demanda.';
+        btnAiLabel.textContent = 'Proyectar Demanda con IA';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">timeline</span><span>Serie Histórica de Consumo (`ZFMM_HISTORICO_CONSUMO` / `MVER`)</span>';
+        matnrReqStar.textContent = '* Obligatorio';
+        matnrReqStar.className = 'text-rose-400 text-[10px] font-bold';
+      }
+
+      // Ejecutar consulta automática al cambiar de modo si los campos requeridos están presentes
+      const werks = document.getElementById('inputWerks').value.trim();
+      const matLow = document.getElementById('inputMatnrLow').value.trim();
+      if (werks && (mode === 'EXCESO_INV' || matLow)) {
+        fetchInventoryData();
+      }
+    }
+
+    function applyPreset(werks, matLow, matHigh) {
+      document.getElementById('inputWerks').value = werks;
+      document.getElementById('inputMatnrLow').value = matLow;
+      document.getElementById('inputMatnrHigh').value = matHigh;
+      fetchInventoryData();
+    }
+
+    function handleConsultRfc(e) {
+      if (e) e.preventDefault();
+      fetchInventoryData();
+    }
+
+    async function fetchInventoryData() {
+      hideValidationAlert();
+      const werks = document.getElementById('inputWerks').value.trim().toUpperCase();
+      const matnrLow = document.getElementById('inputMatnrLow').value.trim().toUpperCase();
+      const matnrHigh = document.getElementById('inputMatnrHigh').value.trim().toUpperCase();
+
+      // Validación de obligatoriedad
+      if (currentMode === 'PROYECCION_INV' && (!werks || !matnrLow)) {
+        showValidationAlert(
+          'Campos Obligatorios en Proyección de Demanda (PROYECCION_INV)',
+          'Para consultar el RFC ZFMM_HISTORICO_CONSUMO debes ingresar obligatoriamente el Centro (WERKS) y el Rango de Material (MATNR) para prevenir sobrecarga de consultas masivas en SAP.'
+        );
+        return;
+      }
+
+      if (currentMode === 'EXCESO_INV' && !werks && !matnrLow) {
+        showValidationAlert(
+          'Filtro Requerido (EXCESO_INV)',
+          'Ingresa al menos el Centro (WERKS) o un Rango de Material (MATNR) para consultar ZFMM_STOCK_BY_WERKS.'
+        );
+        return;
+      }
+
+      const btn = document.getElementById('btnConsultarRfc');
+      const originalBtnHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-lg text-blue-400">sync</span><span>Consultando SAP...</span>';
+
+      renderTableHeader();
+      document.getElementById('tableBody').innerHTML = `
+        <tr>
+          <td colspan="7" class="py-12 text-center text-slate-400">
+            <span class="material-symbols-outlined text-3xl text-purple-400 animate-spin block mx-auto mb-2">sync</span>
+            Ejecutando llamada RFC en SAP ERP (Mandante 300)...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const endpoint = currentMode === 'EXCESO_INV' ? '/api/inventarios/stock' : '/api/inventarios/consumo';
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ werks, matnrLow, matnrHigh })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error al consultar SAP RFC.');
+        }
+
+        rawRows = Array.isArray(data.rows) ? data.rows : [];
+        materialProfiles = Array.isArray(data.materialProfiles) ? data.materialProfiles : [];
+        currentSummary = data.summary || {};
+        currentFilters = { werks, matnrLow, matnrHigh };
+
+        const sourceBadge = document.getElementById('sourceBadge');
+        sourceBadge.textContent = `${data.sourceMode || 'SAP_RFC'} · ${data.elapsedMs || 0}ms`;
+        sourceBadge.classList.remove('hidden');
+
+        populateFilterDropdown();
+        updateKpiCards();
+        handleTableFilterChange();
+      } catch (err) {
+        showValidationAlert('Error en Consulta SAP RFC', err.message);
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="7" class="py-10 text-center text-rose-300">
+              <span class="material-symbols-outlined text-2xl block mx-auto mb-1">error</span>
+              ${escapeHtml(err.message)}
+            </td>
+          </tr>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+      }
+    }
+
+    function updateKpiCards() {
+      const k1L = document.getElementById('kpi1Label');
+      const k1V = document.getElementById('kpi1Value');
+      const k1S = document.getElementById('kpi1Sub');
+
+      const k2L = document.getElementById('kpi2Label');
+      const k2V = document.getElementById('kpi2Value');
+      const k2S = document.getElementById('kpi2Sub');
+
+      const k3L = document.getElementById('kpi3Label');
+      const k3V = document.getElementById('kpi3Value');
+      const k3S = document.getElementById('kpi3Sub');
+
+      const k4L = document.getElementById('kpi4Label');
+      const k4V = document.getElementById('kpi4Value');
+      const k4S = document.getElementById('kpi4Sub');
+
+      if (currentMode === 'EXCESO_INV') {
+        k1L.textContent = 'Materiales Auditados';
+        k1V.textContent = (currentSummary.totalMaterials || 0).toLocaleString('es-CO');
+        k1S.textContent = `${currentSummary.withStockCount || 0} con existencias físicas > 0`;
+
+        k2L.textContent = 'Excesos / Sin Techo MRP';
+        k2V.textContent = ((currentSummary.excessCount || 0) + (currentSummary.unparameterizedCount || 0)).toLocaleString('es-CO');
+        k2S.textContent = `${currentSummary.excessCount || 0} sobre máx · ${currentSummary.unparameterizedCount || 0} sin MABST`;
+
+        k3L.textContent = 'Quiebres / Bajo Seguridad';
+        k3V.textContent = (currentSummary.shortageCount || 0).toLocaleString('es-CO');
+        k3S.textContent = `Déficit: ${(currentSummary.totalShortageUnits || 0).toLocaleString('es-CO')} unds`;
+
+        k4L.textContent = 'Stock Físico Total (LABST)';
+        k4V.textContent = (currentSummary.totalStockUnits || 0).toLocaleString('es-CO');
+        k4S.textContent = `${currentSummary.optimalCount || 0} materiales en nivel óptimo`;
+      } else {
+        k1L.textContent = 'Períodos MVER Analizados';
+        k1V.textContent = (currentSummary.totalRecords || 0).toLocaleString('es-CO');
+        k1S.textContent = `${currentSummary.uniqueMaterials || 0} materiales únicos`;
+
+        k2L.textContent = 'Consumo Histórico Total';
+        k2V.textContent = (currentSummary.totalConsumoAcumulado || 0).toLocaleString('es-CO');
+        const years = currentSummary.yearsCovered || [];
+        k2S.textContent = years.length ? `Años: ${years[0]} – ${years[years.length - 1]}` : 'Serie histórica';
+
+        k3L.textContent = 'Alta Volatilidad Estacional';
+        k3V.textContent = (currentSummary.highVariabilityMaterials || 0).toLocaleString('es-CO');
+        k3S.textContent = 'Materiales con CV >= 50%';
+
+        k4L.textContent = 'Compresión Serie M01..M12';
+        k4V.textContent = '~92%';
+        k4S.textContent = 'Pivoteo anual para ahorro de tokens';
+      }
+    }
+
+    function populateFilterDropdown() {
+      const sel = document.getElementById('statusFilterSelect');
+      if (currentMode === 'EXCESO_INV') {
+        sel.innerHTML = `
+          <option value="ALL">Todos los estados (${rawRows.length})</option>
+          <option value="WITH_STOCK">Con Stock Actual > 0</option>
+          <option value="ALERTS">Con Alerta (Exceso o Quiebre)</option>
+          <option value="EXCESO_CRITICO">Exceso de Stock</option>
+          <option value="QUIEBRE_STOCK">Quiebre de Stock / Bajo Seg.</option>
+          <option value="OPTIMO">Nivel Óptimo</option>
+          <option value="SIN_PARAMETROS_MRP">Sin Parámetros MRP</option>
+        `;
+      } else {
+        const years = Array.from(new Set(rawRows.map(r => r.anio))).sort().reverse();
+        sel.innerHTML = `
+          <option value="ALL">Todos los años (${rawRows.length} períodos)</option>
+          <option value="NON_ZERO">Solo meses con Consumo > 0</option>
+          ${years.map(y => `<option value="YEAR_${y}">Año ${y}</option>`).join('')}
+        `;
+      }
+    }
+
+    function handleTableFilterChange() {
+      const q = document.getElementById('tableSearchInput').value.trim().toLowerCase();
+      const statusFilter = document.getElementById('statusFilterSelect').value;
+
+      filteredRows = rawRows.filter(r => {
+        const matchText =
+          !q ||
+          String(r.matnr || '').toLowerCase().includes(q) ||
+          String(r.maktx || '').toLowerCase().includes(q) ||
+          String(r.werks || '').toLowerCase().includes(q) ||
+          String(r.anio || '').toLowerCase().includes(q) ||
+          String(r.mesNombre || '').toLowerCase().includes(q) ||
+          String(r.statusLabel || '').toLowerCase().includes(q);
+
+        if (!matchText) return false;
+
+        if (statusFilter === 'ALL') return true;
+        if (currentMode === 'EXCESO_INV') {
+          if (statusFilter === 'WITH_STOCK') return r.stockActual > 0;
+          if (statusFilter === 'ALERTS') {
+            return ['EXCESO_CRITICO', 'EXCESO_SIN_TECHO', 'QUIEBRE_STOCK', 'BAJO_SEGURIDAD'].includes(r.statusCode);
+          }
+          if (statusFilter === 'QUIEBRE_STOCK') {
+            return r.statusCode === 'QUIEBRE_STOCK' || r.statusCode === 'BAJO_SEGURIDAD';
+          }
+          return r.statusCode === statusFilter;
+        } else {
+          if (statusFilter === 'NON_ZERO') return r.consumoTotal > 0;
+          if (statusFilter.startsWith('YEAR_')) {
+            return r.anio === statusFilter.replace('YEAR_', '');
+          }
+          return true;
+        }
+      });
+
+      // En Modo B, ordenar en la vista los años más recientes primero para facilitar lectura
+      if (currentMode === 'PROYECCION_INV') {
+        filteredRows.sort((a, b) => {
+          if (a.matnr !== b.matnr) return a.matnr.localeCompare(b.matnr);
+          if (a.anio !== b.anio) return b.anio.localeCompare(a.anio);
+          return b.mesNum - a.mesNum;
+        });
+      }
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    function handlePageSizeChange() {
+      pageSize = parseInt(document.getElementById('pageSizeSelect').value, 10) || 30;
+      currentPage = 1;
+      renderTable();
+    }
+
+    function changePage(delta) {
+      const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+      currentPage = Math.min(totalPages, Math.max(1, currentPage + delta));
+      renderTable();
+    }
+
+    function renderTableHeader() {
+      const thead = document.getElementById('tableHead');
+      if (currentMode === 'EXCESO_INV') {
+        thead.innerHTML = `
+          <tr>
+            <th scope="col" class="py-3.5 px-4">Material</th>
+            <th scope="col" class="py-3.5 px-4">Descripción</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Centro</th>
+            <th scope="col" class="py-3.5 px-4 text-right">Stock Actual</th>
+            <th scope="col" class="py-3.5 px-4 text-right">Stock Máximo</th>
+            <th scope="col" class="py-3.5 px-4 text-right">Stock de Seguridad</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Diagnóstico MRP</th>
+          </tr>
+        `;
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th scope="col" class="py-3.5 px-4">Material</th>
+            <th scope="col" class="py-3.5 px-4">Descripción</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Centro</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Año</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Mes</th>
+            <th scope="col" class="py-3.5 px-4 text-right">Consumo Total</th>
+          </tr>
+        `;
+      }
+    }
+
+    function getStatusBadgeHtml(row) {
+      const map = {
+        EXCESO_CRITICO: 'bg-amber-950/90 text-amber-300 border-amber-500/40',
+        EXCESO_SIN_TECHO: 'bg-amber-950/80 text-amber-200 border-amber-500/30',
+        QUIEBRE_STOCK: 'bg-rose-950/90 text-rose-300 border-rose-500/40',
+        BAJO_SEGURIDAD: 'bg-orange-950/90 text-orange-300 border-orange-500/40',
+        PUNTO_REORDEN: 'bg-blue-950/90 text-blue-300 border-blue-500/40',
+        OPTIMO: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40',
+        SIN_PARAMETROS_MRP: 'bg-purple-950/80 text-purple-300 border-purple-500/30',
+        SIN_STOCK: 'bg-slate-800/80 text-slate-400 border-slate-700'
+      };
+      const cls = map[row.statusCode] || map.SIN_STOCK;
+      return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${cls}" title="${escapeHtml(row.recommendation || '')}">${escapeHtml(row.statusLabel)}</span>`;
+    }
+
+    function renderTable() {
+      renderTableHeader();
+      const tbody = document.getElementById('tableBody');
+      const total = filteredRows.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const pageItems = filteredRows.slice(startIdx, startIdx + pageSize);
+
+      document.getElementById('paginationInfo').textContent =
+        total > 0
+          ? `Mostrando ${startIdx + 1}–${Math.min(startIdx + pageSize, total)} de ${total.toLocaleString('es-CO')} registros`
+          : '0 registros encontrados';
+      document.getElementById('pageIndicator').textContent = `Pág. ${currentPage} / ${totalPages}`;
+      document.getElementById('btnPrevPage').disabled = currentPage <= 1;
+      document.getElementById('btnNextPage').disabled = currentPage >= totalPages;
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-10 text-center text-slate-400">
+              No se encontraron registros para los filtros seleccionados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      if (currentMode === 'EXCESO_INV') {
+        tbody.innerHTML = pageItems
+          .map(r => {
+            const lgorts = (r.almacenes || []).length ? `Almacén: ${r.almacenes.join(', ')}` : '';
+            const actualCls =
+              r.statusCode === 'EXCESO_CRITICO'
+                ? 'text-amber-300 font-bold'
+                : r.statusCode === 'QUIEBRE_STOCK'
+                  ? 'text-rose-400 font-bold'
+                  : r.stockActual > 0
+                    ? 'text-emerald-300 font-semibold'
+                    : 'text-slate-400';
+
+            return `
+              <tr class="hover:bg-slate-800/60 transition-colors">
+                <th scope="row" class="py-3 px-4 font-mono font-bold text-blue-300 whitespace-nowrap">${escapeHtml(r.matnr)}</th>
+                <td class="py-3 px-4 text-slate-200 font-medium">${escapeHtml(r.maktx)}</td>
+                <td class="py-3 px-4 text-center">
+                  <span class="font-mono font-semibold text-slate-200 bg-slate-800 px-2 py-0.5 rounded border border-slate-700" title="${escapeHtml(lgorts)}">${escapeHtml(r.werks)}</span>
+                </td>
+                <td class="py-3 px-4 text-right font-mono ${actualCls}">${Number(r.stockActual).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+                <td class="py-3 px-4 text-right font-mono text-slate-300">${Number(r.stockMaximo).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+                <td class="py-3 px-4 text-right font-mono text-slate-300">${Number(r.stockSeguridad).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+                <td class="py-3 px-4 text-center whitespace-nowrap">${getStatusBadgeHtml(r)}</td>
+              </tr>
+            `;
+          })
+          .join('');
+      } else {
+        tbody.innerHTML = pageItems
+          .map(r => {
+            const valCls = r.consumoTotal > 0 ? 'text-purple-300 font-bold' : 'text-slate-500';
+            return `
+              <tr class="hover:bg-slate-800/60 transition-colors">
+                <th scope="row" class="py-3 px-4 font-mono font-bold text-blue-300 whitespace-nowrap">${escapeHtml(r.matnr)}</th>
+                <td class="py-3 px-4 text-slate-200 font-medium">${escapeHtml(r.maktx)}</td>
+                <td class="py-3 px-4 text-center">
+                  <span class="font-mono font-semibold text-slate-200 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(r.werks)}</span>
+                </td>
+                <td class="py-3 px-4 text-center font-mono text-slate-300">${escapeHtml(r.anio)}</td>
+                <td class="py-3 px-4 text-center">
+                  <span class="font-mono text-xs px-2 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700">${escapeHtml(r.mes)} · ${escapeHtml(r.mesNombre)}</span>
+                </td>
+                <td class="py-3 px-4 text-right font-mono ${valCls}">
+                  ${Number(r.consumoTotal).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
+                  <span class="text-[10px] text-slate-500 ml-1">${escapeHtml(r.meins || 'UN')}</span>
+                </td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+    }
+
+    async function handleRunAiAnalysis() {
+      if (!rawRows || rawRows.length === 0) {
+        showValidationAlert('Sin datos para analizar', 'Primero ejecuta la consulta al RFC de SAP para cargar los materiales en la tabla.');
+        return;
+      }
+
+      const btn = document.getElementById('btnRunAi');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-lg">neurology</span><span>Minificando y Analizando con IA...</span>';
+
+      try {
+        const preferredModel = document.getElementById('aiModelSelect').value;
+        const res = await fetch('/api/inventarios/ai-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            processType: currentMode,
+            rows: rawRows,
+            filters: currentFilters,
+            preferredModel
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error al generar el informe con IA.');
+        }
+
+        lastAiMarkdown = data.markdownReport || '';
+        openAiModal(data);
+      } catch (err) {
+        showValidationAlert('Error en el Motor Analítico IA', err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+
+    function openAiModal(data) {
+      const modal = document.getElementById('aiResultModal');
+      document.getElementById('aiModalTitle').textContent =
+        currentMode === 'EXCESO_INV'
+          ? 'Auditoría Inteligente de Excesos y Quiebres de Stock'
+          : 'Proyección Estacional de Demanda (Series MVER)';
+      document.getElementById('aiModalProcessBadge').textContent = data.process;
+      document.getElementById('aiModalSubtitle').textContent = `${data.providerUsed} · ${data.modelDecision?.rationale || ''}`;
+
+      const tel = data.telemetry || {};
+      document.getElementById('aiTelModel').textContent = data.modelDecision?.selectedModel || 'gemini-2.5-flash';
+      document.getElementById('aiTelTokens').textContent = `${tel.estimatedRawTokens || 0} → ${tel.estimatedMinifiedTokens || 0} tokens (-${tel.tokenSavingsPct || 0}%)`;
+      document.getElementById('aiTelLatency').textContent = `${tel.elapsedMs || 0} ms`;
+
+      document.getElementById('compactPayloadPre').textContent = data.compactPayloadPreview || '';
+      document.getElementById('aiReportContent').innerHTML = renderMarkdownToHtml(data.markdownReport || '');
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAiModal() {
+      document.getElementById('aiResultModal').classList.add('hidden');
+    }
+
+    function toggleCompactPayloadPreview() {
+      document.getElementById('compactPayloadBox').classList.toggle('hidden');
+    }
+
+    async function copyAiMarkdownReport() {
+      if (!lastAiMarkdown) return;
+      try {
+        await navigator.clipboard.writeText(lastAiMarkdown);
+        const txt = document.getElementById('btnCopyReportText');
+        txt.textContent = '¡Copiado!';
+        setTimeout(() => { txt.textContent = 'Copiar Informe'; }, 2000);
+      } catch (_) {}
+    }
+
+    function exportReportToPdf() {
+      window.print();
+    }
+
+    function exportTableToExcelCsv() {
+      if (!filteredRows || filteredRows.length === 0) {
+        showValidationAlert('Exportación vacía', 'No hay registros cargados para exportar a Excel.');
+        return;
+      }
+
+      let csvLines = [];
+      if (currentMode === 'EXCESO_INV') {
+        csvLines.push(['Material', 'Descripcion', 'Centro', 'Stock_Actual', 'Stock_Maximo', 'Stock_Seguridad', 'Punto_Reorden', 'Estado_MRP', 'Recomendacion'].join(';'));
+        for (const r of filteredRows) {
+          csvLines.push([
+            r.matnr,
+            `"${String(r.maktx || '').replace(/"/g, '""')}"`,
+            r.werks,
+            r.stockActual,
+            r.stockMaximo,
+            r.stockSeguridad,
+            r.puntoReorden || 0,
+            `"${r.statusLabel}"`,
+            `"${String(r.recommendation || '').replace(/"/g, '""')}"`
+          ].join(';'));
+        }
+      } else {
+        csvLines.push(['Material', 'Descripcion', 'Centro', 'Anio', 'Mes', 'Consumo_Total', 'Unidad'].join(';'));
+        for (const r of filteredRows) {
+          csvLines.push([
+            r.matnr,
+            `"${String(r.maktx || '').replace(/"/g, '""')}"`,
+            r.werks,
+            r.anio,
+            r.mes,
+            r.consumoTotal,
+            r.meins || 'UN'
+          ].join(';'));
+        }
+      }
+
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_${currentMode}_Centro_${currentFilters.werks || 'SAP'}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Renderizador ligero y seguro de Markdown Estructurado (Tablas, Alertas, Listas y Encabezados)
+    function renderMarkdownToHtml(md) {
+      const lines = String(md || '').split('\n');
+      let html = '';
+      let inTable = false;
+      let inList = false;
+
+      const formatInline = (text) => {
+        return escapeHtml(text)
+          .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em class="text-slate-300">$1</em>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>');
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const line = rawLine.trim();
+
+        // Manejo de Tablas Markdown
+        if (line.startsWith('|') && line.endsWith('|')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          const cells = line.slice(1, -1).split('|').map(c => c.trim());
+          // Ignorar fila separadora | :--- | ---: |
+          if (cells.every(c => /^:?-{2,}:?$/.test(c))) {
+            continue;
+          }
+          if (!inTable) {
+            html += '<div class="md-table-wrap"><table><thead><tr>';
+            cells.forEach(c => { html += `<th>${formatInline(c)}</th>`; });
+            html += '</tr></thead><tbody>';
+            inTable = true;
+          } else {
+            html += '<tr>';
+            cells.forEach(c => { html += `<td>${formatInline(c)}</td>`; });
+            html += '</tr>';
+          }
+          continue;
+        } else if (inTable) {
+          html += '</tbody></table></div>';
+          inTable = false;
+        }
+
+        if (!line) {
+          if (inList) { html += '</ul>'; inList = false; }
+          continue;
+        }
+
+        if (line === '---') {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += '<hr class="border-slate-800 my-4" />';
+          continue;
+        }
+
+        if (line.startsWith('# ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<h1>${formatInline(line.slice(2))}</h1>`;
+          continue;
+        }
+
+        if (line.startsWith('## ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<h2><span class="material-symbols-outlined text-base text-purple-400">analytics</span>${formatInline(line.slice(3))}</h2>`;
+          continue;
+        }
+
+        if (line.startsWith('> ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<blockquote>${formatInline(line.slice(2))}</blockquote>`;
+          continue;
+        }
+
+        if (line.startsWith('- ') || /^\d+\.\s/.test(line)) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          const itemContent = line.replace(/^(-|\d+\.)\s+/, '');
+          html += `<li>${formatInline(itemContent)}</li>`;
+          continue;
+        }
+
+        if (inList) { html += '</ul>'; inList = false; }
+        html += `<p>${formatInline(line)}</p>`;
+      }
+
+      if (inTable) html += '</tbody></table></div>';
+      if (inList) html += '</ul>';
+      return html;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchInventoryData();
+    });
+  </script>
+</body>
+</html>

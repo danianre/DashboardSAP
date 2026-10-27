@@ -10,6 +10,11 @@ require('dotenv').config();
 
 const apiRoutes = require('./routes/api');
 const { db: monitorDb } = require('./services/snapshotService');
+const {
+  fetchStockByWerks,
+  fetchHistoricoConsumo,
+  analyzeInventoryWithAi
+} = require('./services/inventoryService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,6 +70,7 @@ app.use((req, res, next) => {
 // - "/"                   -> Página Principal: Selector «Plataforma de Aplicaciones SAP»
 // - "/monitor-sap"        -> Aplicación 1: Monitor SAP (Consola de Monitoreo SAP ERP)
 // - "/notificaciones-sap" -> Aplicación 2: Notificaciones SAP (Planta / Microsoft SSO)
+// - "/inventarios-sap"    -> Aplicación 3: Analítica Inteligente de Inventarios (RFC + IA)
 // ============================================================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -76,6 +82,10 @@ app.get(['/monitor-sap', '/monitor', '/dashboard'], (req, res) => {
 
 app.get(['/notificaciones-sap', '/notificaciones'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'notificaciones.html'));
+});
+
+app.get(['/inventarios-sap', '/optimizador-inventarios', '/inventarios'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'inventarios.html'));
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -93,7 +103,8 @@ app.get('/api/health', (req, res) => {
     routes: {
       portal: '/',
       monitorSap: '/monitor-sap',
-      notificacionesSap: '/notificaciones-sap'
+      notificacionesSap: '/notificaciones-sap',
+      inventariosSap: '/inventarios-sap'
     }
   });
 });
@@ -280,6 +291,57 @@ monitorDb.serialize(() => {
   )`);
 });
 
+// ============================================================================
+// MÓDULO 3: ANALÍTICA INTELIGENTE DE INVENTARIOS (SAP RFC + IA / CPI)
+// Procesos: EXCESO_INV (ZFMM_STOCK_BY_WERKS) y PROYECCION_INV (ZFMM_HISTORICO_CONSUMO)
+// ============================================================================
+app.post('/api/inventarios/stock', async (req, res) => {
+  try {
+    const { matnrLow, matnrHigh, werks, werksHigh } = req.body || {};
+    const data = await fetchStockByWerks({ matnrLow, matnrHigh, werks, werksHigh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR POST /api/inventarios/stock]:', error.message);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Error al consultar el RFC ZFMM_STOCK_BY_WERKS en SAP.'
+    });
+  }
+});
+
+app.post('/api/inventarios/consumo', async (req, res) => {
+  try {
+    const { matnrLow, matnrHigh, werks, werksHigh } = req.body || {};
+    const data = await fetchHistoricoConsumo({ matnrLow, matnrHigh, werks, werksHigh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR POST /api/inventarios/consumo]:', error.message);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Error al consultar el RFC ZFMM_HISTORICO_CONSUMO en SAP.'
+    });
+  }
+});
+
+app.post('/api/inventarios/ai-analyze', async (req, res) => {
+  try {
+    const { processType, rows, filters, preferredModel } = req.body || {};
+    const result = await analyzeInventoryWithAi({
+      processType,
+      rows,
+      filters,
+      preferredModel
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('[ERROR POST /api/inventarios/ai-analyze]:', error.message);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Error al procesar el análisis de inventarios con Inteligencia Artificial.'
+    });
+  }
+});
+
 // Rutas del Monitor SAP (/api/auth/*, /api/dashboard, /api/user/lock, etc.)
 app.use('/api', apiRoutes);
 
@@ -290,6 +352,7 @@ app.listen(PORT, () => {
   console.log(` 🏠 Selector Principal:   http://localhost:${PORT}/`);
   console.log(` 📊 Monitor SAP ERP:      http://localhost:${PORT}/monitor-sap`);
   console.log(` 🔔 Notificaciones SAP:   http://localhost:${PORT}/notificaciones-sap`);
+  console.log(` 🧠 Inventarios IA:       http://localhost:${PORT}/inventarios-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
 });

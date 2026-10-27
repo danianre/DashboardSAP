@@ -43,7 +43,7 @@ for (const relPath of jsFiles) {
   }
 }
 
-// 2. Verificar existencia e integridad de las 3 vistas principales
+// 2. Verificar existencia e integridad de las 4 vistas principales
 const requiredViews = [
   {
     file: 'public/index.html',
@@ -52,7 +52,9 @@ const requiredViews = [
       'Monitor SAP',
       'Ingresar al monitor',
       'Notificaciones SAP',
-      'Ingresar a notificaciones'
+      'Ingresar a notificaciones',
+      'Optimizador de Inventarios IA',
+      'Ingresar al optimizador'
     ]
   },
   {
@@ -62,6 +64,16 @@ const requiredViews = [
   {
     file: 'public/notificaciones.html',
     mustContain: ['Notificación SAP Producción', 'loginMicrosoft']
+  },
+  {
+    file: 'public/inventarios.html',
+    mustContain: [
+      'Analítica Inteligente de Inventarios',
+      'ZFMM_STOCK_BY_WERKS',
+      'ZFMM_HISTORICO_CONSUMO',
+      'EXCESO_INV',
+      'PROYECCION_INV'
+    ]
   }
 ];
 
@@ -86,7 +98,7 @@ const forbiddenPatterns = [
   /(?:CPI_PASS|SAP_PASSWORD)\s*=\s*["'][^"']+["']/
 ];
 
-for (const relPath of [...jsFiles, 'public/index.html', 'public/monitor.html', 'public/notificaciones.html']) {
+for (const relPath of [...jsFiles, 'public/index.html', 'public/monitor.html', 'public/notificaciones.html', 'public/inventarios.html']) {
   const fullPath = path.join(rootDir, relPath);
   if (!fs.existsSync(fullPath)) continue;
   const content = fs.readFileSync(fullPath, 'utf8');

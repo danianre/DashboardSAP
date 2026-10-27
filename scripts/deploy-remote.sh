@@ -110,7 +110,8 @@ check_url() {
 if ! check_url "http://127.0.0.1:${APP_PORT}/api/health" "\"status\":\"ok\"" || \
    ! check_url "http://127.0.0.1:${APP_PORT}/" "Plataforma de Aplicaciones SAP" || \
    ! check_url "http://127.0.0.1:${APP_PORT}/monitor-sap" "Centro de Monitoreo" || \
-   ! check_url "http://127.0.0.1:${APP_PORT}/notificaciones-sap" "Notificación SAP Producción"; then
+   ! check_url "http://127.0.0.1:${APP_PORT}/notificaciones-sap" "Notificación SAP Producción" || \
+   ! check_url "http://127.0.0.1:${APP_PORT}/inventarios-sap" "Analítica Inteligente de Inventarios"; then
   echo "⚠️ ERROR EN VERIFICACIÓN POST-DESPLIEGUE. Ejecutando reversión automática..."
   bash "${DEPLOY_DIR}/scripts/rollback-remote.sh" "${BACKUP_FILE}"
   exit 1

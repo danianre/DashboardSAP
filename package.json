@@ -1,12 +1,12 @@
 {
-  "name": "app-notificaciones-monitor-sap",
-  "version": "1.1.0",
-  "description": "Plataforma de Aplicaciones SAP: Portal Principal (/), Monitor SAP (/monitor-sap) y Notificaciones SAP (/notificaciones-sap)",
+  "name": "apps-sap",
+  "version": "1.2.0",
+  "description": "Plataforma de Aplicaciones SAP: Portal Principal (/), Monitor SAP (/monitor-sap), Notificaciones SAP (/notificaciones-sap) y Optimizador de Inventarios IA (/inventarios-sap)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "validate": "node scripts/validate-build.js",
-    "deploy": "node scripts/validate-build.js && git push origin main && ssh -o BatchMode=yes plant@10.0.0.146 \"cd /home/plant/app-notificaciones-sap && bash scripts/deploy-remote.sh\""
+    "deploy": "node scripts/validate-build.js && git push origin main && ssh -o BatchMode=yes plant@10.0.0.146 \"cd /home/plant/apps-sap && bash scripts/deploy-remote.sh\""
   },
   "dependencies": {
     "axios": "^1.20.0",

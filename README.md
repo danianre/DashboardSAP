@@ -18,7 +18,10 @@ Este proyecto conecta una aplicación web ágil y moderna directamente con el se
 3. **Monitoreo Especializado de Buffers (ST02) y Base de Datos (DBACOCKPIT)**: Identificación exacta de qué usuarios, programas o consultas SQL consumen más CPU, lecturas lógicas/físicas o generan demoras en la base de datos con diseño minimalista y explicaciones en español.
 4. **Control de Licencias, Auditoría BASC / HCM y Reporte de Ahorro CADI**: Seguimiento continuo del tope de licencias de diálogo (334 usuarios máximos permitidos), detección de cuentas inactivas por más de 30 días, verificación del job nocturno de retiro de colaboradores desvinculados y cuantificación ejecutiva del retorno de inversión (ROI) con cálculo de horas hombre ahorradas por la autogestión de contraseñas.
 5. **Impacto Cero en Producción**: Diseñado bajo un principio estricto de solo lectura (*read-only*), cachés inteligentes en memoria y serialización de llamadas, garantizando que el monitoreo no añada sobrecarga al sistema productivo.
-6. **Arquitectura Unificada Multi-Vista (`10.0.0.146:3000`)**: Coexistencia transparente en un mismo servidor Node.js/Express (puerto `3000`, carpeta `/home/plant/apps-sap`) junto con la aplicación operativa **Notificación SAP Producción**, exponiendo la vista de planta en `/notificaciones-sap` y la consola de monitoreo técnico en `/monitor-sap` bajo el portal corporativo `/` sin interferencia de sesiones ni bases de datos.
+6. **Arquitectura Unificada Multi-Vista (`https://apps-sap.daabon.com.co` / `10.0.0.146:3000`)**: Coexistencia transparente en un mismo servidor Node.js/Express (puerto `3000`, carpeta `/home/plant/apps-sap`) de tres aplicaciones empresariales bajo el portal corporativo `/`:
+   * **Monitor SAP (`/monitor-sap`)**: Consola técnica Basis/TI en tiempo real.
+   * **Notificaciones SAP (`/notificaciones-sap`)**: Notificación de órdenes de fabricación, tiempos y `COGI` con SSO Microsoft.
+   * **Optimizador de Inventarios IA (`/inventarios-sap`)**: Analítica inteligente de excesos de inventario (`ZFMM_STOCK_BY_WERKS`) y proyección estacional de demanda (`ZFMM_HISTORICO_CONSUMO` / `MVER`) impulsada por IA.
 
 ---
 
@@ -26,17 +29,17 @@ Este proyecto conecta una aplicación web ágil y moderna directamente con el se
 
 La conexión entre la aplicación web y el entorno productivo de SAP no utiliza scraping ni emuladores de interfaz gráfica; combina el **protocolo oficial binario RFC (Remote Function Call)** de SAP SE (para el Monitor ERP en `/monitor`) y servicios HTTP REST sobre **SAP Cloud Integration (CPI)** (para Notificaciones de Producción en `/`).
 
-### 2.1. Enrutamiento y Aislamiento de Aplicaciones en `10.0.0.146:3000`
+### 2.1. Enrutamiento y Aislamiento de Aplicaciones en `10.0.0.146:3000` (`apps-sap.daabon.com.co`)
 
-| Característica | Selector Principal (`/`) | Aplicación 1: Monitor SAP (`/monitor-sap`) | Aplicación 2: Notificaciones SAP (`/notificaciones-sap`) |
-| :--- | :--- | :--- | :--- |
-| **URL de Acceso** | `https://10.0.0.146/` (`http://10.0.0.146:3000/`) | `https://10.0.0.146/monitor-sap` (alias `/monitor`, `/dashboard`) | `https://10.0.0.146/notificaciones-sap` (alias `/notificaciones`) |
-| **Archivo Frontend** | `public/index.html` | `public/monitor.html` | `public/notificaciones.html` |
-| **Rol / Propósito** | Portal corporativo «Plataforma de Aplicaciones SAP» con selector de módulos y pasarela OAuth | Dashboard técnico Basis/TI en tiempo real | Registro y contabilización de órdenes de producción en planta |
-| **Autenticación** | Pasarela automática de callback OAuth (`#code=...`) hacia `/notificaciones-sap` | SAP Logon Gate directo vía RFC (`USR02`) con Control de Lista Blanca (`sap_monitor_whitelist`) | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) |
-| **Integración SAP** | Healthcheck (`/api/health`) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) | SAP CPI (`axios` Basic Auth vía variables `.env`) |
-| **Base de Datos Local**| N/A | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`, `sap_monitor_whitelist`) | `database.sqlite` (Tabla `logs` de órdenes notificadas) |
-| **Rutas API** | `GET /api/health` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET/POST/DELETE /api/whitelist`, etc. | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` |
+| Característica | Selector Principal (`/`) | Aplicación 1: Monitor SAP (`/monitor-sap`) | Aplicación 2: Notificaciones SAP (`/notificaciones-sap`) | Aplicación 3: Optimizador de Inventarios IA (`/inventarios-sap`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **URL de Acceso** | `https://apps-sap.daabon.com.co/` | `https://apps-sap.daabon.com.co/monitor-sap` | `https://apps-sap.daabon.com.co/notificaciones-sap` | `https://apps-sap.daabon.com.co/inventarios-sap` |
+| **Archivo Frontend** | `public/index.html` | `public/monitor.html` | `public/notificaciones.html` | `public/inventarios.html` |
+| **Rol / Propósito** | Portal corporativo «Plataforma de Aplicaciones SAP» con 3 tarjetas de módulos | Dashboard técnico Basis/TI en tiempo real | Registro y contabilización de órdenes de producción en planta | Auditoría de excesos de stock (`EXCESO_INV`) y proyección estacional (`PROYECCION_INV`) con IA |
+| **Autenticación** | Acceso directo al hub corporativo | SAP Logon Gate directo vía RFC (`USR02`) con Control de Lista Blanca (`sap_monitor_whitelist`) | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) | Conexión directa a SAP RFC (`node-rfc`) + Motor Analítico IA |
+| **Integración SAP** | Healthcheck (`/api/health`) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) | SAP CPI (`axios` Basic Auth vía variables `.env`) | RFCs `ZFMM_STOCK_BY_WERKS` y `ZFMM_HISTORICO_CONSUMO` (`MVER`) + SAP CPI / Gemini IA |
+| **Base de Datos Local**| N/A | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`, `sap_monitor_whitelist`) | `database.sqlite` (Tabla `logs` de órdenes notificadas) | Procesamiento en memoria con minificación matricial de tokens |
+| **Rutas API** | `GET /api/health` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET/POST/DELETE /api/whitelist` | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` | `POST /api/inventarios/stock`, `POST /api/inventarios/consumo`, `POST /api/inventarios/ai-analyze` |
 
 ### Diagrama de Arquitectura de la Solución
 
@@ -289,6 +292,20 @@ Para no sobrecargar la pantalla principal, los detalles pesados se abren en vent
   * *Histórico Mensual Comparativo y Top Usuarios*: Evolución mes a mes y ranking de los colaboradores con mayor frecuencia de uso.
   * *Distribución Horaria*: Gráfico de uso por franjas (mañana, tarde y noche/fines de semana), evidenciando la cobertura fuera de horario de soporte.
   * *Acciones Ejecutivas*: Botón **"Copiar Resumen para Jefatura"** (formato texto listo para enviar por Teams o correo) y botón **"Imprimir / Guardar como PDF"** con estilos `@media print` profesionales.
+
+### 5.7. Módulo 3: Analítica Inteligente de Inventarios (`Optimizador de Inventarios IA`)
+Disponible en `/inventarios-sap` (`public/inventarios.html` + `services/inventoryService.js`), integra la gestión de materiales SAP MM (`MARD`, `MARC`, `MVER`) con Inteligencia Artificial:
+* **Modo A — Excesos de Inventario (`EXCESO_INV` · RFC `ZFMM_STOCK_BY_WERKS`)**:
+  * Consulta en vivo las existencias por Centro (`WERKS`) y Rango de Material (`MATNR`), consolidando almacenes (`LGORT`) frente a los parámetros MRP de `MARC` (`MABST` Stock Máximo, `EISBE` Stock de Seguridad y `MINBE` Punto de Pedido).
+  * Clasifica automáticamente cada material en: `Exceso de Stock`, `Posible Sobrestock (Sin Máx.)`, `Quiebre de Stock (0)`, `Bajo Stock Seguridad`, `En Punto de Pedido`, `Nivel Óptimo` o `Sin Parámetros MRP`.
+* **Modo B — Proyección y Demanda Estacional (`PROYECCION_INV` · RFC `ZFMM_HISTORICO_CONSUMO` / `MVER`)**:
+  * Incluye validación obligatoria de Centro (`WERKS`) y Rango de Material (`MATNR`) para proteger a SAP contra consultas masivas.
+  * Consume `ZFMM_HISTORICO_CONSUMO` (y cuenta con fallback directo a `MVER` + `MAKT` + `MARA` bajo la estructura `ZST_IA_CONSUMO` si el módulo no tiene activo el flag *Remote-Enabled* en `SE37`).
+  * Calcula media mensual, desviación estándar ($\sigma_d$), Coeficiente de Variación ($CV\%$), mes pico estacional, pronóstico ponderado del próximo trimestre y Stock de Seguridad sugerido al 95% de nivel de servicio ($Z = 1.65 \cdot \sigma_d$).
+* **Minificación de Payload y Selección Dinámica de Modelo IA**:
+  * `minifyInventoryPayload()`: Transforma los arreglos JSON verbosos en una matriz compacta delimitada por pipes (`|`) y pivota los 12 meses (`M01..M12`) por año, reduciendo el consumo de tokens entre un **65% y un 96%**.
+  * `selectOptimalAiModel()`: Selecciona automáticamente entre **Gemini 2.5 Flash** (para auditorías tabulares rápidas de baja latencia y alta cuota RPM/TPM libre de errores `HTTP 429`) y **Gemini 2.5 Pro** (para descomposición matemática de series temporales extensas), soportando despacho hacia **SAP CPI iFlow** (`CPI_URL_INVENTARIOS_IA`), **Google Gemini API** (`GEMINI_API_KEY`) y el **Motor Analítico Cuantitativo Híbrido** local con disponibilidad garantizada 24/7.
+  * Incluye visualizador modal en formato Markdown estructurado con botones para **Copiar Informe**, **Exportar a PDF** y **Exportar a Excel (CSV)**.
 
 ---
 
