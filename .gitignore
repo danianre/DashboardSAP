@@ -24,9 +24,11 @@ yarn-error.log*
 dev_rfc.log
 _noderfc.log
 
-# Scripts de scratch y utilidades temporales
+# Scripts de scratch, respaldos y metadatos de despliegue
 scratch/
 app-notificaciones-sap/
+backups/
+.deploy-meta.json
 
 # Archivos de entorno del editor y sistema operativo
 .DS_Store

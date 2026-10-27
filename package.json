@@ -1,10 +1,11 @@
 {
   "name": "app-notificaciones-monitor-sap",
-  "version": "1.0.0",
-  "description": "Plataforma Unificada SAP: Notificación de Producción (CPI) y Consola de Monitoreo SAP ERP (RFC)",
+  "version": "1.1.0",
+  "description": "Plataforma de Aplicaciones SAP: Portal Principal (/), Monitor SAP (/monitor-sap) y Notificaciones SAP (/notificaciones-sap)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "validate": "node scripts/validate-build.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

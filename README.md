@@ -26,16 +26,17 @@ Este proyecto conecta una aplicación web ágil y moderna directamente con el se
 
 La conexión entre la aplicación web y el entorno productivo de SAP no utiliza scraping ni emuladores de interfaz gráfica; combina el **protocolo oficial binario RFC (Remote Function Call)** de SAP SE (para el Monitor ERP en `/monitor`) y servicios HTTP REST sobre **SAP Cloud Integration (CPI)** (para Notificaciones de Producción en `/`).
 
-### 2.1. Coexistencia Multi-Vista en el Servidor `10.0.0.146:3000`
+### 2.1. Enrutamiento y Aislamiento de Aplicaciones en `10.0.0.146:3000`
 
-| Característica | Vista 1: Notificación SAP Producción (`/`) | Vista 2: Consola de Monitoreo SAP ERP (`/monitor`) |
-| :--- | :--- | :--- |
-| **URL de Acceso** | `http://10.0.0.146:3000/` | `http://10.0.0.146:3000/monitor` (o `/dashboard`) |
-| **Archivo Frontend** | `public/index.html` | `public/monitor.html` |
-| **Autenticación** | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) | SAP Logon Gate directo vía RFC (`USR02`) |
-| **Integración SAP** | SAP CPI (`axios` Basic Auth hacia iFlows QAS/PRD) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) |
-| **Base de Datos Local**| `database.sqlite` (Tabla `logs` de órdenes notificadas) | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`) |
-| **Rutas API** | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET /api/password-resets`, etc. |
+| Característica | Selector Principal (`/`) | Aplicación 1: Monitor SAP (`/monitor-sap`) | Aplicación 2: Notificaciones SAP (`/notificaciones-sap`) |
+| :--- | :--- | :--- | :--- |
+| **URL de Acceso** | `https://10.0.0.146/` (`http://10.0.0.146:3000/`) | `https://10.0.0.146/monitor-sap` (alias `/monitor`, `/dashboard`) | `https://10.0.0.146/notificaciones-sap` (alias `/notificaciones`) |
+| **Archivo Frontend** | `public/index.html` | `public/monitor.html` | `public/notificaciones.html` |
+| **Rol / Propósito** | Portal corporativo «Plataforma de Aplicaciones SAP» con selector de módulos y pasarela OAuth | Dashboard técnico Basis/TI en tiempo real | Registro y contabilización de órdenes de producción en planta |
+| **Autenticación** | Pasarela automática de callback OAuth (`#code=...`) hacia `/notificaciones-sap` | SAP Logon Gate directo vía RFC (`USR02`) | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) |
+| **Integración SAP** | Healthcheck (`/api/health`) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) | SAP CPI (`axios` Basic Auth vía variables `.env`) |
+| **Base de Datos Local**| N/A | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`) | `database.sqlite` (Tabla `logs` de órdenes notificadas) |
+| **Rutas API** | `GET /api/health` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET /api/password-resets`, etc. | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` |
 
 ### Diagrama de Arquitectura de la Solución
 
@@ -363,28 +364,56 @@ SAP_ROUTER=/H/sap.daabon.com.co
 ENVIRONMENT_NAME=PRODUCTIVO
 ```
 
-### Paso 5: Iniciar el Servidor Unificado
-Ejecutar:
+### Paso 5: Validar e Iniciar el Servidor Unificado
+Ejecutar validación previa y arranque:
 ```powershell
+npm run validate
 node server.js
 ```
 
-La consola confirmará el inicio exitoso de ambos módulos:
+La consola confirmará el inicio exitoso de la plataforma y sus módulos:
 ```text
 [OK] Conector node-rfc cargado. Apuntando a SAP 10.0.0.100 (Mandante 300)
-====================================================
- 🚀 Servidor Unificado SAP activo en puerto 3000
- 📌 Vista Notificaciones Planta: http://localhost:3000/
- 📊 Vista Monitor SAP ERP:       http://localhost:3000/monitor
-====================================================
+========================================================
+ 🚀 Plataforma de Aplicaciones SAP activa en puerto 3000
+ 🏠 Selector Principal:   http://localhost:3000/
+ 📊 Monitor SAP ERP:      http://localhost:3000/monitor-sap
+ 🔔 Notificaciones SAP:   http://localhost:3000/notificaciones-sap
+========================================================
 ✅ Base de datos SQLite (Notificaciones Planta: database.sqlite) lista.
 ```
 
-### Paso 6: Abrir en el Navegador (Local o Servidor `10.0.0.146:3000`)
-* **Vista de Notificación SAP Producción (Planta)**:
-  👉 **`http://10.0.0.146:3000/`** (o `http://localhost:3000/`)
-* **Vista de Consola de Monitoreo SAP ERP (Basis / TI)**:
-  👉 **`http://10.0.0.146:3000/monitor`** (o `http://localhost:3000/monitor`)
+### Paso 6: Abrir en el Navegador (Local o Servidor `10.0.0.146`)
+* **Página Principal («Plataforma de Aplicaciones SAP»)**:
+  👉 **`https://10.0.0.146/`** (o `http://10.0.0.146:3000/`)
+* **Aplicación 1 — Monitor SAP (Basis / TI)**:
+  👉 **`https://10.0.0.146/monitor-sap`** (o `http://10.0.0.146:3000/monitor-sap`)
+* **Aplicación 2 — Notificaciones SAP (Planta / Microsoft SSO)**:
+  👉 **`https://10.0.0.146/notificaciones-sap`** (o `http://10.0.0.146:3000/notificaciones-sap`)
+
+### Paso 7: Flujo CI/CD, Despliegue Controlado y Reversión en Linux (`10.0.0.146`)
+1. **Validación Local en Antigravity**:
+   ```bash
+   npm run validate
+   ```
+2. **Publicación en GitHub (`main`)**:
+   ```bash
+   git add .
+   git commit -m "feat: descripción del cambio"
+   git push origin main
+   ```
+3. **Automatización GitHub Actions (`.github/workflows/deploy.yml`)**:
+   * **Job 1 (`validate`)**: Verifica en Ubuntu que no existan archivos `.env` ni `.sqlite` rastreados, valida la sintaxis de todos los servicios JS (`node --check`), comprueba la integridad de las 3 vistas HTML y escanea que no existan secretos expuestos. Si falla, detiene el pipeline e impide actualizar producción.
+   * **Job 2 (`deploy`)**: Se conecta por SSH al servidor Linux usando GitHub Actions Secrets (`SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`) y ejecuta `scripts/deploy-remote.sh`.
+4. **Respaldo, Trazabilidad y Reversión Automática (`scripts/deploy-remote.sh` y `scripts/rollback-remote.sh`)**:
+   * Antes de aplicar cualquier cambio, genera un respaldo comprimido en `backups/release_YYYYMMDD_HHMMSS.tar.gz`.
+   * Preserva intactos el archivo `.env` y las bases de datos `database.sqlite` y `monitor_sap.sqlite` de producción.
+   * Registra el commit desplegado en `.deploy-meta.json` (consultable en vivo vía `GET /api/health`).
+   * Verifica automáticamente las rutas `/api/health`, `/`, `/monitor-sap` y `/notificaciones-sap`. Si alguna falla, ejecuta `scripts/rollback-remote.sh` automáticamente.
+   * Para revertir manualmente a la versión anterior en el servidor Linux:
+     ```bash
+     bash scripts/rollback-remote.sh
+     ```
 
 ---
 

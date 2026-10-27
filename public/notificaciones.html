@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Notificación SAP Producción</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1d4ed8">
+
+  <!-- ÍCONO DE CAMPANA -->
+  <link rel="icon" type="image/png" href="icon.jpg">
+  <link rel="apple-touch-icon" href="icon.jpg">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+  <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' } } } } }
+  </script>
+
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    input[type="text"], input[type="number"], input[type="date"], input[type="time"], input[type="email"], select { min-height: 48px; transition: all 0.2s ease-in-out; }
+    .req-star { color: #ef4444; margin-left: 2px; font-weight: bold; }
+    .swal2-popup { font-family: 'Inter', sans-serif !important; border-radius: 1rem !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased pb-24 selection:bg-brand-500 selection:text-white">
+
+  <!-- MODAL DE LOGIN MICROSOFT -->
+  <div id="loginOverlay" class="fixed inset-0 bg-brand-900 z-[100] flex flex-col items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft" class="h-10 mx-auto mb-5">
+      <h2 class="text-2xl font-bold text-slate-800 mb-1">Acceso a Planta</h2>
+      <p class="text-sm text-slate-500 mb-6">Inicia sesión con tu cuenta corporativa para continuar.</p>
+      
+      <form onsubmit="loginMicrosoft(event)" class="space-y-4">
+        <div class="text-left">
+          <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">Correo Electrónico</label>
+          <input type="email" id="loginEmail" required class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0078D4] outline-none transition-colors" placeholder="usuario@daabon.com.co">
+        </div>
+        <button type="submit" id="btnMsLogin" class="w-full bg-[#0078D4] hover:bg-[#005A9E] text-white font-bold py-3.5 rounded-xl shadow-md text-base transition-all flex items-center justify-center mt-2">
+          <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24"><path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/></svg>
+          Continuar con Microsoft
+        </button>
+      </form>
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <a href="/" class="inline-flex items-center justify-center text-xs font-semibold text-slate-500 hover:text-brand-700 transition-colors">
+          <span class="material-symbols-outlined text-sm mr-1">apps</span>
+          Volver a Plataforma de Aplicaciones SAP
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="listaOrdenesRecientes"></datalist>
+
+  <header class="bg-brand-700 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="material-symbols-outlined text-3xl">notifications_active</span>
+        <h1 class="text-xl font-bold tracking-tight truncate max-w-[150px] sm:max-w-xs">Notificación SAP</h1>
+      </div>
+      <div class="flex items-center space-x-2">
+        <a href="/" title="Volver al Selector de Aplicaciones SAP" class="bg-brand-900/70 hover:bg-brand-900 border border-brand-500/70 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center">
+          <span class="material-symbols-outlined text-sm mr-1">apps</span> <span class="hidden sm:inline">Plataforma</span>
+        </a>
+        <button id="btnSwitchView" onclick="toggleView()" class="bg-brand-800 hover:bg-brand-900 border border-brand-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center">
+          <span class="material-symbols-outlined text-sm mr-1">manage_search</span> <span>Logs</span>
+        </button>
+      </div>
+    </div>
+    <div class="bg-brand-900 text-brand-100 text-xs px-4 py-2 flex justify-between items-center shadow-inner">
+      <div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1.5">person</span><span id="userNameDisplay" class="font-semibold truncate max-w-[200px]">No identificado</span></div>
+      <button onclick="cerrarSesion()" class="text-brand-200 hover:text-white flex items-center border border-brand-700 hover:bg-brand-800 px-2 py-0.5 rounded transition-colors"><span class="material-symbols-outlined text-sm mr-1">logout</span> Salir</button>
+    </div>
+  </header>
+
+  <!-- VISTA 1: FORMULARIO PRINCIPAL -->
+  <main id="viewForm" class="p-4 max-w-4xl mx-auto space-y-6 mt-2 block animate-in fade-in slide-in-from-left-4 duration-300">
+    <div id="alertBox" class="hidden p-4 rounded-xl shadow-sm border mb-4 text-sm font-medium flex items-start space-x-3 transition-all duration-300">
+      <span id="alertIcon" class="material-symbols-outlined mt-0.5">info</span><div id="alertMessage" class="flex-1 w-full"></div>
+    </div>
+
+    <form id="sapForm" onsubmit="enviarDatos(event)" class="space-y-6">
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+          <h2 class="font-bold text-lg text-slate-800 flex items-center"><span class="material-symbols-outlined mr-2 text-brand-600">assignment</span> Datos Principales</h2>
+          <span id="loaderOrden" class="hidden text-brand-600 text-sm font-bold animate-pulse flex items-center"><span class="material-symbols-outlined animate-spin mr-1 text-sm">sync</span> Cargando...</span>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mb-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">No. Orden <span class="req-star">*</span></label>
+            <div class="flex shadow-sm rounded-lg">
+              <input type="text" inputmode="numeric" id="iv_aufnr" list="listaOrdenesRecientes" required maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '');" class="w-full border border-slate-300 rounded-l-lg p-3 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-base outline-none transition-colors" placeholder="Ej. 100234">
+              <button type="button" onclick="cargarMaestrosOrden()" class="bg-brand-50 hover:bg-brand-100 text-brand-700 px-4 rounded-r-lg border border-l-0 border-slate-300 transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"><span class="material-symbols-outlined">search</span></button>
+            </div>
+          </div>
+          <div class="col-span-1">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Pto. Trabajo</label>
+            <input type="text" id="iv_arbpl" readonly class="w-full border border-slate-300 rounded-lg p-3 bg-slate-100 text-center font-bold text-slate-600 outline-none uppercase truncate text-sm" placeholder="-">
+          </div>
+          <input type="hidden" id="iv_vornr" value="">
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="col-span-1">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Ctd. Buena <span class="req-star">*</span></label>
+            <input type="number" step="0.001" id="iv_lmnga" required oninput="if(this.value.length > 13) this.value = this.value.slice(0,13);" class="w-full border border-slate-300 rounded-lg p-3 shadow-sm focus:ring-2 focus:ring-brand-500 text-right" placeholder="0.000">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Ctd. Rechazo</label>
+            <input type="number" step="0.001" id="iv_xmnga" oninput="if(this.value.length > 13) this.value = this.value.slice(0,13);" class="w-full border border-slate-300 rounded-lg p-3 shadow-sm focus:ring-2 focus:ring-brand-500 text-right" placeholder="0.000">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Motivo</label>
+            <input type="text" id="iv_grund" maxlength="4" class="w-full border border-slate-300 rounded-lg p-3 shadow-sm focus:ring-2 focus:ring-brand-500 text-center uppercase" placeholder="Cód">
+          </div>
+        </div>
+        
+        <h3 class="font-bold text-sm text-slate-500 uppercase tracking-wider mt-6 border-b border-slate-100 pb-2 mb-4">Tiempos</h3>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Inicio</label>
+            <div class="flex flex-col space-y-2">
+              <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3.5 text-slate-400 text-sm">calendar_month</span><input type="date" id="iv_isdd" onchange="calcularTiempos()" class="w-full border border-slate-300 rounded-lg p-2.5 pl-9 shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-slate-700 bg-slate-50"></div>
+              <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3.5 text-slate-400 text-sm">schedule</span><input type="time" id="iv_isdz" onchange="calcularTiempos()" class="w-full border border-slate-300 rounded-lg p-2.5 pl-9 shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-slate-700 bg-slate-50"></div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Fin</label>
+            <div class="flex flex-col space-y-2">
+              <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3.5 text-slate-400 text-sm">calendar_month</span><input type="date" id="iv_iedd" onchange="calcularTiempos()" class="w-full border border-slate-300 rounded-lg p-2.5 pl-9 shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-slate-700 bg-slate-50"></div>
+              <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3.5 text-slate-400 text-sm">schedule</span><input type="time" id="iv_iedz" onchange="calcularTiempos()" class="w-full border border-slate-300 rounded-lg p-2.5 pl-9 shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-slate-700 bg-slate-50"></div>
+            </div>
+          </div>
+          <div class="col-span-2 mt-2">
+            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Fecha Contabilización <span class="req-star">*</span></label>
+            <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3.5 text-slate-400 text-sm">edit_calendar</span><input type="date" id="iv_budat" required class="w-full border border-slate-300 rounded-lg p-2.5 pl-9 shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-slate-700 bg-slate-50"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+          <h2 class="font-bold text-lg text-slate-800 flex items-center"><span class="material-symbols-outlined mr-2 text-brand-600">bolt</span> Consumos Adicionales</h2>
+        </div>
+        
+        <input type="hidden" id="iv_ism01" value=""><input type="hidden" id="iv_ile01" value="H">
+        <input type="hidden" id="iv_ism02" value=""><input type="hidden" id="iv_ile02" value="H">
+        <input type="hidden" id="iv_ism05" value=""><input type="hidden" id="iv_ile05" value="H">
+
+        <div class="space-y-4">
+          <div class="flex space-x-3 items-center">
+            <label class="w-1/2 text-sm font-semibold text-slate-600">Consumo Energía</label>
+            <div class="w-1/2 flex shadow-sm rounded-lg">
+              <input type="number" step="0.001" id="iv_ism03" oninput="if(this.value.length > 13) this.value = this.value.slice(0,13);" placeholder="0.000" class="w-2/3 border border-slate-300 p-2.5 rounded-l-lg text-right focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+              <input type="text" id="iv_ile03" value="KWH" class="w-1/3 border border-l-0 border-slate-300 p-2.5 rounded-r-lg bg-slate-100 text-center uppercase text-slate-600 font-bold text-xs" readonly>
+            </div>
+          </div>
+          <div class="flex space-x-3 items-center">
+            <label class="w-1/2 text-sm font-semibold text-slate-600">Consumo Vapor</label>
+            <div class="w-1/2 flex shadow-sm rounded-lg">
+              <input type="number" step="0.001" id="iv_ism04" oninput="if(this.value.length > 13) this.value = this.value.slice(0,13);" placeholder="0.000" class="w-2/3 border border-slate-300 p-2.5 rounded-l-lg text-right focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+              <input type="text" id="iv_ile04" value="T" class="w-1/3 border border-l-0 border-slate-300 p-2.5 rounded-r-lg bg-slate-100 text-center uppercase text-slate-600 font-bold text-xs" readonly>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h2 class="font-bold text-lg text-slate-800 flex items-center"><span class="material-symbols-outlined mr-2 text-brand-600">inventory_2</span> Componentes</h2>
+          <button type="button" onclick="agregarComponente()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center"><span class="material-symbols-outlined text-sm mr-1">add</span> Fila</button>
+        </div>
+        <div id="componentesContainer" class="space-y-6 pt-2"></div>
+        <button type="button" onclick="agregarComponente()" class="w-full mt-4 bg-slate-50 hover:bg-slate-100 text-brand-600 border-2 border-dashed border-slate-300 hover:border-brand-400 py-4 rounded-xl font-bold flex items-center justify-center"><span class="material-symbols-outlined text-2xl mr-2">add_circle</span> Agregar Componente</button>
+      </section>
+
+      <div class="fixed bottom-0 left-0 w-full bg-white border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
+        <div class="max-w-4xl mx-auto">
+          <button type="submit" id="btnSubmit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 rounded-xl shadow-md text-lg flex justify-center items-center transition-all focus:outline-none focus:ring-4 focus:ring-brand-300"><span class="material-symbols-outlined mr-2">send</span><span>Contabilizar en SAP</span></button>
+        </div>
+      </div>
+      <div class="h-10"></div>
+    </form>
+  </main>
+
+  <!-- VISTA 2: PANEL DE LOGS -->
+  <main id="viewLogs" class="hidden p-4 max-w-4xl mx-auto space-y-4 mt-2 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="font-bold text-lg text-slate-800 flex items-center mb-4"><span class="material-symbols-outlined mr-2 text-brand-600">history</span> Historial Reciente (Servidor Local)</h2>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">Orden</label>
+          <input type="text" id="filtroOrden" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Ej. 100234">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">Usuario</label>
+          <input type="text" id="filtroUsuario" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Ej. juan@daabon.com">
+        </div>
+      </div>
+      <button onclick="buscarLogs()" class="w-full bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 font-bold py-2.5 rounded-lg flex items-center justify-center transition-colors">
+        <span class="material-symbols-outlined mr-2 text-sm">filter_alt</span> Aplicar Filtros
+      </button>
+    </div>
+    <div id="logsResults" class="space-y-3 pb-24"></div>
+  </main>
+
+  <div id="selectionModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/40 w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+        <h3 id="modalTitle" class="font-bold text-lg text-slate-800">Seleccionar</h3>
+        <button type="button" onclick="cerrarModalSeleccion()" class="text-slate-400 hover:text-slate-700 rounded-full p-1"><span class="material-symbols-outlined text-2xl">close</span></button>
+      </div>
+      <div class="p-3 border-b border-slate-100">
+        <div class="relative"><span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 text-sm">search</span><input type="text" id="modalSearch" oninput="filtrarOpcionesModal()" placeholder="Buscar..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"></div>
+      </div>
+      <div id="modalItemsList" class="overflow-y-auto p-3 space-y-2 flex-1 divide-y divide-slate-100"></div>
+      <div class="p-3 border-t border-slate-100 bg-slate-50/50 text-right">
+        <button type="button" onclick="cerrarModalSeleccion()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // MSAL CONFIGURATION (AZURE AD - MICROSOFT SSO)
+    // =====================================================
+    const msalConfig = {
+      auth: {
+        // !!! PEGA TUS IDs DE AZURE AQUÍ !!!
+        clientId: "292f3257-185c-4f40-adb6-0542f774ea95",
+        authority: "https://login.microsoftonline.com/d32abad8-2dae-49c2-ad31-281c08db2327",
+        redirectUri: window.location.origin + "/" 
+      },
+      cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false },
+      system: {
+        loggerOptions: {
+            loggerCallback: (level, message, containsPii) => { if (containsPii) return; console.log(`[LOG MSAL]: ${message}`); },
+            logLevel: msal.LogLevel.Warning, piiLoggingEnabled: false
+        }
+      }
+    };
+    
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    
+    const dominiosPermitidos = [
+      "@daabon.com.co", "@c-ecosoaps.com", "@cltequendama.onmicrosoft.com", 
+      "@daabon.com", "@daabon.com.br", "@daabonorganic.com", 
+      "@daabonuk.com", "@dabon.com.co", "@elogia.com.co", "@elogiasl.com"
+    ];
+
+    function esDominioPermitido(email) {
+      if (!email) return false;
+      const emailLower = email.toLowerCase().trim();
+      return dominiosPermitidos.some(dominio => emailLower.endsWith(dominio));
+    }
+    // =====================================================
+
+    let recetaMaestra = []; let operacionesDisponibles = []; let modalTargetRow = null; 
+    let modalMode = ''; let sessionUser = null; let isLogsView = false; let logsCache = []; 
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await manejarRetornoMicrosoft();
+      verificarSesion();
+      
+      const hoy = new Date().toISOString().split('T')[0];
+      const hora = new Date().toTimeString().split(' ')[0].substring(0, 5);
+      document.getElementById('iv_isdd').value = hoy; document.getElementById('iv_iedd').value = hoy;
+      document.getElementById('iv_budat').value = hoy; document.getElementById('iv_isdz').value = hora;
+      document.getElementById('iv_iedz').value = hora;
+
+      document.addEventListener('wheel', function(e) { if (e.target.type === 'number') e.preventDefault(); }, { passive: false });
+      renderizarOrdenesRecientes(); agregarComponente(false);
+    });
+
+    async function manejarRetornoMicrosoft() {
+      try {
+        const response = await msalInstance.handleRedirectPromise();
+        if (response !== null) {
+          const account = response.account;
+          if (!esDominioPermitido(account.username)) {
+             msalInstance.logoutRedirect(); return;
+          }
+          sessionUser = { nombre: account.name, correo: account.username };
+          localStorage.setItem('sap_operador_sesion', JSON.stringify(sessionUser));
+          Swal.fire({ icon: 'success', title: `Hola, ${sessionUser.nombre}`, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        }
+      } catch (error) { console.error("Error al retornar de Microsoft:", error); }
+    }
+
+    function verificarSesion() {
+      const storedUser = localStorage.getItem('sap_operador_sesion');
+      const currentAccounts = msalInstance.getAllAccounts();
+      
+      if (currentAccounts.length > 0 && !esDominioPermitido(currentAccounts[0].username)) {
+          msalInstance.logoutRedirect(); return;
+      }
+
+      if (storedUser || currentAccounts.length > 0) {
+        if (!storedUser && currentAccounts.length > 0) {
+           sessionUser = { nombre: currentAccounts[0].name, correo: currentAccounts[0].username };
+           localStorage.setItem('sap_operador_sesion', JSON.stringify(sessionUser));
+        } else {
+           sessionUser = JSON.parse(storedUser);
+        }
+        document.getElementById('userNameDisplay').innerText = sessionUser.nombre;
+        document.getElementById('loginOverlay').classList.add('hidden');
+      } else {
+        document.getElementById('loginOverlay').classList.remove('hidden');
+      }
+    }
+
+    async function loginMicrosoft(e) {
+      e.preventDefault();
+      const emailInput = document.getElementById('loginEmail').value.trim();
+      if (!esDominioPermitido(emailInput)) {
+          Swal.fire({ icon: 'warning', title: 'Correo no válido', text: 'Debes utilizar una cuenta de correo corporativo autorizada.' });
+          return;
+      }
+
+      const btn = document.getElementById('btnMsLogin');
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">sync</span> Redirigiendo a Microsoft...';
+      btn.disabled = true; btn.classList.add('opacity-75');
+
+      try {
+        if (!window.crypto || !window.crypto.subtle) throw new Error("HTTPS_REQUIRED_OR_LOCALHOST");
+        const loginRequest = { scopes: ["User.Read"], loginHint: emailInput };
+        await msalInstance.loginRedirect(loginRequest);
+      } catch (error) {
+        console.error("Error técnico de MSAL:", error);
+        btn.innerHTML = '<svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24"><path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/></svg> Continuar con Microsoft';
+        btn.disabled = false; btn.classList.remove('opacity-75');
+        if (error.message === "HTTPS_REQUIRED_OR_LOCALHOST") Swal.fire({ icon: 'error', title: 'Entorno no seguro', text: 'El navegador bloqueó la criptografía por falta de HTTPS.' });
+        else Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'Microsoft rechazó la solicitud.' });
+      }
+    }
+
+    function cerrarSesion() {
+      Swal.fire({ title: '¿Cerrar Sesión?', icon: 'question', showCancelButton: true, confirmButtonColor: '#1d4ed8', cancelButtonColor: '#64748b', confirmButtonText: 'Sí, salir', cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) { localStorage.removeItem('sap_operador_sesion'); sessionUser = null; msalInstance.logoutRedirect(); }
+      });
+    }
+
+    function calcularTiempos() {
+      const dIni = document.getElementById('iv_isdd').value, tIni = document.getElementById('iv_isdz').value;
+      const dFin = document.getElementById('iv_iedd').value, tFin = document.getElementById('iv_iedz').value;
+      if(dIni && tIni && dFin && tFin) {
+        const dtIni = new Date(`${dIni}T${tIni}:00`); let dtFin = new Date(`${dFin}T${tFin}:00`);
+        if(dtFin < dtIni) { dtFin.setDate(dtFin.getDate() + 1); }
+        let diffMs = dtFin - dtIni;
+        if(diffMs > 0) {
+          const diffHours = (diffMs / (1000 * 60 * 60)).toFixed(3);
+          document.getElementById('iv_ism01').value = diffHours; document.getElementById('iv_ism02').value = diffHours; document.getElementById('iv_ism05').value = diffHours; 
+        } else {
+          document.getElementById('iv_ism01').value = ''; document.getElementById('iv_ism02').value = ''; document.getElementById('iv_ism05').value = '';
+        }
+      }
+    }
+
+    function toggleView() {
+      const btn = document.getElementById('btnSwitchView'), vForm = document.getElementById('viewForm'), vLogs = document.getElementById('viewLogs');
+      if (!isLogsView) {
+        vForm.classList.replace('block', 'hidden'); vLogs.classList.replace('hidden', 'block');
+        btn.innerHTML = `<span class="material-symbols-outlined text-sm mr-1">arrow_back</span> <span>Volver</span>`;
+        btn.classList.replace('bg-brand-800', 'bg-slate-700'); btn.classList.replace('border-brand-500', 'border-slate-600');
+        isLogsView = true; buscarLogs(); 
+      } else {
+        vLogs.classList.replace('block', 'hidden'); vForm.classList.replace('hidden', 'block');
+        btn.innerHTML = `<span class="material-symbols-outlined text-sm mr-1">manage_search</span> <span>Logs</span>`;
+        btn.classList.replace('bg-slate-700', 'bg-brand-800'); btn.classList.replace('border-slate-600', 'border-brand-500');
+        isLogsView = false;
+      }
+    }
+
+    async function buscarLogs() {
+      const orden = document.getElementById('filtroOrden').value.trim(), usuario = document.getElementById('filtroUsuario').value.trim(), container = document.getElementById('logsResults');
+      container.innerHTML = `<div class="text-center py-10 text-slate-400"><span class="material-symbols-outlined animate-spin text-4xl block mx-auto mb-2">sync</span>Cargando historial...</div>`;
+      try {
+        const params = new URLSearchParams(); if (orden) params.append('orden', orden); if (usuario) params.append('usuario', usuario);
+        const res = await fetch(`/api/logs?${params.toString()}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.message);
+        dibujarTarjetasLogs(data.data);
+      } catch (error) { container.innerHTML = `<div class="text-center py-6 text-red-500 bg-red-50 rounded-xl border border-red-200">Error al leer datos del servidor: ${error.message}</div>`; }
+    }
+
+    function dibujarTarjetasLogs(logs) {
+      logsCache = logs; const container = document.getElementById('logsResults'); container.innerHTML = '';
+      if (!logs || logs.length === 0) { container.innerHTML = `<div class="text-center py-10 text-slate-500 bg-white rounded-xl border border-slate-200">No se encontraron registros.</div>`; return; }
+
+      logs.forEach((log, index) => {
+        let colorBg = 'bg-slate-50', colorText = 'text-slate-800', colorBorder = 'border-slate-300';
+        const st = log.estado.toUpperCase();
+        if (st.includes('ÉXITO')) { colorBg = 'bg-emerald-100'; colorText = 'text-emerald-800'; colorBorder = 'border-emerald-300'; }
+        else if (st.includes('ADVERTENCIA') || st.includes('COGI')) { colorBg = 'bg-amber-100'; colorText = 'text-amber-800'; colorBorder = 'border-amber-300'; }
+        else if (st.includes('ERROR') || st.includes('RECHAZO')) { colorBg = 'bg-red-100'; colorText = 'text-red-800'; colorBorder = 'border-red-300'; }
+
+        const card = document.createElement('div'); card.className = "bg-white rounded-xl shadow-sm border border-slate-200 p-4 relative flex flex-col space-y-2";
+        card.innerHTML = `
+          <div class="flex justify-between items-start"><span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${colorBg} ${colorText} ${colorBorder}">${log.estado}</span><span class="text-xs text-slate-400 font-mono">${log.fecha}</span></div>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Orden</p><p class="font-bold text-slate-700">${log.orden || 'N/A'}</p></div>
+            <div class="text-right"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Confirmación</p><p class="font-bold text-brand-600 font-mono">${log.rueck || 'Fallida'}</p></div>
+          </div>
+          <div class="flex items-center space-x-1 border-t border-slate-100 pt-2 mt-2"><span class="material-symbols-outlined text-[14px] text-slate-400">person</span><span class="text-xs text-slate-600 truncate">${log.usuario}</span></div>
+          <button type="button" onclick="verDetalleJson(${index})" class="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold py-2 rounded-lg flex items-center justify-center transition-colors"><span class="material-symbols-outlined text-sm mr-1">visibility</span> Ver Detalle</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function verDetalleJson(index) {
+      const log = logsCache[index]; let pObj = {}, rObj = {};
+      try { pObj = JSON.parse(log.payload); } catch(e){} try { rObj = JSON.parse(log.respuesta); } catch(e){}
+
+      let reqHtml = '';
+      if(Object.keys(pObj).length > 0) {
+        reqHtml += `<div class="mb-4"><h4 class="font-bold text-brand-700 border-b border-brand-200 pb-1 mb-2">Datos Principales</h4><div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-slate-500">Orden:</span> <strong class="text-slate-800">${pObj.IV_AUFNR || '-'}</strong></div>
+              <div><span class="text-slate-500">Ctd. Buena:</span> <strong class="text-slate-800">${pObj.IV_LMNGA || '0'}</strong></div>
+              <div><span class="text-slate-500">Ctd. Rechazo:</span> <strong class="text-slate-800">${pObj.IV_XMNGA || '0'}</strong></div>
+              <div><span class="text-slate-500">Motivo:</span> <strong class="text-slate-800">${pObj.IV_GRUND || '-'}</strong></div>
+              <div><span class="text-slate-500">F. Contab.:</span> <strong class="text-slate-800">${pObj.IV_BUDAT || '-'}</strong></div></div></div>`;
+
+        const acts = [ { name: "T. Máquina", val: pObj.IV_ISM01, un: pObj.IV_ILE01 }, { name: "T. Mano Obra", val: pObj.IV_ISM02, un: pObj.IV_ILE02 }, { name: "Cons. Energía", val: pObj.IV_ISM03, un: pObj.IV_ILE03 }, { name: "Cons. Vapor", val: pObj.IV_ISM04, un: pObj.IV_ILE04 }, { name: "Otros CIF", val: pObj.IV_ISM05, un: pObj.IV_ILE05 } ];
+        const actsFil = acts.filter(a => a.val && parseFloat(a.val) > 0);
+        if (actsFil.length > 0) {
+          reqHtml += `<div class="mb-4"><h4 class="font-bold text-brand-700 border-b border-brand-200 pb-1 mb-2">Actividades</h4><div class="grid grid-cols-2 gap-2 text-xs">`;
+          actsFil.forEach(a => { reqHtml += `<div><span class="text-slate-500">${a.name}:</span> <strong class="text-slate-800">${a.val} ${a.un||''}</strong></div>`; });
+          reqHtml += `</div></div>`;
+        }
+
+        let comps = []; if (pObj.IT_COMPONENTS && pObj.IT_COMPONENTS.item) comps = Array.isArray(pObj.IT_COMPONENTS.item) ? pObj.IT_COMPONENTS.item : [pObj.IT_COMPONENTS.item];
+        if (comps.length > 0) {
+          reqHtml += `<div class="mb-2"><h4 class="font-bold text-brand-700 border-b border-brand-200 pb-1 mb-2">Componentes</h4><div class="overflow-x-auto"><table class="w-full text-[10px] text-left border-collapse border border-slate-200"><thead class="bg-slate-100 text-slate-600"><tr><th class="p-1.5 border">Material</th><th class="p-1.5 border">Cant.</th><th class="p-1.5 border">Cen/Alm</th><th class="p-1.5 border">Lote</th></tr></thead><tbody>`;
+          comps.forEach(c => { reqHtml += `<tr><td class="p-1.5 border font-bold text-slate-800 break-all">${c.MATERIAL||'-'}</td><td class="p-1.5 border">${c.CANTIDAD||'0'} ${c.UNIDAD||''}</td><td class="p-1.5 border">${c.CENTRO||''}/${c.ALMACEN||''}</td><td class="p-1.5 border break-all">${c.NUM_LOTE||'-'}</td></tr>`; });
+          reqHtml += `</tbody></table></div></div>`;
+        }
+      } else { reqHtml = `<div class="text-xs text-red-500">Estructura no válida o vacía.</div><pre class="mt-2 p-2 bg-slate-200 rounded text-[10px] text-slate-700">${log.payload}</pre>`; }
+
+      let resHtml = '';
+      if(Object.keys(rObj).length > 0) {
+        const rootRes = rObj.Z_AUTO_REGISTRO_NOTIFI_EXTRResponse || rObj;
+        const evRueck = rootRes.EV_RUECK || "", evMessage = rootRes.EV_MESSAGE || "", mblnr = extraerTablaCPI(rootRes.ET_MBLNR), cogi = extraerTablaCPI(rootRes.ET_COGI), returns = extraerTablaCPI(rootRes.ET_RETURN);
+
+        resHtml += `<div class="mb-4"><h4 class="font-bold text-emerald-700 border-b border-emerald-200 pb-1 mb-2">Resultado Principal</h4><div class="text-xs space-y-1">`;
+        if (evRueck) resHtml += `<div><span class="text-slate-500">Confirmación:</span> <strong class="text-emerald-700 text-sm">${evRueck}</strong></div>`;
+        if (evMessage) resHtml += `<div><span class="text-slate-500">Mensaje:</span> <strong class="text-slate-800">${evMessage}</strong></div>`;
+        resHtml += `</div></div>`;
+
+        if (mblnr.length > 0) {
+          resHtml += `<div class="mb-3"><strong class="text-[10px] text-emerald-800 uppercase block mb-1">Documentos Generados:</strong><ul class="text-xs list-disc pl-4 text-slate-700 space-y-1">`;
+          mblnr.forEach(d => { let doc = getPropIgnoreCase(d, 'MAT_DOC') || getPropIgnoreCase(d, 'MBLNR'), y = getPropIgnoreCase(d, 'DOC_YEAR') || getPropIgnoreCase(d, 'MJAHR'); if(doc) resHtml += `<li>Doc: <strong>${doc}</strong> (Año: ${y})</li>`; });
+          resHtml += `</ul></div>`;
+        }
+        if (cogi.length > 0) {
+          resHtml += `<div class="mb-3"><strong class="text-[10px] text-amber-800 uppercase block mb-1">Mensajes de COGI:</strong><ul class="text-xs list-disc pl-4 text-amber-900 space-y-1">`;
+          cogi.forEach(c => { let msg = getPropIgnoreCase(c, 'MESSAGE') || getPropIgnoreCase(c, 'MSG'); if(msg) resHtml += `<li>${msg}</li>`; });
+          resHtml += `</ul></div>`;
+        }
+        if (returns.length > 0) {
+          resHtml += `<div class="mb-1"><strong class="text-[10px] text-slate-600 uppercase block mb-1">Mensajes del Sistema:</strong><ul class="text-xs list-disc pl-4 text-slate-700 space-y-1">`;
+          returns.forEach(r => { 
+             let msg = getPropIgnoreCase(r, 'MESSAGE') || getPropIgnoreCase(r, 'MSG');
+             let type = (getPropIgnoreCase(r, 'TYPE') || getPropIgnoreCase(r, 'MSGTY') || "").toUpperCase();
+             if(msg) resHtml += `<li><strong>[${type}]</strong> ${msg}</li>`; 
+          });
+          resHtml += `</ul></div>`;
+        }
+      } else resHtml = `<div class="text-xs text-red-500">Respuesta vacía o error HTTP.</div><pre class="mt-2 p-2 bg-emerald-100 rounded text-[10px] text-emerald-800">${log.respuesta}</pre>`;
+
+      Swal.fire({
+        title: 'Detalle de Ejecución',
+        html: `<div class="text-left font-sans"><div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 shadow-sm"><h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center"><span class="material-symbols-outlined mr-1 text-base">upload</span> Datos Enviados</h3>${reqHtml}</div><div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 shadow-sm"><h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center"><span class="material-symbols-outlined mr-1 text-base">download</span> Respuesta SAP</h3>${resHtml}</div></div>`,
+        width: '600px', showCloseButton: true, showConfirmButton: false, customClass: { popup: 'swal2-popup' }
+      });
+    }
+
+    function renderizarOrdenesRecientes() {
+      const datalist = document.getElementById('listaOrdenesRecientes'); datalist.innerHTML = '';
+      let recientes = JSON.parse(localStorage.getItem('sap_ordenes_recientes') || '[]');
+      recientes.forEach(orden => { let option = document.createElement('option'); option.value = orden; datalist.appendChild(option); });
+    }
+
+    function guardarOrdenReciente(orden) {
+      if (!orden) return; let recientes = JSON.parse(localStorage.getItem('sap_ordenes_recientes') || '[]');
+      recientes = recientes.filter(o => o !== orden); recientes.unshift(orden); 
+      if (recientes.length > 10) recientes.pop(); localStorage.setItem('sap_ordenes_recientes', JSON.stringify(recientes)); renderizarOrdenesRecientes();
+    }
+
+    async function cargarMaestrosOrden() {
+      const orden = document.getElementById('iv_aufnr').value;
+      if (!orden) { mostrarAlerta('bg-amber-50 border-amber-200', 'text-amber-800', 'warning', 'Ingrese un número de orden primero.'); return; }
+
+      const loader = document.getElementById('loaderOrden'); loader.classList.remove('hidden'); document.getElementById('iv_arbpl').value = '';
+      recetaMaestra = []; operacionesDisponibles = [];
+
+      try {
+        const res = await fetch('/api/orden', {
+           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orden })
+        });
+        const data = await res.json();
+        procesarMaestros(data, orden);
+      } catch (error) { loader.classList.add('hidden'); mostrarAlerta('bg-red-50 border-red-200', 'text-red-800', 'error', 'Error conectando al servidor Ubuntu.'); }
+    }
+
+    function procesarMaestros(response, ordenBuscada) {
+      document.getElementById('loaderOrden').classList.add('hidden');
+      if (response.errorHTTP) { mostrarAlerta('bg-red-50 border-red-200', 'text-red-800', 'error', `Error CPI: ${response.E_MESSAGE}`); return; }
+
+      const root = response.ZFPP_ORDEN_DAT_MAESTROSResponse || response;
+      if (!root.TAB_ORDENES_FAB || !root.TAB_ORDENES_FAB.item) { mostrarAlerta('bg-amber-50 border-amber-200', 'text-amber-800', 'warning', root.E_MESSAGE || "La orden no existe."); return; }
+
+      guardarOrdenReciente(ordenBuscada);
+      let ordenes = Array.isArray(root.TAB_ORDENES_FAB.item) ? root.TAB_ORDENES_FAB.item : [root.TAB_ORDENES_FAB.item];
+      const ordenData = ordenes[0];
+
+      document.getElementById('iv_arbpl').value = ordenData.ARBPL || 'N/A';
+      recetaMaestra = [];
+      if (ordenData.RECETA && ordenData.RECETA.item) { recetaMaestra = Array.isArray(ordenData.RECETA.item) ? ordenData.RECETA.item : [ordenData.RECETA.item]; }
+
+      const mapOps = new Map();
+      if (ordenData.VORNR) { let opClean = ordenData.VORNR.replace(/^0+/, ''); mapOps.set(opClean, ordenData.LTXA1 || `Operación ${opClean}`); }
+      recetaMaestra.forEach(r => { if (r.VORNR) { let opClean = r.VORNR.replace(/^0+/, ''); if (!mapOps.has(opClean)) mapOps.set(opClean, `Operación ${opClean}`); } });
+
+      operacionesDisponibles = Array.from(mapOps, ([vornr, desc]) => ({ vornr, desc }));
+      if (operacionesDisponibles.length > 0 && !document.getElementById('iv_vornr').value) { document.getElementById('iv_vornr').value = operacionesDisponibles[0].vornr; }
+
+      mostrarAlerta('bg-emerald-50 border-emerald-300', 'text-emerald-900', 'check_circle', root.E_MESSAGE || 'Datos cargados.');
+      setTimeout(() => { document.getElementById('alertBox').classList.add('hidden'); }, 3000);
+    }
+
+    function abrirModalMateriales(btn) {
+      if (recetaMaestra.length === 0) { Swal.fire({ icon: 'info', title: 'Sin receta', text: 'Consulte una orden válida.' }); return; }
+      modalMode = 'MAT'; modalTargetRow = btn.closest('.component-row'); document.getElementById('modalTitle').innerText = 'Seleccionar Material';
+      const items = recetaMaestra.map(r => ({ code: r.MATNR.replace(/^0+/, ''), title: r.MAKTX || 'Sin descripción', desc: `Mat: ${r.MATNR.replace(/^0+/, '')} | Almacén: ${r.LGORT || 'N/A'}` }));
+      renderizarItemsModal(items); document.getElementById('selectionModal').classList.remove('hidden');
+    }
+
+    function renderizarItemsModal(lista) {
+      const container = document.getElementById('modalItemsList'); container.innerHTML = ''; document.getElementById('modalSearch').value = '';
+      lista.forEach(item => {
+        const div = document.createElement('div'); div.className = "modal-option-item p-3 hover:bg-brand-50 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-brand-200";
+        div.setAttribute('data-search', `${item.code} ${item.title} ${item.desc}`.toLowerCase());
+        div.onclick = () => seleccionarOpcionModal(item.code, item.title);
+        div.innerHTML = `<div class="font-bold text-sm text-slate-800 text-brand-700">${item.title}</div><div class="text-xs text-slate-500 mt-0.5">${item.desc}</div>`;
+        container.appendChild(div);
+      });
+    }
+
+    function filtrarOpcionesModal() {
+      const query = document.getElementById('modalSearch').value.toLowerCase();
+      document.querySelectorAll('.modal-option-item').forEach(el => { el.style.display = el.getAttribute('data-search').includes(query) ? 'block' : 'none'; });
+    }
+
+    function seleccionarOpcionModal(codigo, titulo) {
+      if (modalMode === 'MAT' && modalTargetRow) { 
+         const inputMatDesc = modalTargetRow.querySelector('input[name="material_desc[]"]'); const inputMatCode = modalTargetRow.querySelector('input[name="material[]"]'); 
+         inputMatCode.value = codigo; inputMatDesc.value = titulo; autocompletarFila(inputMatCode); 
+      }
+      cerrarModalSeleccion();
+    }
+
+    function cerrarModalSeleccion() { document.getElementById('selectionModal').classList.add('hidden'); modalTargetRow = null; modalMode = ''; }
+    function reenumerarFilas() { document.querySelectorAll('.component-row').forEach((fila, index) => { const badge = fila.querySelector('.row-number-badge'); if (badge) badge.textContent = index + 1; }); }
+
+    function eliminarFila(btn) {
+      const fila = btn.closest('.component-row'); const mat = fila.querySelector('input[name="material[]"]').value.trim();
+      if (mat === "") { fila.remove(); reenumerarFilas(); } 
+      else { Swal.fire({ title: '¿Eliminar componente?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }).then((r) => { if (r.isConfirmed) { fila.remove(); reenumerarFilas(); } }); }
+    }
+
+    function agregarComponente(scroll = true) {
+      const container = document.getElementById('componentesContainer'); const div = document.createElement('div');
+      div.className = "bg-slate-50 border border-slate-200 p-4 rounded-xl grid grid-cols-2 gap-3 relative component-row transition-all hover:shadow-md";
+      div.innerHTML = `
+        <div class="absolute -top-3 -left-3 bg-brand-600 text-white border-2 border-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shadow-md row-number-badge z-10"></div>
+        <button type="button" onclick="eliminarFila(this)" class="absolute -top-3 -right-3 bg-white border border-slate-200 text-slate-400 hover:text-red-500 rounded-full w-8 h-8 flex items-center justify-center shadow-sm focus:outline-none z-10"><span class="material-symbols-outlined text-lg">delete</span></button>
+        <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Material <span class="req-star">*</span></label><div class="flex shadow-sm rounded-lg"><input type="hidden" name="material[]" required><input type="text" name="material_desc[]" placeholder="Buscar material..." readonly class="w-full border border-slate-300 rounded-l-lg p-2.5 uppercase font-bold text-brand-700 outline-none text-sm bg-white cursor-pointer" onclick="abrirModalMateriales(this)"><button type="button" onclick="abrirModalMateriales(this)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 rounded-r-lg border border-l-0 border-slate-300"><span class="material-symbols-outlined text-lg">list</span></button></div></div>
+        <div class="col-span-2 text-xs text-slate-500 desc-mat px-1 font-medium -mt-1 mb-1"></div>
+        <select name="clase_mov[]" class="hidden"><option value="261">Consumo (261)</option><option value="101">Entrada (101)</option><option value="531">Consumo (531)</option></select>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">Cantidad <span class="req-star">*</span></label><div class="flex shadow-sm rounded-lg"><input type="number" step="0.001" name="cantidad[]" required class="w-2/3 border border-slate-300 p-2.5 rounded-l-lg font-bold focus:ring-2 focus:ring-brand-500 text-right"><input type="text" name="unidad[]" value="KG" class="w-1/3 border border-l-0 border-slate-300 p-2.5 rounded-r-lg bg-slate-100 text-center uppercase text-slate-600 font-bold text-sm" readonly></div></div>
+        <div><label class="block text-xs font-semibold text-slate-600 mb-1">Lote</label><input type="text" name="lote[]" class="w-full border border-slate-300 p-2.5 rounded-lg uppercase shadow-sm focus:ring-2 focus:ring-brand-500 text-sm text-center tracking-widest text-slate-700"></div>
+        <div class="hidden"><input type="text" name="centro[]" value="1000"></div><div class="hidden"><input type="text" name="almacen[]"></div>
+      `;
+      container.appendChild(div); reenumerarFilas();
+      if (scroll) setTimeout(() => { div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); 
+    }
+
+    function autocompletarFila(inputElemCode) {
+      let valEscrito = inputElemCode.value.toUpperCase().trim(); let row = inputElemCode.closest('.component-row');
+      let match = recetaMaestra.find(r => r.MATNR.replace(/^0+/, '') === valEscrito);
+      if (match) {
+        row.querySelector('.desc-mat').innerText = match.MATNR.replace(/^0+/, ''); 
+        row.querySelector('[name="centro[]"]').value = match.WERKS || '1000'; row.querySelector('[name="almacen[]"]').value = match.LGORT || ''; 
+        row.querySelector('[name="lote[]"]').value = match.CHARG || ''; if (match.BWART && match.BWART !== '') row.querySelector('[name="clase_mov[]"]').value = match.BWART;
+      }
+    }
+
+    function formatearFechaSAP(htmlDate) { return htmlDate ? htmlDate : ""; } function formatearHoraSAP(htmlTime) { return htmlTime ? htmlTime + ':00' : '00:00:00'; }
+
+    async function enviarDatos(event) {
+      event.preventDefault();
+      if (!sessionUser || !sessionUser.correo) { Swal.fire({ icon: 'error', title: 'Sesión Inválida', text: 'Debe iniciar sesión.' }); return; }
+
+      try {
+        const btn = document.getElementById('btnSubmit'); btn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">sync</span><span>Procesando...</span>';
+        btn.disabled = true; btn.classList.replace('bg-brand-600', 'bg-slate-400'); btn.classList.replace('hover:bg-brand-700', 'hover:bg-slate-400');
+        calcularTiempos();
+        
+        const payload = {
+          IV_AUFNR: document.getElementById('iv_aufnr').value, IV_VORNR: (document.getElementById('iv_vornr').value || '0010').padStart(4, '0'),
+          IV_LMNGA: parseFloat(document.getElementById('iv_lmnga').value) || 0, IV_XMNGA: parseFloat(document.getElementById('iv_xmnga').value) || 0,
+          IV_GRUND: document.getElementById('iv_grund').value || "", IV_ISDD: formatearFechaSAP(document.getElementById('iv_isdd').value),
+          IV_ISDZ: formatearHoraSAP(document.getElementById('iv_isdz').value), IV_IEDD: formatearFechaSAP(document.getElementById('iv_iedd').value),
+          IV_IEDZ: formatearHoraSAP(document.getElementById('iv_iedz').value), IV_BUDAT: formatearFechaSAP(document.getElementById('iv_budat').value),
+          IV_ISM01: parseFloat(document.getElementById('iv_ism01').value) || 0, IV_ILE01: document.getElementById('iv_ile01').value,
+          IV_ISM02: parseFloat(document.getElementById('iv_ism02').value) || 0, IV_ILE02: document.getElementById('iv_ile02').value,
+          IV_ISM03: parseFloat(document.getElementById('iv_ism03').value) || 0, IV_ILE03: document.getElementById('iv_ile03').value,
+          IV_ISM04: parseFloat(document.getElementById('iv_ism04').value) || 0, IV_ILE04: document.getElementById('iv_ile04').value,
+          IV_ISM05: parseFloat(document.getElementById('iv_ism05').value) || 0, IV_ILE05: document.getElementById('iv_ile05').value,
+          IT_COMPONENTS: { item: [] }, ET_MBLNR: { item: [] }, ET_COGI: { item: [] }, ET_RETURN: { item: [] }
+        };
+
+        // LA CORRECCIÓN ESTÁ AQUÍ (Array.from)
+        Array.from(document.getElementById('componentesContainer').children).forEach((row) => {
+          payload.IT_COMPONENTS.item.push({
+            MATERIAL: row.querySelector('input[name="material[]"]').value, CENTRO: row.querySelector('input[name="centro[]"]').value,
+            ALMACEN: row.querySelector('input[name="almacen[]"]').value, NUM_LOTE: row.querySelector('input[name="lote[]"]').value,
+            CANTIDAD: parseFloat(row.querySelector('input[name="cantidad[]"]').value) || 0,
+            CLASE_MOV: row.querySelector('select[name="clase_mov[]"]').value, UNIDAD: row.querySelector('input[name="unidad[]"]').value 
+          });
+        });
+
+        const res = await fetch('/api/notificacion', {
+           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: payload, usuario: sessionUser.correo })
+        });
+        const data = await res.json();
+        procesarRespuestaSap(data);
+        
+      } catch (error) { errorCritico(error); }
+    }
+
+    function procesarRespuestaSap(rawResponse) {
+      restaurarBoton(); const alertBox = document.getElementById('alertBox');
+      alertBox.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-300', 'text-emerald-900', 'bg-amber-50', 'border-amber-300', 'text-amber-900', 'bg-red-50', 'border-red-300', 'text-red-900');
+      
+      if (rawResponse.errorHTTP) { mostrarAlerta('bg-red-50 border-red-300', 'text-red-900', 'error', `<strong>Error HTTP:</strong> ${rawResponse.EV_MESSAGE || 'Fallo de Red'}`); return; }
+
+      const response = rawResponse.Z_AUTO_REGISTRO_NOTIFI_EXTRResponse || rawResponse;
+      const cogiErrores = extraerTablaCPI(response.ET_COGI), mblnrDocs = extraerTablaCPI(response.ET_MBLNR), returnMsgs = extraerTablaCPI(response.ET_RETURN);
+      const rueck = response.EV_RUECK || "", evMessage = response.EV_MESSAGE || "";
+      let hasError = !rueck, hasCogi = cogiErrores.length > 0;
+
+      let docsHtml = "";
+      if (mblnrDocs.length > 0) {
+        docsHtml += `<div class="mt-3"><strong class="text-xs text-emerald-900 uppercase tracking-wide">Documentos Generados:</strong><div class="mt-1 space-y-1">`;
+        mblnrDocs.forEach(d => {
+          const matDoc = getPropIgnoreCase(d, 'MAT_DOC') || getPropIgnoreCase(d, 'MBLNR'), year = getPropIgnoreCase(d, 'DOC_YEAR') || getPropIgnoreCase(d, 'MJAHR');
+          if (matDoc) docsHtml += `<div class="bg-emerald-50 border border-emerald-300 rounded-lg p-2 flex justify-between items-center text-xs font-mono text-emerald-900 shadow-sm"><span>Doc: <strong class="text-sm">${matDoc}</strong></span><span>Año: <strong>${year}</strong></span></div>`;
+        });
+        docsHtml += `</div></div>`;
+      }
+
+      let cogiHtml = "";
+      if (cogiErrores.length > 0) {
+        cogiHtml += `<div class="mt-3"><strong class="text-xs text-amber-900 uppercase tracking-wide">Mensajes de COGI:</strong><div class="mt-1 space-y-2">`;
+        cogiErrores.forEach(e => {
+          const msg = getPropIgnoreCase(e, 'MESSAGE') || getPropIgnoreCase(e, 'MSG');
+          if (msg) cogiHtml += `<div class="bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs shadow-sm text-amber-900 font-medium">${msg}</div>`;
+        });
+        cogiHtml += `</div></div>`;
+      }
+
+      let returnHtml = "";
+      if (returnMsgs.length > 0) {
+        returnHtml += `<div class="mt-3"><strong class="text-xs text-slate-700 uppercase tracking-wide">Mensajes del Sistema:</strong><div class="mt-1 space-y-2">`;
+        returnMsgs.forEach(e => {
+          const msg = getPropIgnoreCase(e, 'MESSAGE') || getPropIgnoreCase(e, 'MSG'), type = (getPropIgnoreCase(e, 'TYPE') || getPropIgnoreCase(e, 'MSGTY') || "").toUpperCase();
+          if (type === 'E' || type === 'A') hasError = true;
+          if (msg) returnHtml += `<div class="bg-white border border-slate-300 rounded-lg p-2.5 text-xs shadow-sm text-slate-800 font-medium"><strong>[${type}]</strong> ${msg}</div>`;
+        });
+        returnHtml += `</div></div>`;
+      }
+
+      if (!hasError && !hasCogi) {
+        mostrarAlerta('bg-emerald-50 border-emerald-300', 'text-emerald-900', 'check_circle', `<div><strong class="text-base">${evMessage || '¡Notificación exitosa!'}</strong></div>${rueck ? `<div class="mt-1 text-sm">No. Confirmación: <span class="font-bold underline">${rueck}</span></div>` : ''}${docsHtml}${returnHtml}`);
+        document.getElementById('sapForm').reset(); document.getElementById('componentesContainer').innerHTML = ''; agregarComponente(false); document.getElementById('iv_arbpl').value = '';
+      } else if (!hasError && hasCogi) {
+        mostrarAlerta('bg-amber-50 border-amber-300', 'text-amber-900', 'warning', `<div><strong class="text-base">${evMessage || 'Notificación con observaciones'}</strong></div>${rueck ? `<div class="mt-1 text-sm">No. Confirmación: <span class="font-bold underline">${rueck}</span></div>` : ''}${docsHtml}${cogiHtml}${returnHtml}`);
+        document.getElementById('sapForm').reset(); document.getElementById('componentesContainer').innerHTML = ''; agregarComponente(false); document.getElementById('iv_arbpl').value = '';
+      } else {
+        mostrarAlerta('bg-red-50 border-red-300', 'text-red-900', 'error', `<div><strong class="text-base text-red-700">Error en Contabilización</strong></div>${evMessage ? `<div class="mt-1 text-sm font-medium">${evMessage}</div>` : ''}${returnHtml}`);
+      }
+    }
+
+    function errorCritico(error) { 
+      console.error("Detalle técnico (Crash Local):", error);
+      restaurarBoton(); 
+      mostrarAlerta('bg-red-50 border-red-300', 'text-red-900', 'wifi_off', `<strong>Falla de comunicación:</strong> No se pudo contactar con el servidor Ubuntu.`); 
+    }
+
+    function extraerTablaCPI(obj) {
+      if (!obj) return []; if (typeof obj === 'string') return []; if (Array.isArray(obj)) return obj;
+      if (obj.item !== undefined) { if (Array.isArray(obj.item)) return obj.item; if (typeof obj.item === 'object') return [obj.item]; }
+      if (obj.ITEM !== undefined) { if (Array.isArray(obj.ITEM)) return obj.ITEM; if (typeof obj.ITEM === 'object') return [obj.ITEM]; }
+      if (typeof obj === 'object' && Object.keys(obj).length > 0) return [obj]; return [];
+    }
+
+    function getPropIgnoreCase(obj, prop) {
+      if (!obj || typeof obj !== 'object') return null; const key = Object.keys(obj).find(k => k.toLowerCase() === prop.toLowerCase()); return key ? obj[key] : null;
+    }
+
+    function mostrarAlerta(bgClasses, textClasses, icon, htmlContent) {
+      const alertBox = document.getElementById('alertBox'); alertBox.className = `p-4 rounded-xl shadow-sm border mb-6 text-sm font-medium flex items-start space-x-3 transition-all duration-300 w-full ${bgClasses} ${textClasses}`;
+      document.getElementById('alertIcon').innerText = icon; document.getElementById('alertMessage').innerHTML = htmlContent;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function restaurarBoton() {
+      const btn = document.getElementById('btnSubmit'); btn.innerHTML = '<span class="material-symbols-outlined mr-2">send</span><span>Contabilizar en SAP</span>';
+      btn.disabled = false; btn.classList.replace('bg-slate-400', 'bg-brand-600'); btn.classList.replace('hover:bg-slate-400', 'hover:bg-brand-700');
+    }
+  </script>
+</body>
+</html>

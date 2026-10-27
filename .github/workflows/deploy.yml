@@ -1,0 +1,86 @@
+name: CI/CD - Validación y Despliegue Plataforma SAP
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: 1. Validación de Código, Vistas y Seguridad
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar que no existan archivos .env ni bases de datos rastreados
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "❌ ERROR CRÍTICO: El archivo .env está rastreado en Git."
+            exit 1
+          fi
+          if git ls-files | grep -E '\.(sqlite|sqlite3|db)$'; then
+            echo "❌ ERROR CRÍTICO: Existen archivos de base de datos SQLite rastreados en Git."
+            exit 1
+          fi
+          echo "✅ Ningún archivo sensible (.env / .sqlite) está rastreado en Git."
+
+      - name: Ejecutar validación de sintaxis, vistas y escaneo de secretos
+        run: node scripts/validate-build.js
+
+  deploy:
+    name: 2. Despliegue Controlado en Servidor Linux (10.0.0.146)
+    needs: validate
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.RUNNER_TYPE || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout del código fuente
+        uses: actions/checkout@v4
+
+      - name: Verificar configuración de Secretos de Despliegue SSH
+        id: check_secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$DEPLOY_PATH" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ Secretos SSH_HOST / SSH_USER / SSH_PRIVATE_KEY / DEPLOY_PATH pendientes de configurar en GitHub Actions Secrets."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Desplegar y verificar en Servidor Linux vía SSH
+        if: steps.check_secrets.outputs.configured == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf "%s\n" "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "${SSH_USER}@${SSH_HOST}" \
+            "DEPLOY_DIR='${DEPLOY_PATH}' BRANCH='main' bash '${DEPLOY_PATH}/scripts/deploy-remote.sh'"
+
+          rm -f ~/.ssh/deploy_key
