@@ -18,12 +18,24 @@ Este proyecto conecta una aplicación web ágil y moderna directamente con el se
 3. **Monitoreo Especializado de Buffers (ST02) y Base de Datos (DBACOCKPIT)**: Identificación exacta de qué usuarios, programas o consultas SQL consumen más CPU, lecturas lógicas/físicas o generan demoras en la base de datos con diseño minimalista y explicaciones en español.
 4. **Control de Licencias, Auditoría BASC / HCM y Reporte de Ahorro CADI**: Seguimiento continuo del tope de licencias de diálogo (334 usuarios máximos permitidos), detección de cuentas inactivas por más de 30 días, verificación del job nocturno de retiro de colaboradores desvinculados y cuantificación ejecutiva del retorno de inversión (ROI) con cálculo de horas hombre ahorradas por la autogestión de contraseñas.
 5. **Impacto Cero en Producción**: Diseñado bajo un principio estricto de solo lectura (*read-only*), cachés inteligentes en memoria y serialización de llamadas, garantizando que el monitoreo no añada sobrecarga al sistema productivo.
+6. **Arquitectura Unificada Multi-Vista (`10.0.0.146:3000`)**: Coexistencia transparente en un mismo servidor Node.js/Express (puerto `3000`) junto con la aplicación operativa **Notificación SAP Producción (`app-notificaciones-sap`)**, exponiendo la vista de planta en `/` y la consola de monitoreo técnico en `/monitor` sin interferencia de sesiones ni bases de datos.
 
 ---
 
 ## 2. Arquitectura de Conectividad con SAP Productivo
 
-La conexión entre la aplicación web y el entorno productivo de SAP no utiliza scraping ni emuladores de interfaz gráfica; se fundamenta en el **protocolo oficial binario RFC (Remote Function Call)** de SAP SE a través de bibliotecas nativas de alto rendimiento.
+La conexión entre la aplicación web y el entorno productivo de SAP no utiliza scraping ni emuladores de interfaz gráfica; combina el **protocolo oficial binario RFC (Remote Function Call)** de SAP SE (para el Monitor ERP en `/monitor`) y servicios HTTP REST sobre **SAP Cloud Integration (CPI)** (para Notificaciones de Producción en `/`).
+
+### 2.1. Coexistencia Multi-Vista en el Servidor `10.0.0.146:3000`
+
+| Característica | Vista 1: Notificación SAP Producción (`/`) | Vista 2: Consola de Monitoreo SAP ERP (`/monitor`) |
+| :--- | :--- | :--- |
+| **URL de Acceso** | `http://10.0.0.146:3000/` | `http://10.0.0.146:3000/monitor` (o `/dashboard`) |
+| **Archivo Frontend** | `public/index.html` | `public/monitor.html` |
+| **Autenticación** | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) | SAP Logon Gate directo vía RFC (`USR02`) |
+| **Integración SAP** | SAP CPI (`axios` Basic Auth hacia iFlows QAS/PRD) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) |
+| **Base de Datos Local**| `database.sqlite` (Tabla `logs` de órdenes notificadas) | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`) |
+| **Rutas API** | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET /api/password-resets`, etc. |
 
 ### Diagrama de Arquitectura de la Solución
 
@@ -286,11 +298,13 @@ Para no sobrecargar la pantalla principal, los detalles pesados se abren en vent
 | **Framework HTTP** | **Express** | `^5.3.0` | Enrutamiento de APIs REST y servidor de contenido estático web. |
 | **Conector SAP** | **`node-rfc`** | `^3.3.1` | Addon nativo C++ para enlazar Node.js con el SAP NetWeaver RFC SDK. |
 | **SAP SDK Binario** | **SAP NW RFC SDK** | `7.50` | Bibliotecas C/C++ binarias oficiales de comunicación de SAP. |
-| **Base de Datos Local** | **SQLite3** | `^6.0.1` | Base de datos embebida ligera para persistir series temporales de 8h en intervalos de 15s (~1.920 puntos) y sesiones de autenticación sin tocar la BD de SAP. |
+| **Base de Datos Local** | **SQLite3 + `sqlite`** | `^6.0.1` / `^5.1.1`| Bases de datos embebidas independientes (`monitor_sap.sqlite` para telemetría de 8h a 15s y sesiones RFC; `database.sqlite` para auditoría de notificaciones de planta). |
+| **Cliente HTTP CPI** | **`axios`** | `^1.20.0` | Consumo de endpoints REST de SAP Cloud Integration (CPI) para consulta y contabilización de órdenes de producción. |
 | **Variables de Entorno**| **dotenv** | `^18.0.8` | Gestión segura de configuraciones y credenciales fuera del código fuente. |
 | **CORS Middleware** | **cors** | `^2.8.6` | Seguridad de peticiones de origen cruzado para las rutas de la API. |
-| **Frontend UI** | **HTML5 Semántico + Vanilla JS**| Estándar | Interfaz web ultrarrápida, sin dependencias pesadas ni compilación. |
-| **Diseño y Estilos** | **Tailwind CSS** | CDN v3 | Framework utilitario moderno de diseño con modo oscuro corporativo. |
+| **Frontend UI** | **HTML5 Semántico + Vanilla JS**| Estándar | Vistas desacopladas (`public/index.html` para Planta y `public/monitor.html` para Monitor SAP), sin compilación pesada. |
+| **Autenticación SSO** | **MSAL Browser** | `2.35.0` | Inicio de sesión corporativo con Microsoft Azure AD en la vista de Notificaciones de Planta. |
+| **Diseño y Estilos** | **Tailwind CSS** | CDN v3 | Framework utilitario moderno de diseño con modo claro (Planta) y modo oscuro corporativo (Monitor SAP). |
 | **Visualización Gráfica**| **Chart.js** | v4 | Renderizado de gráficas temporales interactivas y responsivas. |
 | **Iconografía** | **FontAwesome 6** | CDN Pro | Iconografía técnica para estados, advertencias y métricas. |
 
@@ -349,24 +363,28 @@ SAP_ROUTER=/H/sap.daabon.com.co
 ENVIRONMENT_NAME=PRODUCTIVO
 ```
 
-### Paso 5: Iniciar el Servidor
+### Paso 5: Iniciar el Servidor Unificado
 Ejecutar:
 ```powershell
 node server.js
 ```
 
-La consola confirmará el inicio exitoso:
+La consola confirmará el inicio exitoso de ambos módulos:
 ```text
 [OK] Conector node-rfc cargado. Apuntando a SAP 10.0.0.100 (Mandante 300)
 ====================================================
- Consola de Monitoreo SAP ERP activa en puerto 3000
- URL: http://localhost:3000
+ 🚀 Servidor Unificado SAP activo en puerto 3000
+ 📌 Vista Notificaciones Planta: http://localhost:3000/
+ 📊 Vista Monitor SAP ERP:       http://localhost:3000/monitor
 ====================================================
+✅ Base de datos SQLite (Notificaciones Planta: database.sqlite) lista.
 ```
 
-### Paso 6: Abrir en el Navegador
-Ingresar a:
-👉 **`http://localhost:3000`**
+### Paso 6: Abrir en el Navegador (Local o Servidor `10.0.0.146:3000`)
+* **Vista de Notificación SAP Producción (Planta)**:
+  👉 **`http://10.0.0.146:3000/`** (o `http://localhost:3000/`)
+* **Vista de Consola de Monitoreo SAP ERP (Basis / TI)**:
+  👉 **`http://10.0.0.146:3000/monitor`** (o `http://localhost:3000/monitor`)
 
 ---
 

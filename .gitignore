@@ -26,6 +26,7 @@ _noderfc.log
 
 # Scripts de scratch y utilidades temporales
 scratch/
+app-notificaciones-sap/
 
 # Archivos de entorno del editor y sistema operativo
 .DS_Store
