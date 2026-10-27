@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "validate": "node scripts/validate-build.js"
+    "validate": "node scripts/validate-build.js",
+    "deploy": "node scripts/validate-build.js && git push origin main && ssh -o BatchMode=yes plant@10.0.0.146 \"cd /home/plant/app-notificaciones-sap && bash scripts/deploy-remote.sh\""
   },
   "dependencies": {
     "axios": "^1.20.0",

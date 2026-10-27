@@ -383,36 +383,44 @@ La consola confirmará el inicio exitoso de la plataforma y sus módulos:
 ✅ Base de datos SQLite (Notificaciones Planta: database.sqlite) lista.
 ```
 
-### Paso 6: Abrir en el Navegador (Local o Servidor `10.0.0.146`)
+### Paso 6: Abrir en el Navegador (Dominio Corporativo, Servidor `10.0.0.146` o Local)
 * **Página Principal («Plataforma de Aplicaciones SAP»)**:
-  👉 **`https://10.0.0.146/`** (o `http://10.0.0.146:3000/`)
+  👉 **`https://notificaciones-sap.daabon.com.co/`** (o `http://10.0.0.146:3000/`)
 * **Aplicación 1 — Monitor SAP (Basis / TI)**:
-  👉 **`https://10.0.0.146/monitor-sap`** (o `http://10.0.0.146:3000/monitor-sap`)
+  👉 **`https://notificaciones-sap.daabon.com.co/monitor-sap`** (o `http://10.0.0.146:3000/monitor-sap`)
 * **Aplicación 2 — Notificaciones SAP (Planta / Microsoft SSO)**:
-  👉 **`https://10.0.0.146/notificaciones-sap`** (o `http://10.0.0.146:3000/notificaciones-sap`)
+  👉 **`https://notificaciones-sap.daabon.com.co/notificaciones-sap`** (o `http://10.0.0.146:3000/notificaciones-sap`)
 
-### Paso 7: Flujo CI/CD, Despliegue Controlado y Reversión en Linux (`10.0.0.146`)
-1. **Validación Local en Antigravity**:
-   ```bash
-   npm run validate
-   ```
-2. **Publicación en GitHub (`main`)**:
-   ```bash
-   git add .
-   git commit -m "feat: descripción del cambio"
-   git push origin main
-   ```
-3. **Automatización GitHub Actions (`.github/workflows/deploy.yml`)**:
-   * **Job 1 (`validate`)**: Verifica en Ubuntu que no existan archivos `.env` ni `.sqlite` rastreados, valida la sintaxis de todos los servicios JS (`node --check`), comprueba la integridad de las 3 vistas HTML y escanea que no existan secretos expuestos. Si falla, detiene el pipeline e impide actualizar producción.
-   * **Job 2 (`deploy`)**: Se conecta por SSH al servidor Linux usando GitHub Actions Secrets (`SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`) y ejecuta `scripts/deploy-remote.sh`.
-4. **Respaldo, Trazabilidad y Reversión Automática (`scripts/deploy-remote.sh` y `scripts/rollback-remote.sh`)**:
-   * Antes de aplicar cualquier cambio, genera un respaldo comprimido en `backups/release_YYYYMMDD_HHMMSS.tar.gz`.
-   * Preserva intactos el archivo `.env` y las bases de datos `database.sqlite` y `monitor_sap.sqlite` de producción.
-   * Registra el commit desplegado en `.deploy-meta.json` (consultable en vivo vía `GET /api/health`).
-   * Verifica automáticamente las rutas `/api/health`, `/`, `/monitor-sap` y `/notificaciones-sap`. Si alguna falla, ejecuta `scripts/rollback-remote.sh` automáticamente.
-   * Para revertir manualmente a la versión anterior en el servidor Linux:
+### Paso 7: Flujo CI/CD, Despliegue Controlado y Reversión en Linux (`plant@10.0.0.146`)
+1. **Validación y Publicación desde Antigravity**:
+   * Para validar, publicar en GitHub (`main`) y desplegar inmediatamente al servidor Linux en un solo paso:
      ```bash
-     bash scripts/rollback-remote.sh
+     npm run deploy
+     ```
+   * O siguiendo el flujo estándar Git (el sincronizador automático `scripts/auto-sync-github.sh` en el servidor detecta nuevos commits en `origin/main` cada minuto y ejecuta el despliegue controlado):
+     ```bash
+     npm run validate
+     git add .
+     git commit -m "feat: descripción del cambio"
+     git push origin main
+     ```
+2. **Automatización GitHub Actions (`.github/workflows/deploy.yml`)**:
+   * **Job 1 (`validate`)**: Verifica en Ubuntu que no existan archivos `.env` ni `.sqlite` rastreados, valida la sintaxis de todos los servicios JS (`node --check`), comprueba la integridad de las 3 vistas HTML y escanea que no existan secretos expuestos. Si falla, detiene el pipeline.
+   * **Job 2 (`deploy`)**: Ejecuta `scripts/deploy-remote.sh` vía SSH cuando los secretos `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY` y `DEPLOY_PATH` están definidos.
+3. **Dónde Consultar los Registros del Despliegue**:
+   * **En vivo vía HTTP**: `GET https://notificaciones-sap.daabon.com.co/api/health` (muestra `commit`, `deployedAt` y `uptimeSeconds`).
+   * **En GitHub**: Pestaña **Actions** de `https://github.com/danianre/DashboardSAP/actions`.
+   * **En el Servidor Linux (`10.0.0.146`)**:
+     * Bitácora histórica de despliegues: `/home/plant/app-notificaciones-sap/deploy.log`
+     * Metadatos de versión activa: `/home/plant/app-notificaciones-sap/.deploy-meta.json`
+     * Logs en tiempo real del proceso Node.js: `pm2 logs sap-notificaciones`
+4. **Respaldo, Trazabilidad y Procedimiento de Reversión (`scripts/rollback-remote.sh`)**:
+   * Antes de aplicar cualquier actualización, `scripts/deploy-remote.sh` genera un respaldo en `/home/plant/app-notificaciones-sap/backups/release_YYYYMMDD_HHMMSS.tar.gz` (además del respaldo inicial en `/home/plant/backups_app_notificaciones_sap/backup_pre_integracion_initial.tar.gz`).
+   * Si `node scripts/validate-build.js` falla antes de recargar PM2, el script restaura inmediatamente el commit previo (`git reset --hard`) sin tocar el proceso activo.
+   * Si alguna de las rutas (`/api/health`, `/`, `/monitor-sap`, `/notificaciones-sap`) falla después de recargar PM2, ejecuta automáticamente `scripts/rollback-remote.sh`.
+   * Para ejecutar una reversión manual inmediata a la última versión funcional:
+     ```bash
+     ssh plant@10.0.0.146 "cd /home/plant/app-notificaciones-sap && bash scripts/rollback-remote.sh"
      ```
 
 ---

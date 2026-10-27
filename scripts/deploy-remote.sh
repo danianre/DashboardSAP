@@ -2,7 +2,8 @@
 # ==============================================================================
 # Script de Despliegue Controlado y Reversible para Servidor Linux (10.0.0.146)
 # Preserva .env y bases de datos SQLite locales, genera respaldo previo,
-# registra el commit activo y ejecuta reversión automática si falla el healthcheck.
+# valida código antes de publicar, registra el commit activo y ejecuta
+# reversión automática si falla la validación o el healthcheck.
 # ==============================================================================
 set -euo pipefail
 
@@ -20,6 +21,7 @@ echo "========================================================"
 
 mkdir -p "${BACKUP_ROOT}"
 cd "${DEPLOY_DIR}"
+git config core.fileMode false || true
 
 # 1. Identificar commit actual antes de actualizar
 PREV_COMMIT="none"
@@ -35,21 +37,32 @@ tar --exclude='./node_modules' \
     --exclude='./.git' \
     -czf "${BACKUP_FILE}" .
 chmod 600 "${BACKUP_FILE}"
+# Conservar los últimos 10 respaldos para no saturar disco
+ls -1t "${BACKUP_ROOT}"/release_*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
 echo "      Respaldo creado exitosamente."
 
 # 3. Sincronizar código desde GitHub de forma controlada
 echo "[3/6] Obteniendo cambios desde origin/${BRANCH}..."
 git fetch origin "${BRANCH}"
 TARGET_COMMIT="$(git rev-parse "origin/${BRANCH}")"
+git checkout -- package-lock.json 2>/dev/null || true
 git merge --ff-only "origin/${BRANCH}"
 
-# 4. Validar código e instalar dependencias si package.json cambió
+# 4. Validar código e instalar dependencias si package.json cambió (ANTES de tocar el servicio en ejecución)
 echo "[4/6] Validando integridad del paquete..."
 if [ "${PREV_COMMIT}" != "none" ] && git diff --name-only "${PREV_COMMIT}" "${TARGET_COMMIT}" | grep -q "^package.json$"; then
   echo "      Cambio detectado en package.json. Actualizando dependencias..."
-  npm install --omit=dev --ignore-scripts=false || npm install --omit=dev --ignore-scripts
+  npm install --omit=dev --ignore-scripts
+  git checkout -- package-lock.json 2>/dev/null || true
 fi
-node scripts/validate-build.js
+
+if ! node scripts/validate-build.js; then
+  echo "⛔ [BLOQUEO DE SEGURIDAD]: La validación falló. Restaurando commit ${PREV_COMMIT} sin reiniciar el servicio..."
+  if [ "${PREV_COMMIT}" != "none" ]; then
+    git reset --hard "${PREV_COMMIT}"
+  fi
+  exit 1
+fi
 
 # 5. Registrar metadatos de la versión desplegada
 cat > .deploy-meta.json <<EOF
@@ -63,19 +76,16 @@ cat > .deploy-meta.json <<EOF
 EOF
 
 # 6. Reiniciar únicamente el servicio de la aplicación Node.js
-echo "[5/6] Recargando servicio de aplicación..."
-if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "online\|stopped"; then
-  pm2 reload all --update-env || pm2 restart all
-elif systemctl list-units --type=service | grep -qE "sap|notificaciones|dashboard|node"; then
-  SVC_NAME="$(systemctl list-units --type=service --no-legend | awk '{print $1}' | grep -E "sap|notificaciones|dashboard" | head -n 1)"
-  if [ -n "${SVC_NAME}" ]; then
-    sudo systemctl restart "${SVC_NAME}"
-  fi
+echo "[5/6] Recargando servicio de aplicación en PM2..."
+if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "sap-notificaciones"; then
+  pm2 reload sap-notificaciones --update-env
+elif command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "online\|stopped"; then
+  pm2 reload all --update-env
 fi
 
 # 7. Comprobaciones automáticas posteriores al despliegue (Healthcheck + Rutas)
 echo "[6/6] Verificando estado del sitio en http://127.0.0.1:${APP_PORT}..."
-sleep 3
+sleep 2
 
 check_url() {
   local url="$1"
