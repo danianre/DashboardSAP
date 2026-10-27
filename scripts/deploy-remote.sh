@@ -14,6 +14,11 @@ APP_PORT="${APP_PORT:-3000}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 BACKUP_FILE="${BACKUP_ROOT}/release_${TIMESTAMP}.tar.gz"
 
+if [ -d "/home/plant/nwrfcsdk/lib" ]; then
+  export SAPNWRFC_HOME="/home/plant/nwrfcsdk"
+  export LD_LIBRARY_PATH="/home/plant/nwrfcsdk/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 echo "========================================================"
 echo " Iniciando despliegue controlado en: ${DEPLOY_DIR}"
 echo " Fecha/Hora: $(date -Is)"

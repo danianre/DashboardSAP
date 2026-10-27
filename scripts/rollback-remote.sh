@@ -10,6 +10,11 @@ BACKUP_ROOT="${BACKUP_ROOT:-${DEPLOY_DIR}/backups}"
 APP_PORT="${APP_PORT:-3000}"
 TARGET_BACKUP="${1:-}"
 
+if [ -d "/home/plant/nwrfcsdk/lib" ]; then
+  export SAPNWRFC_HOME="/home/plant/nwrfcsdk"
+  export LD_LIBRARY_PATH="/home/plant/nwrfcsdk/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 cd "${DEPLOY_DIR}"
 
 if [ -z "${TARGET_BACKUP}" ]; then

@@ -101,11 +101,12 @@ Para materializar esta conexión en un entorno Node.js se instalaron e integraro
 
 1. **SAP NetWeaver RFC SDK 7.50 (Librería Binaria Oficial C/C++)**:
    * Es el kit de desarrollo oficial compilado por SAP en C/C++.
-   * Contiene los controladores binarios de bajo nivel (`libsapnwrfc.dll`, `libsapucum.dll`, `icudt50.dll`, etc.) que implementan el protocolo de red hacia el Dispatcher de SAP.
-   * **Ubicación en el servidor**: Debe estar descomprimido en una ruta fija (por ejemplo, `C:\nwrfcsdk`).
-   * **Variables de Entorno requeridas**:
-     * `SAPNWRFC_HOME`: Debe apuntar a `C:\nwrfcsdk`.
-     * `PATH`: Debe incluir `C:\nwrfcsdk\lib` para que el sistema operativo ubique los archivos DLL en tiempo de ejecución.
+   * Contiene los controladores binarios de bajo nivel que implementan el protocolo de red hacia el Dispatcher de SAP:
+     * **En Windows**: `C:\nwrfcsdk\lib` (`libsapnwrfc.dll`, `libsapucum.dll`, `icudt50.dll`, etc.).
+     * **En Servidor Linux (`10.0.0.146`)**: `/home/plant/nwrfcsdk/lib` (`libsapnwrfc.so`, `libsapucum.so`, `libicuuc57.so`, `libicui18n57.so`, `libicudata57.so`), extraídos directamente del kernel SAP NetWeaver 754 Linux x86_64 (`bonprd`).
+   * **Variables de Entorno y Auto-Resolución ELF (`config/sap.js`)**:
+     * `SAPNWRFC_HOME`: Apunta a `C:\nwrfcsdk` (Windows) o `/home/plant/nwrfcsdk` (Linux).
+     * `LD_LIBRARY_PATH` / `PATH`: Incluye `/home/plant/nwrfcsdk/lib` (Linux) o `C:\nwrfcsdk\lib` (Windows). Además, `config/sap.js` incluye `ensureLinuxRfcSdkPaths()`, que sincroniza automáticamente el `DT_RPATH` ELF de `node.napi.node`, `libsapnwrfc.so` y `libsapucum.so` hacia `/home/plant/nwrfcsdk/lib` antes de cargar `node-rfc`, garantizando que el enlazador dinámico (`ld.so`) encuentre las librerías incluso tras reinicios de PM2 o reinstalaciones de `npm`.
 
 2. **`node-rfc` (Paquete npm nativo / Wrapper para Node.js)**:
    * Es el conector oficial de código abierto respaldado por la comunidad SAP que enlaza el entorno JavaScript de Node.js con la librería C++ del SAP NW RFC SDK mediante N-API.

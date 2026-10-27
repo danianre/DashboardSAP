@@ -1,6 +1,53 @@
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
 const https = require('https');
+
+/**
+ * En servidores Linux, asegura que el SDK C++ de SAP NetWeaver RFC (/home/plant/nwrfcsdk/lib)
+ * esté registrado tanto en las variables de entorno como en el RPATH ELF del binario precompilado
+ * de node-rfc (node.napi.node) y de las librerías libsapnwrfc.so / libsapucum.so.
+ * Esto permite que dlopen() resuelva libsapnwrfc.so incluso si PM2 o Node se iniciaron sin LD_LIBRARY_PATH.
+ */
+function ensureLinuxRfcSdkPaths() {
+  if (process.platform !== 'linux') return;
+
+  const sdkHome = process.env.SAPNWRFC_HOME || '/home/plant/nwrfcsdk';
+  const sdkLib = path.join(sdkHome, 'lib');
+  if (!fs.existsSync(sdkLib) || sdkLib.length > 27) return;
+
+  process.env.SAPNWRFC_HOME = sdkHome;
+  const currentLd = process.env.LD_LIBRARY_PATH || '';
+  if (!currentLd.split(':').includes(sdkLib)) {
+    process.env.LD_LIBRARY_PATH = currentLd ? `${sdkLib}:${currentLd}` : sdkLib;
+  }
+
+  const patchElfRpath = (filePath, oldRpath) => {
+    try {
+      if (!fs.existsSync(filePath)) return;
+      const buf = fs.readFileSync(filePath);
+      const idx = buf.indexOf(oldRpath);
+      if (idx !== -1) {
+        const replacement = Buffer.alloc(oldRpath.length, 0);
+        replacement.write(sdkLib, 0, 'ascii');
+        replacement.copy(buf, idx);
+        fs.writeFileSync(filePath, buf);
+      }
+    } catch (_) {
+      // Ignorar si no hay permisos de escritura
+    }
+  };
+
+  patchElfRpath(path.join(sdkLib, 'libsapnwrfc.so'), '/opt/rh/SAP/lib64:/usr/sap/lib');
+  patchElfRpath(path.join(sdkLib, 'libsapucum.so'), '/opt/rh/SAP/lib64:/usr/sap/lib');
+  patchElfRpath(
+    path.join(__dirname, '..', 'node_modules', 'node-rfc', 'prebuilds', 'linux-x64', 'node.napi.node'),
+    '/usr/local/sap/nwrfcsdk/lib'
+  );
+}
+
+ensureLinuxRfcSdkPaths();
 
 let rfcInitError = null;
 let clientInstance = null;
@@ -27,7 +74,21 @@ async function getOrOpenClient() {
   }
 
   if (!clientInstance.alive) {
-    await clientInstance.open();
+    try {
+      await clientInstance.open();
+    } catch (err) {
+      // Si el servidor está en la misma LAN que SAP y falla el SAP_ROUTER externo, reintentar directo a ashost
+      if (SAP_CONFIG.saprouter && String(err?.key || '').includes('COMMUNICATION')) {
+        const directConfig = { ...SAP_CONFIG };
+        delete directConfig.saprouter;
+        const directClient = new Client(directConfig);
+        await directClient.open();
+        delete SAP_CONFIG.saprouter;
+        clientInstance = directClient;
+      } else {
+        throw err;
+      }
+    }
   }
 
   return clientInstance;
@@ -171,8 +232,20 @@ async function verifySapCredentials(username, password, client) {
         lang: 'ES'
       };
 
-      const authClient = new Client(loginConfig);
-      await authClient.open();
+      let authClient = new Client(loginConfig);
+      try {
+        await authClient.open();
+      } catch (openErr) {
+        if (loginConfig.saprouter && String(openErr?.key || '').includes('COMMUNICATION')) {
+          const directLoginConfig = { ...loginConfig };
+          delete directLoginConfig.saprouter;
+          authClient = new Client(directLoginConfig);
+          await authClient.open();
+          delete SAP_CONFIG.saprouter;
+        } else {
+          throw openErr;
+        }
+      }
       const info = authClient.connectionInfo || {};
       try {
         await authClient.close();
