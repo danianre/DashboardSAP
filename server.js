@@ -52,7 +52,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
   if (host.includes('notificaciones-sap') && (req.path === '/' || req.path === '/index.html')) {
-    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const proto = isLocalhost ? 'http' : 'https';
     const targetUrl = `${proto}://${req.headers.host}/notificaciones-sap`;
     return res.redirect(301, targetUrl);
   }
