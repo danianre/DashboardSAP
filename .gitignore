@@ -27,6 +27,7 @@ _noderfc.log
 # Scripts de scratch, respaldos y metadatos de despliegue
 scratch/
 app-notificaciones-sap/
+apps-sap/
 backups/
 .deploy-meta.json
 

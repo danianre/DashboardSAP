@@ -7,7 +7,7 @@
 set -euo pipefail
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-DEPLOY_DIR="${DEPLOY_DIR:-/home/plant/app-notificaciones-sap}"
+DEPLOY_DIR="${DEPLOY_DIR:-/home/plant/apps-sap}"
 BRANCH="${BRANCH:-main}"
 LOCK_FILE="/tmp/sap_platform_autosync.lock"
 LOG_FILE="${DEPLOY_DIR}/deploy.log"

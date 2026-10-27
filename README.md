@@ -18,7 +18,7 @@ Este proyecto conecta una aplicación web ágil y moderna directamente con el se
 3. **Monitoreo Especializado de Buffers (ST02) y Base de Datos (DBACOCKPIT)**: Identificación exacta de qué usuarios, programas o consultas SQL consumen más CPU, lecturas lógicas/físicas o generan demoras en la base de datos con diseño minimalista y explicaciones en español.
 4. **Control de Licencias, Auditoría BASC / HCM y Reporte de Ahorro CADI**: Seguimiento continuo del tope de licencias de diálogo (334 usuarios máximos permitidos), detección de cuentas inactivas por más de 30 días, verificación del job nocturno de retiro de colaboradores desvinculados y cuantificación ejecutiva del retorno de inversión (ROI) con cálculo de horas hombre ahorradas por la autogestión de contraseñas.
 5. **Impacto Cero en Producción**: Diseñado bajo un principio estricto de solo lectura (*read-only*), cachés inteligentes en memoria y serialización de llamadas, garantizando que el monitoreo no añada sobrecarga al sistema productivo.
-6. **Arquitectura Unificada Multi-Vista (`10.0.0.146:3000`)**: Coexistencia transparente en un mismo servidor Node.js/Express (puerto `3000`) junto con la aplicación operativa **Notificación SAP Producción (`app-notificaciones-sap`)**, exponiendo la vista de planta en `/` y la consola de monitoreo técnico en `/monitor` sin interferencia de sesiones ni bases de datos.
+6. **Arquitectura Unificada Multi-Vista (`10.0.0.146:3000`)**: Coexistencia transparente en un mismo servidor Node.js/Express (puerto `3000`, carpeta `/home/plant/apps-sap`) junto con la aplicación operativa **Notificación SAP Producción**, exponiendo la vista de planta en `/notificaciones-sap` y la consola de monitoreo técnico en `/monitor-sap` bajo el portal corporativo `/` sin interferencia de sesiones ni bases de datos.
 
 ---
 
@@ -386,11 +386,13 @@ La consola confirmará el inicio exitoso de la plataforma y sus módulos:
 
 ### Paso 6: Abrir en el Navegador (Dominio Corporativo, Servidor `10.0.0.146` o Local)
 * **Página Principal («Plataforma de Aplicaciones SAP»)**:
-  👉 **`https://notificaciones-sap.daabon.com.co/`** (o `http://10.0.0.146:3000/`)
+  👉 **`https://apps-sap.daabon.com.co/`** (o `http://10.0.0.146:3000/`)
 * **Aplicación 1 — Monitor SAP (Basis / TI)**:
-  👉 **`https://notificaciones-sap.daabon.com.co/monitor-sap`** (o `http://10.0.0.146:3000/monitor-sap`)
+  👉 **`https://apps-sap.daabon.com.co/monitor-sap`** (o `http://10.0.0.146:3000/monitor-sap`)
 * **Aplicación 2 — Notificaciones SAP (Planta / Microsoft SSO)**:
-  👉 **`https://notificaciones-sap.daabon.com.co/notificaciones-sap`** (o `http://10.0.0.146:3000/notificaciones-sap`)
+  👉 **`https://apps-sap.daabon.com.co/notificaciones-sap`** (o `http://10.0.0.146:3000/notificaciones-sap`)
+* **Redirección de Retrocompatibilidad**:
+  Cualquier usuario que ingrese a **`https://notificaciones-sap.daabon.com.co`** es redirigido automáticamente a **`https://notificaciones-sap.daabon.com.co/notificaciones-sap`**, preservando intacto el flujo histórico de planta.
 
 ### Paso 7: Flujo CI/CD, Despliegue Controlado y Reversión en Linux (`plant@10.0.0.146`)
 1. **Validación y Publicación desde Antigravity**:
@@ -409,19 +411,20 @@ La consola confirmará el inicio exitoso de la plataforma y sus módulos:
    * **Job 1 (`validate`)**: Verifica en Ubuntu que no existan archivos `.env` ni `.sqlite` rastreados, valida la sintaxis de todos los servicios JS (`node --check`), comprueba la integridad de las 3 vistas HTML y escanea que no existan secretos expuestos. Si falla, detiene el pipeline.
    * **Job 2 (`deploy`)**: Ejecuta `scripts/deploy-remote.sh` vía SSH cuando los secretos `SSH_HOST`, `SSH_PORT`, `SSH_USER`, `SSH_PRIVATE_KEY` y `DEPLOY_PATH` están definidos.
 3. **Dónde Consultar los Registros del Despliegue**:
-   * **En vivo vía HTTP**: `GET https://notificaciones-sap.daabon.com.co/api/health` (muestra `commit`, `deployedAt` y `uptimeSeconds`).
+   * **En vivo vía HTTP**: `GET https://apps-sap.daabon.com.co/api/health` o `http://10.0.0.146:3000/api/health` (muestra `commit`, `deployedAt` y `uptimeSeconds`).
    * **En GitHub**: Pestaña **Actions** de `https://github.com/danianre/DashboardSAP/actions`.
    * **En el Servidor Linux (`10.0.0.146`)**:
-     * Bitácora histórica de despliegues: `/home/plant/app-notificaciones-sap/deploy.log`
-     * Metadatos de versión activa: `/home/plant/app-notificaciones-sap/.deploy-meta.json`
-     * Logs en tiempo real del proceso Node.js: `pm2 logs sap-notificaciones`
+     * Directorio de despliegue: `/home/plant/apps-sap`
+     * Bitácora histórica de despliegues: `/home/plant/apps-sap/deploy.log`
+     * Metadatos de versión activa: `/home/plant/apps-sap/.deploy-meta.json`
+     * Logs en tiempo real del proceso Node.js: `pm2 logs apps-sap`
 4. **Respaldo, Trazabilidad y Procedimiento de Reversión (`scripts/rollback-remote.sh`)**:
-   * Antes de aplicar cualquier actualización, `scripts/deploy-remote.sh` genera un respaldo en `/home/plant/app-notificaciones-sap/backups/release_YYYYMMDD_HHMMSS.tar.gz` (además del respaldo inicial en `/home/plant/backups_app_notificaciones_sap/backup_pre_integracion_initial.tar.gz`).
+   * Antes de aplicar cualquier actualización, `scripts/deploy-remote.sh` genera un respaldo en `/home/plant/apps-sap/backups/release_YYYYMMDD_HHMMSS.tar.gz` (además del respaldo inicial en `/home/plant/backups_app_notificaciones_sap/backup_pre_integracion_initial.tar.gz`).
    * Si `node scripts/validate-build.js` falla antes de recargar PM2, el script restaura inmediatamente el commit previo (`git reset --hard`) sin tocar el proceso activo.
    * Si alguna de las rutas (`/api/health`, `/`, `/monitor-sap`, `/notificaciones-sap`) falla después de recargar PM2, ejecuta automáticamente `scripts/rollback-remote.sh`.
    * Para ejecutar una reversión manual inmediata a la última versión funcional:
      ```bash
-     ssh plant@10.0.0.146 "cd /home/plant/app-notificaciones-sap && bash scripts/rollback-remote.sh"
+     ssh plant@10.0.0.146 "cd /home/plant/apps-sap && bash scripts/rollback-remote.sh"
      ```
 
 ---

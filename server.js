@@ -44,6 +44,22 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================================
+// REDIRECCIÓN INTELIGENTE POR DOMINIO
+// - Si un usuario ingresa a notificaciones-sap.daabon.com.co en la raíz (/ o /index.html),
+//   se redirige automáticamente a https://notificaciones-sap.daabon.com.co/notificaciones-sap
+// - Si ingresa por apps-sap.daabon.com.co (o IP/localhost), se muestra el selector de aplicaciones en /
+// ============================================================================
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+  if (host.includes('notificaciones-sap') && (req.path === '/' || req.path === '/index.html')) {
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const targetUrl = `${proto}://${req.headers.host}/notificaciones-sap`;
+    return res.redirect(301, targetUrl);
+  }
+  next();
+});
+
+// ============================================================================
 // VISTAS DEL FRONTEND (Plataforma Unificada SAP)
 // - "/"                   -> Página Principal: Selector «Plataforma de Aplicaciones SAP»
 // - "/monitor-sap"        -> Aplicación 1: Monitor SAP (Consola de Monitoreo SAP ERP)
@@ -269,6 +285,7 @@ app.use('/api', apiRoutes);
 app.listen(PORT, () => {
   console.log(`========================================================`);
   console.log(` 🚀 Plataforma de Aplicaciones SAP activa en puerto ${PORT}`);
+  console.log(` 🌐 URL Principal:        https://apps-sap.daabon.com.co/`);
   console.log(` 🏠 Selector Principal:   http://localhost:${PORT}/`);
   console.log(` 📊 Monitor SAP ERP:      http://localhost:${PORT}/monitor-sap`);
   console.log(` 🔔 Notificaciones SAP:   http://localhost:${PORT}/notificaciones-sap`);

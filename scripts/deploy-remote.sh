@@ -82,7 +82,9 @@ EOF
 
 # 6. Reiniciar únicamente el servicio de la aplicación Node.js
 echo "[5/6] Recargando servicio de aplicación en PM2..."
-if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "sap-notificaciones"; then
+if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "apps-sap"; then
+  pm2 reload apps-sap --update-env
+elif command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "sap-notificaciones"; then
   pm2 reload sap-notificaciones --update-env
 elif command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "online\|stopped"; then
   pm2 reload all --update-env
