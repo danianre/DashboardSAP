@@ -200,6 +200,8 @@ async function loginWithSap(username, password, client) {
         errKey === 'RFC_COMMUNICATION_FAILURE' ||
         errKey === 'RFC_SDK_MISSING' ||
         String(rfcErr?.message || '').includes('SAPNWRFC') ||
+        String(rfcErr?.message || '').includes('libsapnwrfc') ||
+        String(rfcErr?.message || '').includes('cannot open shared object file') ||
         String(rfcErr?.message || '').includes('not found');
 
       // Respaldo de contingencia exclusivamente si el servidor SAP no es alcanzable por red
