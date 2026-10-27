@@ -33,10 +33,10 @@ La conexión entre la aplicación web y el entorno productivo de SAP no utiliza 
 | **URL de Acceso** | `https://10.0.0.146/` (`http://10.0.0.146:3000/`) | `https://10.0.0.146/monitor-sap` (alias `/monitor`, `/dashboard`) | `https://10.0.0.146/notificaciones-sap` (alias `/notificaciones`) |
 | **Archivo Frontend** | `public/index.html` | `public/monitor.html` | `public/notificaciones.html` |
 | **Rol / Propósito** | Portal corporativo «Plataforma de Aplicaciones SAP» con selector de módulos y pasarela OAuth | Dashboard técnico Basis/TI en tiempo real | Registro y contabilización de órdenes de producción en planta |
-| **Autenticación** | Pasarela automática de callback OAuth (`#code=...`) hacia `/notificaciones-sap` | SAP Logon Gate directo vía RFC (`USR02`) | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) |
+| **Autenticación** | Pasarela automática de callback OAuth (`#code=...`) hacia `/notificaciones-sap` | SAP Logon Gate directo vía RFC (`USR02`) con Control de Lista Blanca (`sap_monitor_whitelist`) | Microsoft Entra ID / Azure AD SSO (`MSAL.js`) |
 | **Integración SAP** | Healthcheck (`/api/health`) | SAP NetWeaver RFC SDK (`node-rfc` binario C++) | SAP CPI (`axios` Basic Auth vía variables `.env`) |
-| **Base de Datos Local**| N/A | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`) | `database.sqlite` (Tabla `logs` de órdenes notificadas) |
-| **Rutas API** | `GET /api/health` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET /api/password-resets`, etc. | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` |
+| **Base de Datos Local**| N/A | `monitor_sap.sqlite` (`system_snapshots`, `password_resets_log`, `sap_auth_sessions`, `sap_monitor_whitelist`) | `database.sqlite` (Tabla `logs` de órdenes notificadas) |
+| **Rutas API** | `GET /api/health` | `POST /api/auth/*`, `GET /api/dashboard`, `GET /api/st02`, `GET /api/dbacockpit`, `GET/POST/DELETE /api/whitelist`, etc. | `POST /api/orden`, `POST /api/notificacion`, `GET /api/logs` |
 
 ### Diagrama de Arquitectura de la Solución
 
@@ -441,6 +441,11 @@ La consola confirmará el inicio exitoso de la plataforma y sus módulos:
    * Las acciones que modifican el estado de un usuario (bloqueo preventivo o ajuste de vigencia) quedan registradas automáticamente en el log de modificaciones de documentos de usuario en SAP (`SU01` / `USH02` / `SM20`).
 4. **Resiliencia ante Fallos de Red**:
    * Si el enlace de red con SAP o el SAP Router se interrumpe, la aplicación no colapsa: atrapa el error limpiamente, informa el estado en el banner superior y muestra datos de respaldo para no interrumpir la navegación. En cuanto el enlace vuelve, la reconexión es automática.
+5. **Control de Acceso y Gestión de Lista Blanca (Whitelist) del Monitor SAP**:
+   * El acceso a la consola de monitoreo técnico está estrictamente restringido a usuarios autorizados mediante la tabla `sap_monitor_whitelist` en `monitor_sap.sqlite`.
+   * **Usuarios Autorizados por Defecto**: `DREDONDO`, `HPEREZ`, `JCUESTA`, `JANDRADE`, `SISTEMAS` y `CONEXION`.
+   * **Administradores de la Whitelist**: Únicamente los usuarios `DREDONDO` y `HPEREZ` tienen permisos (`isAdmin: true`) para visualizar la lista y agregar o revocar usuarios autorizados desde el modal de administración en el header (`#btnWhitelistAdmin`) o vía los endpoints protegidos `/api/whitelist`.
+   * Cualquier usuario autenticado en SAP que no figure en la lista blanca recibe un código `403 FORBIDDEN` con el mensaje explícito indicándole solicitar acceso a `DREDONDO` o `HPEREZ`.
 
 ---
 

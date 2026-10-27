@@ -287,13 +287,19 @@
       <!-- Usuario SAP Autenticado y Cierre de Sesión -->
       <div id="sapUserHeaderBadge" class="hidden px-3 py-2 rounded-lg border border-blue-500/30 bg-blue-950/30 items-center gap-3 shadow-sm">
         <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-          <i class="fa-solid fa-user-Astronaut fa-user-shield text-sm"></i>
+          <i class="fa-solid fa-user-shield text-sm"></i>
         </div>
         <div class="leading-tight">
           <div class="flex items-center gap-1.5">
             <span id="headerSapUsername" class="text-xs font-mono font-bold text-white">--</span>
           </div>
         </div>
+        <!-- Botón de Administración de Lista Blanca (Solo DREDONDO y HPEREZ) -->
+        <button id="btnWhitelistAdmin" onclick="openWhitelistModal()" title="Gestionar Lista de Acceso al Monitor (Solo Administradores)"
+          class="hidden px-2.5 py-1.5 rounded-md bg-purple-950/80 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-semibold items-center gap-1.5 transition active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-users-gear text-purple-400"></i>
+          <span class="hidden sm:inline">Acceso Monitor</span>
+        </button>
         <button onclick="handleSapLogout()" title="Cerrar sesión de SAP"
           class="ml-1 px-2.5 py-1.5 rounded-md bg-rose-950/70 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
           <i class="fa-solid fa-right-from-bracket"></i>
@@ -1197,6 +1203,116 @@
           <span>Auditoría en tiempo real vía SAP RFC. El auto-refresco del dashboard continúa activo en segundo plano.</span>
         </div>
         <button onclick="closeProcessDiagnosisModal()"
+          class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: GESTIÓN DE ACCESO Y LISTA BLANCA (WHITELIST MONITOR SAP) -->
+  <div id="whitelistModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-5" onclick="handleWhitelistModalBackdropClick(event)">
+    <div class="card max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-purple-500/30 shadow-2xl bg-gray-900/95" onclick="event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-950/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-inner">
+            <i class="fa-solid fa-users-gear text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-white tracking-tight">Control de Acceso al Monitor SAP</h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold uppercase">
+                Administración DREDONDO / HPEREZ
+              </span>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">Gestión de la lista blanca (whitelist) de usuarios SAP autorizados para consultar este monitor.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadWhitelistData()" class="w-8 h-8 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 border border-gray-700 flex items-center justify-center transition" title="Refrescar lista">
+            <i class="fa-solid fa-rotate text-purple-400" id="whitelistRefreshIcon"></i>
+          </button>
+          <button onclick="closeWhitelistModal()" class="w-8 h-8 rounded-lg bg-gray-800/80 hover:bg-rose-950 hover:text-rose-400 text-gray-400 border border-gray-700 flex items-center justify-center transition" title="Cerrar modal (Esc)">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulario para Agregar Nuevo Usuario -->
+      <div class="p-5 border-b border-gray-800/80 bg-gray-950/40">
+        <form id="formAddWhitelistUser" onsubmit="submitAddWhitelist(event)" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div class="md:col-span-4">
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              Usuario SAP a Autorizar
+            </label>
+            <div class="relative">
+              <i class="fa-solid fa-user absolute left-3 top-2.5 text-xs text-gray-500"></i>
+              <input id="inpWhitelistUsername" type="text" placeholder="EJ: JCUESTA" required maxlength="12"
+                class="w-full bg-gray-950 border border-gray-700 focus:border-purple-500 rounded-lg pl-8 pr-3 py-1.5 text-sm font-mono font-bold uppercase text-white placeholder-gray-600 focus:outline-none transition" />
+            </div>
+          </div>
+          <div class="md:col-span-5">
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              Nota / Cargo / Justificación
+            </label>
+            <div class="relative">
+              <i class="fa-solid fa-tag absolute left-3 top-2.5 text-xs text-gray-500"></i>
+              <input id="inpWhitelistNotes" type="text" placeholder="EJ: Analista Basis / Soporte TI"
+                class="w-full bg-gray-950 border border-gray-700 focus:border-purple-500 rounded-lg pl-8 pr-3 py-1.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none transition" />
+            </div>
+          </div>
+          <div class="md:col-span-3">
+            <button id="btnSubmitAddWhitelist" type="submit"
+              class="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs border border-purple-400/40 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md shadow-purple-600/20">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Autorizar Usuario</span>
+            </button>
+          </div>
+        </form>
+        <div id="whitelistFeedbackMsg" class="hidden mt-2 text-xs font-semibold"></div>
+      </div>
+
+      <!-- Tabla de Usuarios Autorizados -->
+      <div class="flex-1 overflow-y-auto p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+            <span>Usuarios Autorizados en la Whitelist</span>
+            <span id="whitelistCountBadge" class="bg-purple-950 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold">0</span>
+          </div>
+          <span class="text-[11px] text-gray-500">Solo usuarios en esta lista pueden iniciar sesión en el Monitor SAP.</span>
+        </div>
+
+        <div class="border border-gray-800 rounded-xl overflow-hidden bg-gray-950/60">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-900/90 text-gray-400 font-mono text-[11px] uppercase border-b border-gray-800">
+              <tr>
+                <th class="py-2.5 px-3">Usuario SAP</th>
+                <th class="py-2.5 px-3">Rol / Permiso</th>
+                <th class="py-2.5 px-3">Nota / Detalle</th>
+                <th class="py-2.5 px-3">Agregado Por</th>
+                <th class="py-2.5 px-3">Fecha</th>
+                <th class="py-2.5 px-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="whitelistTableBody" class="divide-y divide-gray-800/60 font-mono">
+              <tr>
+                <td colspan="6" class="text-center py-6 text-gray-500">Cargando lista de usuarios autorizados...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-gray-800 flex justify-between items-center bg-gray-950/80 text-xs">
+        <div class="flex items-center gap-2 text-gray-400">
+          <i class="fa-solid fa-lock text-purple-400"></i>
+          <span>Administradores con facultad de modificación: <strong class="text-purple-300 font-mono">DREDONDO</strong> y <strong class="text-purple-300 font-mono">HPEREZ</strong>.</span>
+        </div>
+        <button onclick="closeWhitelistModal()"
           class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
           Cerrar
         </button>
@@ -2423,6 +2539,7 @@
         closeRetiredUsersModal();
         closeSm12St22Modal();
         closeWsCpiModal();
+        closeWhitelistModal();
       }
     });
 
@@ -4888,6 +5005,12 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         headerBadge.classList.remove('flex');
       }
 
+      const btnWhitelist = document.getElementById('btnWhitelistAdmin');
+      if (btnWhitelist) {
+        btnWhitelist.classList.add('hidden');
+        btnWhitelist.classList.remove('flex');
+      }
+
       const errBox = document.getElementById('sapLoginErrorBox');
       const errText = document.getElementById('sapLoginErrorText');
       if (errorMessage && errBox && errText) {
@@ -4917,6 +5040,19 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
       if (headerBadge) {
         headerBadge.classList.remove('hidden');
         headerBadge.classList.add('flex');
+      }
+
+      const btnWhitelist = document.getElementById('btnWhitelistAdmin');
+      if (btnWhitelist) {
+        const username = String(user?.username || '').toUpperCase();
+        const canManage = Boolean(user?.isAdmin || user?.canManageWhitelist || ['DREDONDO', 'HPEREZ'].includes(username));
+        if (canManage) {
+          btnWhitelist.classList.remove('hidden');
+          btnWhitelist.classList.add('flex');
+        } else {
+          btnWhitelist.classList.add('hidden');
+          btnWhitelist.classList.remove('flex');
+        }
       }
 
       startDashboardPolling();
@@ -4972,6 +5108,155 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         if (submitBtn) submitBtn.disabled = false;
         if (btnIcon) btnIcon.className = 'fa-solid fa-right-to-bracket';
         if (btnText) btnText.textContent = 'Iniciar Sesión con SAP';
+      }
+    }
+
+    // ==========================================
+    // CONTROL DE LISTA BLANCA (WHITELIST)
+    // Exclusivo para administradores DREDONDO y HPEREZ
+    // ==========================================
+    let currentWhitelist = [];
+
+    function openWhitelistModal() {
+      const modal = document.getElementById('whitelistModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      loadWhitelistData();
+    }
+
+    function closeWhitelistModal() {
+      const modal = document.getElementById('whitelistModal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleWhitelistModalBackdropClick(event) {
+      if (event.target && event.target.id === 'whitelistModal') {
+        closeWhitelistModal();
+      }
+    }
+
+    async function loadWhitelistData() {
+      const tbody = document.getElementById('whitelistTableBody');
+      const countBadge = document.getElementById('whitelistCountBadge');
+      const icon = document.getElementById('whitelistRefreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+
+      try {
+        const res = await fetch('/api/whitelist');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-rose-400 font-sans">${data.error || 'Error cargando lista de acceso'}</td></tr>`;
+          return;
+        }
+
+        currentWhitelist = data.whitelist || [];
+        if (countBadge) countBadge.textContent = currentWhitelist.length;
+
+        if (!tbody) return;
+        if (currentWhitelist.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500 font-sans">No hay usuarios registrados en la whitelist.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = currentWhitelist.map(u => {
+          const isAdm = Boolean(u.isAdmin);
+          const dateStr = u.addedAt ? new Date(u.addedAt).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+          const roleBadge = isAdm
+            ? `<span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 text-[10px] font-bold"><i class="fa-solid fa-crown text-[9px] mr-1"></i>Administrador</span>`
+            : `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold"><i class="fa-solid fa-user-check text-[9px] mr-1"></i>Autorizado</span>`;
+
+          const deleteBtn = isAdm
+            ? `<span class="text-gray-600 text-[11px] font-sans" title="Administrador protegido">Protegido</span>`
+            : `<button onclick="deleteWhitelistUser('${u.username}')" title="Revocar acceso al Monitor SAP" class="px-2 py-1 rounded bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] transition active:scale-95 cursor-pointer flex items-center gap-1 ml-auto"><i class="fa-solid fa-trash-can text-[10px]"></i> Eliminar</button>`;
+
+          return `
+            <tr class="hover:bg-gray-800/40 transition">
+              <td class="py-2.5 px-3 font-bold text-white flex items-center gap-1.5">
+                <i class="fa-solid fa-user text-gray-500 text-[10px]"></i>
+                <span>${u.username}</span>
+              </td>
+              <td class="py-2.5 px-3">${roleBadge}</td>
+              <td class="py-2.5 px-3 text-gray-300 font-sans">${u.notes || '-'}</td>
+              <td class="py-2.5 px-3 text-gray-400 font-mono text-[11px]">${u.addedBy || 'ADMIN'}</td>
+              <td class="py-2.5 px-3 text-gray-400 font-mono text-[11px]">${dateStr}</td>
+              <td class="py-2.5 px-3 text-right">${deleteBtn}</td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-rose-400 font-sans">Error de conexión: ${err.message}</td></tr>`;
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }
+
+    async function submitAddWhitelist(event) {
+      event.preventDefault();
+      const inpUser = document.getElementById('inpWhitelistUsername');
+      const inpNotes = document.getElementById('inpWhitelistNotes');
+      const btn = document.getElementById('btnSubmitAddWhitelist');
+      const feedback = document.getElementById('whitelistFeedbackMsg');
+
+      const username = (inpUser?.value || '').trim().toUpperCase();
+      const notes = (inpNotes?.value || '').trim();
+
+      if (!username) return;
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/whitelist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, notes })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          if (feedback) {
+            feedback.className = 'mt-2 text-xs font-semibold text-rose-400 block';
+            feedback.textContent = data.error || 'Error al agregar usuario';
+          }
+          return;
+        }
+
+        if (inpUser) inpUser.value = '';
+        if (inpNotes) inpNotes.value = '';
+        if (feedback) {
+          feedback.className = 'mt-2 text-xs font-semibold text-emerald-400 block';
+          feedback.textContent = data.message || `Usuario ${username} agregado exitosamente.`;
+          setTimeout(() => { if (feedback) feedback.className = 'hidden'; }, 4000);
+        }
+        loadWhitelistData();
+      } catch (err) {
+        if (feedback) {
+          feedback.className = 'mt-2 text-xs font-semibold text-rose-400 block';
+          feedback.textContent = 'Error de red: ' + err.message;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function deleteWhitelistUser(username) {
+      if (!confirm(`¿Está seguro de revocar el acceso al Monitor SAP para el usuario '${username}'?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/whitelist/${encodeURIComponent(username)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || 'No fue posible eliminar al usuario');
+          return;
+        }
+        loadWhitelistData();
+      } catch (err) {
+        alert('Error al eliminar usuario: ' + err.message);
       }
     }
 

@@ -28,8 +28,26 @@ const {
   deleteSession,
   extractTokenFromReq,
   requireSapAuth,
-  getSapTargetMetadata
+  getSapTargetMetadata,
+  isWhitelistAdmin,
+  getWhitelist,
+  addToWhitelist,
+  removeFromWhitelist,
+  WHITELIST_ADMINS
 } = require('../services/authService');
+
+// Middleware para restringir endpoints de configuración de acceso exclusivamente a DREDONDO y HPEREZ
+function requireWhitelistAdmin(req, res, next) {
+  const username = req.sapSession?.username || '';
+  if (!isWhitelistAdmin(username)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Acceso denegado: Solo los administradores DREDONDO y HPEREZ tienen permisos para consultar o modificar la lista de acceso (whitelist) al Monitor SAP.',
+      sapCode: 'ADMIN_PERMISSION_REQUIRED'
+    });
+  }
+  next();
+}
 
 // ==========================================
 // ENDPOINTS DE AUTENTICACIÓN SAP (LOGIN / LOGOUT / SESIÓN)
@@ -57,7 +75,9 @@ router.get('/auth/me', async (req, res) => {
         host: session.host,
         authMode: session.authMode,
         loginAt: session.loginAt,
-        expiresAt: session.expiresAt
+        expiresAt: session.expiresAt,
+        isAdmin: isWhitelistAdmin(session.username),
+        canManageWhitelist: isWhitelistAdmin(session.username)
       },
       sapTarget
     });
@@ -88,7 +108,9 @@ router.post('/auth/login', async (req, res) => {
         host: session.host,
         authMode: session.authMode,
         loginAt: session.loginAt,
-        expiresAt: session.expiresAt
+        expiresAt: session.expiresAt,
+        isAdmin: isWhitelistAdmin(session.username),
+        canManageWhitelist: isWhitelistAdmin(session.username)
       }
     });
   } catch (error) {
@@ -117,6 +139,56 @@ router.post('/auth/logout', async (req, res) => {
 
 // Proteger todos los endpoints de monitoreo y operación con sesión SAP válida
 router.use(requireSapAuth);
+
+// ==========================================
+// GESTIÓN DE LISTA BLANCA (WHITELIST)
+// Exclusivo para DREDONDO y HPEREZ
+// ==========================================
+
+router.get('/whitelist', requireWhitelistAdmin, async (req, res) => {
+  try {
+    const list = await getWhitelist();
+    res.json({
+      success: true,
+      whitelist: list,
+      admins: WHITELIST_ADMINS,
+      currentUser: req.sapSession.username
+    });
+  } catch (error) {
+    console.error('[ERROR GET /api/whitelist]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/whitelist', requireWhitelistAdmin, async (req, res) => {
+  try {
+    const { username, notes } = req.body || {};
+    const updated = await addToWhitelist(username, req.sapSession.username, notes);
+    res.json({
+      success: true,
+      message: `Usuario '${String(username || '').trim().toUpperCase()}' agregado a la lista de acceso al Monitor SAP.`,
+      whitelist: updated
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/whitelist]:', error);
+    res.status(error.statusCode || 500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/whitelist/:username', requireWhitelistAdmin, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const updated = await removeFromWhitelist(username, req.sapSession.username);
+    res.json({
+      success: true,
+      message: `Usuario '${String(username || '').trim().toUpperCase()}' eliminado de la lista de acceso al Monitor SAP.`,
+      whitelist: updated
+    });
+  } catch (error) {
+    console.error('[ERROR DELETE /api/whitelist]:', error);
+    res.status(error.statusCode || 500).json({ success: false, error: error.message });
+  }
+});
 
 // Endpoint principal del Dashboard
 router.get('/dashboard', async (req, res) => {

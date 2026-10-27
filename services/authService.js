@@ -5,7 +5,18 @@ const { db } = require('./snapshotService');
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 horas de vigencia de sesión
 const sessionsCache = new Map();
 
-// Inicializar tabla de sesiones en SQLite para persistir el login ante reinicios del servidor Node
+// ==========================================
+// CONTROL DE ACCESO / LISTA BLANCA (WHITELIST)
+// Administradores autorizados para ver y modificar la lista: DREDONDO, HPEREZ
+// Usuarios con acceso autorizado por defecto: DREDONDO, HPEREZ, JCUESTA, JANDRADE, SISTEMAS, CONEXION
+// ==========================================
+const WHITELIST_ADMINS = Object.freeze(['DREDONDO', 'HPEREZ']);
+const INITIAL_WHITELIST = Object.freeze(['DREDONDO', 'HPEREZ', 'JCUESTA', 'JANDRADE', 'SISTEMAS', 'CONEXION']);
+
+const whitelistCache = new Set();
+let whitelistLoaded = false;
+
+// Inicializar tablas de sesiones y de lista blanca en SQLite
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS sap_auth_sessions (
     token TEXT PRIMARY KEY,
@@ -20,7 +31,121 @@ db.serialize(() => {
 
   // Limpiar sesiones expiradas al iniciar
   db.run(`DELETE FROM sap_auth_sessions WHERE expires_at < ?`, [Date.now()]);
+
+  // Tabla de usuarios autorizados para ingresar al Monitor SAP
+  db.run(`CREATE TABLE IF NOT EXISTS sap_monitor_whitelist (
+    username TEXT PRIMARY KEY,
+    added_by TEXT NOT NULL,
+    added_at INTEGER NOT NULL,
+    notes TEXT
+  )`);
+
+  // Poblar usuarios iniciales garantizando que existan sin sobrescribir si ya fueron personalizados
+  const now = Date.now();
+  const stmt = db.prepare(`INSERT OR IGNORE INTO sap_monitor_whitelist (username, added_by, added_at, notes) VALUES (?, ?, ?, ?)`);
+  INITIAL_WHITELIST.forEach((user) => {
+    const isAdmin = WHITELIST_ADMINS.includes(user);
+    stmt.run([user, 'SISTEMA_INICIAL', now, isAdmin ? 'Administrador de acceso' : 'Operador autorizado SAP']);
+  });
+  stmt.finalize();
+
+  // Precargar lista blanca en memoria
+  db.all(`SELECT username FROM sap_monitor_whitelist`, (err, rows) => {
+    if (!err && Array.isArray(rows)) {
+      whitelistCache.clear();
+      rows.forEach(r => whitelistCache.add(r.username.toUpperCase()));
+      whitelistLoaded = true;
+    }
+  });
 });
+
+function isWhitelistAdmin(username) {
+  if (!username) return false;
+  return WHITELIST_ADMINS.includes(String(username).trim().toUpperCase());
+}
+
+async function isUserWhitelisted(username) {
+  if (!username) return false;
+  const clean = String(username).trim().toUpperCase();
+
+  if (!whitelistLoaded) {
+    await new Promise((resolve) => {
+      db.all(`SELECT username FROM sap_monitor_whitelist`, (err, rows) => {
+        if (!err && Array.isArray(rows)) {
+          whitelistCache.clear();
+          rows.forEach(r => whitelistCache.add(r.username.toUpperCase()));
+          whitelistLoaded = true;
+        }
+        resolve();
+      });
+    });
+  }
+
+  return whitelistCache.has(clean);
+}
+
+function getWhitelist() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT username, added_by, added_at, notes FROM sap_monitor_whitelist ORDER BY added_at ASC`, (err, rows) => {
+      if (err) return reject(err);
+      const list = (rows || []).map(r => ({
+        username: r.username.toUpperCase(),
+        addedBy: r.added_by,
+        addedAt: r.added_at,
+        notes: r.notes || '',
+        isAdmin: WHITELIST_ADMINS.includes(r.username.toUpperCase())
+      }));
+      resolve(list);
+    });
+  });
+}
+
+function addToWhitelist(username, addedBy, notes = '') {
+  return new Promise((resolve, reject) => {
+    const cleanUser = String(username || '').trim().toUpperCase();
+    const cleanAddedBy = String(addedBy || 'ADMIN').trim().toUpperCase();
+    const cleanNotes = String(notes || '').trim();
+
+    if (!cleanUser || cleanUser.length < 2) {
+      const err = new Error('El nombre de usuario SAP no puede estar vacío.');
+      err.statusCode = 400;
+      return reject(err);
+    }
+
+    const now = Date.now();
+    db.run(
+      `INSERT INTO sap_monitor_whitelist (username, added_by, added_at, notes)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(username) DO UPDATE SET added_by = excluded.added_by, added_at = excluded.added_at, notes = excluded.notes`,
+      [cleanUser, cleanAddedBy, now, cleanNotes],
+      async function(err) {
+        if (err) return reject(err);
+        whitelistCache.add(cleanUser);
+        const list = await getWhitelist();
+        resolve(list);
+      }
+    );
+  });
+}
+
+function removeFromWhitelist(username, requestedBy) {
+  return new Promise(async (resolve, reject) => {
+    const cleanUser = String(username || '').trim().toUpperCase();
+
+    if (WHITELIST_ADMINS.includes(cleanUser)) {
+      const err = new Error(`No es posible eliminar al administrador principal '${cleanUser}' de la lista de acceso.`);
+      err.statusCode = 400;
+      return reject(err);
+    }
+
+    db.run(`DELETE FROM sap_monitor_whitelist WHERE username = ?`, [cleanUser], async function(err) {
+      if (err) return reject(err);
+      whitelistCache.delete(cleanUser);
+      const list = await getWhitelist();
+      resolve(list);
+    });
+  });
+}
 
 /**
  * Traduce los errores nativos de SAP NetWeaver RFC SDK a mensajes claros en español
@@ -254,6 +379,17 @@ async function loginWithSap(username, password, client) {
     };
   }
 
+  // 1. Control de Acceso: Verificar si el usuario está en la Lista Blanca (Whitelist)
+  const isWhitelisted = await isUserWhitelisted(sapAuthResult.user);
+  if (!isWhitelisted) {
+    const forbiddenError = new Error(
+      `Acceso restringido: El usuario SAP '${sapAuthResult.user}' no tiene permisos para acceder al Monitor SAP. Solicite su inclusión en la lista de acceso a los administradores DREDONDO o HPEREZ.`
+    );
+    forbiddenError.statusCode = 403;
+    forbiddenError.sapCode = 'MONITOR_ACCESS_FORBIDDEN';
+    throw forbiddenError;
+  }
+
   const now = Date.now();
   const token = crypto.randomBytes(32).toString('hex');
   const session = {
@@ -264,7 +400,9 @@ async function loginWithSap(username, password, client) {
     host: sapAuthResult.host || SAP_CONFIG.ashost || '10.0.0.100',
     authMode: sapAuthResult.mode || 'SAP_LIVE_RFC',
     loginAt: now,
-    expiresAt: now + SESSION_TTL_MS
+    expiresAt: now + SESSION_TTL_MS,
+    isAdmin: isWhitelistAdmin(sapAuthResult.user),
+    canManageWhitelist: isWhitelistAdmin(sapAuthResult.user)
   };
 
   await saveSession(session);
@@ -296,7 +434,8 @@ function extractTokenFromReq(req) {
 }
 
 /**
- * Middleware Express para proteger los endpoints del Dashboard exigiendo sesión SAP activa.
+ * Middleware Express para proteger los endpoints del Dashboard exigiendo sesión SAP activa
+ * y validando que el usuario siga existiendo en la Whitelist.
  */
 async function requireSapAuth(req, res, next) {
   try {
@@ -308,7 +447,21 @@ async function requireSapAuth(req, res, next) {
         error: 'Sesión SAP requerida. Por favor inicie sesión con sus credenciales de SAP.'
       });
     }
-    req.sapSession = session;
+
+    const isWhitelisted = await isUserWhitelisted(session.username);
+    if (!isWhitelisted) {
+      return res.status(403).json({
+        authenticated: false,
+        error: `Acceso revocado: El usuario SAP '${session.username}' ya no se encuentra en la lista de acceso al Monitor SAP.`,
+        sapCode: 'MONITOR_ACCESS_REVOKED'
+      });
+    }
+
+    req.sapSession = {
+      ...session,
+      isAdmin: isWhitelistAdmin(session.username),
+      canManageWhitelist: isWhitelistAdmin(session.username)
+    };
     next();
   } catch (err) {
     return res.status(401).json({
@@ -334,5 +487,12 @@ module.exports = {
   deleteSession,
   extractTokenFromReq,
   requireSapAuth,
-  getSapTargetMetadata
+  getSapTargetMetadata,
+  WHITELIST_ADMINS,
+  INITIAL_WHITELIST,
+  isWhitelistAdmin,
+  isUserWhitelisted,
+  getWhitelist,
+  addToWhitelist,
+  removeFromWhitelist
 };
