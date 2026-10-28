@@ -1,3 +1,6 @@
+// Configuración forzada de zona horaria de Colombia (UTC-5) para consistencia global
+process.env.TZ = 'America/Bogota';
+
 const express = require('express');
 const axios = require('axios');
 const sqlite3 = require('sqlite3').verbose();

@@ -2194,7 +2194,35 @@
       let timeFormatted = String(err.timestamp || '');
       const tsStr = String(err.timestamp || '').trim();
       if (/^\d{14}$/.test(tsStr)) {
-        timeFormatted = `${tsStr.slice(8, 10)}:${tsStr.slice(10, 12)}:${tsStr.slice(12, 14)}`;
+        const y = tsStr.slice(0, 4);
+        const m = tsStr.slice(4, 6);
+        const d = tsStr.slice(6, 8);
+        const hh = tsStr.slice(8, 10);
+        const mm = tsStr.slice(10, 12);
+        const ss = tsStr.slice(12, 14);
+        const utcDate = new Date(`${y}-${m}-${d}T${hh}:${mm}:${ss}Z`);
+        if (!isNaN(utcDate.getTime())) {
+          timeFormatted = utcDate.toLocaleTimeString('es-CO', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+        } else {
+          timeFormatted = `${hh}:${mm}:${ss}`;
+        }
+      } else if (tsStr.includes('T') && tsStr.endsWith('Z')) {
+        const dt = new Date(tsStr);
+        if (!isNaN(dt.getTime())) {
+          timeFormatted = dt.toLocaleTimeString('es-CO', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+        }
       }
 
       return {
@@ -2333,6 +2361,7 @@
       // 2. Construir lectura en vivo a resolución exacta de 15 segundos
       const now = new Date();
       const nowStr = now.toLocaleTimeString('es-CO', {
+        timeZone: 'America/Bogota',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -2718,7 +2747,7 @@
       // Timestamp
       const tsElem = document.getElementById('diagnosisTimestamp');
       if (tsElem) {
-        tsElem.textContent = `Auditoría: ${data.local_time || new Date().toLocaleTimeString('es-CO')}`;
+        tsElem.textContent = `Auditoría: ${data.local_time || new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota' })}`;
       }
 
       // 1. SEMÁFORO GLOBAL
@@ -3633,7 +3662,7 @@
 Sistema: SAP ERP Productivo (Mandante 300)
 Módulo: Autogestión de Claves y Desbloqueos (Tabla ZPW_RESET_LOG)
 Período Auditado: ${periodLabel}
-Fecha de Emisión: ${new Date().toLocaleDateString('es-CO')} ${new Date().toLocaleTimeString('es-CO')}
+Fecha de Emisión: ${new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })} ${new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota' })}
 
 ----------------------------------------------------------------------
 📌 MÉTRICAS DE AHORRO Y PRODUCTIVIDAD
@@ -5352,7 +5381,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
 
         tbody.innerHTML = currentWhitelist.map(u => {
           const isAdm = Boolean(u.isAdmin);
-          const dateStr = u.addedAt ? new Date(u.addedAt).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+          const dateStr = u.addedAt ? new Date(u.addedAt).toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' }) : '-';
           const roleBadge = isAdm
             ? `<span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 text-[10px] font-bold"><i class="fa-solid fa-crown text-[9px] mr-1"></i>Administrador</span>`
             : `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[10px] font-semibold"><i class="fa-solid fa-user-check text-[9px] mr-1"></i>Autorizado</span>`;

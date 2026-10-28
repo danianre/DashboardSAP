@@ -81,7 +81,7 @@ function getSnapshotsLast8Hours() {
       SELECT
         id,
         timestamp,
-        datetime(timestamp, 'localtime') as local_ts,
+        datetime(timestamp, '-5 hours') as local_ts,
         active_sessions,
         dia_busy_pct,
         btc_busy_pct
@@ -109,15 +109,31 @@ function getSnapshotsLast8Hours() {
 function formatSnapshots(rows) {
   return rows.map((r) => {
     let timeStr = '';
-    const rawTs = r.local_ts || r.timestamp || '';
-    if (rawTs) {
-      const parts = rawTs.split(' ');
-      if (parts[1]) {
-        timeStr = parts[1].slice(0, 8); // Formato exacto HH:MM:SS
+    // r.timestamp se persiste en UTC (ej. "2026-10-28 21:25:00")
+    // Se convierte de forma garantizada a hora local Colombia (America/Bogota, UTC-5)
+    if (r.timestamp) {
+      const utcDate = new Date(String(r.timestamp).replace(' ', 'T') + 'Z');
+      if (!isNaN(utcDate.getTime())) {
+        timeStr = utcDate.toLocaleTimeString('es-CO', {
+          timeZone: 'America/Bogota',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+      }
+    }
+    if (!timeStr) {
+      const rawTs = r.local_ts || r.timestamp || '';
+      if (rawTs) {
+        const parts = rawTs.split(' ');
+        if (parts[1]) {
+          timeStr = parts[1].slice(0, 8); // Formato exacto HH:MM:SS
+        }
       }
     }
     return {
-      timestamp: rawTs,
+      timestamp: r.local_ts || r.timestamp || '',
       time: timeStr,
       dia_busy_pct: Number(r.dia_busy_pct) || 0,
       btc_busy_pct: Number(r.btc_busy_pct) || 0,
@@ -244,5 +260,6 @@ module.exports = {
   startSnapshotDaemon,
   stopSnapshotDaemon,
   getSnapshotDaemonStatus,
-  runCollectorCycle
+  runCollectorCycle,
+  formatSnapshots
 };

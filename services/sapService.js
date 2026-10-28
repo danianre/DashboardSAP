@@ -182,13 +182,40 @@ function parseWsError(err) {
   }
 
   // 2. Formatear timestamp si viene en formato numérico o string YYYYMMDDHHmmss
+  // SAP SRT_UTIL_ERRLOG registra el timestamp en UTC (YYYYMMDDhhmmss).
+  // Se convierte a hora local de Colombia (America/Bogota, UTC-5).
   let timeFormatted = String(err.timestamp || '');
   const tsStr = String(err.timestamp || '').trim();
   if (/^\d{14}$/.test(tsStr)) {
+    const y = tsStr.slice(0, 4);
+    const m = tsStr.slice(4, 6);
+    const d = tsStr.slice(6, 8);
     const hh = tsStr.slice(8, 10);
     const mm = tsStr.slice(10, 12);
     const ss = tsStr.slice(12, 14);
-    timeFormatted = `${hh}:${mm}:${ss}`;
+    const utcDate = new Date(`${y}-${m}-${d}T${hh}:${mm}:${ss}Z`);
+    if (!isNaN(utcDate.getTime())) {
+      timeFormatted = utcDate.toLocaleTimeString('es-CO', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    } else {
+      timeFormatted = `${hh}:${mm}:${ss}`;
+    }
+  } else if (tsStr.includes('T') && tsStr.endsWith('Z')) {
+    const dt = new Date(tsStr);
+    if (!isNaN(dt.getTime())) {
+      timeFormatted = dt.toLocaleTimeString('es-CO', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    }
   }
 
   return {
@@ -572,7 +599,13 @@ function analyzeWorkProcesses(workProcesses = [], userSessions = []) {
 
   return {
     timestamp: new Date().toISOString(),
-    local_time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    local_time: new Date().toLocaleTimeString('es-CO', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }),
     saturation: {
       status,
       color,
@@ -603,6 +636,8 @@ module.exports = {
   fetchSapDashboardData,
   manageUserLock,
   cancelWorkProcess,
-  analyzeWorkProcesses
+  analyzeWorkProcesses,
+  parseWsError,
+  normalizeWsErrors
 };
 
