@@ -882,14 +882,14 @@ function selectOptimalAiModel({ processType, estimatedTokens, preferredModel = '
     selectedModel = preferredModel;
   } else if (processType === 'PROYECCION_INV' && estimatedTokens > 3500) {
     selectedModel = 'gemini-2.5-pro';
-    modelTier = 'Pro Quantitative Series (Razonamiento Estacional MVER)';
+    modelTier = 'Pro Quantitative Series (Razonamiento Estacional Avanzado)';
     rationale =
-      'Seleccionado automáticamente por densidad de series temporales multi-anuales (MVER) para descomposición de estacionalidad, tendencia y cálculo de Stock de Seguridad.';
+      'Seleccionado automáticamente por alto volumen de series temporales para descomposición de estacionalidad, tendencia y proyección de demanda.';
   } else if (processType === 'PROYECCION_INV') {
     selectedModel = 'gemini-2.5-flash';
     modelTier = 'Flash Quantitative (Series Temporales Compactadas)';
     rationale =
-      'El pre-pivoteo M01..M12 redujo los tokens por debajo del umbral crítico, permitiendo inferencia matemática rápida en Gemini 2.5 Flash sin riesgo de Rate Limit (429).';
+      'La compactación mensual optimizó los tokens procesados, permitiendo inferencia analítica veloz y precisa sin riesgo de saturación de cuota.';
   }
 
   const executionChannel = cpiAiUrl
@@ -958,21 +958,29 @@ async function analyzeInventoryWithAi({
 
   const systemPrompt =
     processType === 'EXCESO_INV'
-      ? `Eres un Auditor Senior de Supply Chain, Gestión de Inventarios SAP MM (MARD/MARC) y Optimización de Capital de Trabajo de Grupo Daabon.
-Analiza la matriz compactada proveniente del RFC ZFMM_STOCK_BY_WERKS (Proceso: EXCESO_INV).
+      ? `Eres un Auditor Senior de Supply Chain, Gestión de Inventarios y Optimización de Capital de Trabajo de Grupo Daabon.
+Analiza la matriz compactada proveniente del RFC ZFMM_STOCK_BY_WERKS.
+Reglas de estilo estrictas:
+- Redacta en español corporativo claro y comprensible para gerencia y compras.
+- NO uses acrónimos técnicos de base de datos (evita MARD, MARC, MVER, LABST, MABST, EISBE, MINBE).
+- NO uses fórmulas o notación matemática en LaTeX ($...$); formula todo en texto claro, porcentajes (%) y unidades.
 Genera un informe ejecutivo en formato Markdown estructurado que incluya:
-1. Resumen Ejecutivo de Salud de Inventario y KPIs críticos.
-2. Tabla Markdown con el Top de Materiales en Exceso de Stock / Capital Inmovilizado y acciones concretas (traslado entre centros, bloqueo de OC, ajuste de MABST).
-3. Tabla Markdown con los Materiales en Quiebre de Stock o Bajo Stock de Seguridad (EISBE) que requieren reabastecimiento urgente.
-4. Diagnóstico de Parametrización MRP (materiales con stock real pero sin Stock Máximo MABST o Seguridad EISBE en MARC).
-5. Plan de Acción Inmediato para Compras y Demand Planning.`
-      : `Eres un Científico de Datos de Supply Chain y Demand Planning especializado en SAP MM (Tabla MVER / RFC ZFMM_HISTORICO_CONSUMO) de Grupo Daabon.
-Analiza las series históricas mensuales compactadas (M01..M12) del proceso PROYECCION_INV.
+1. Resumen Ejecutivo de Salud de Inventario y métricas clave.
+2. Tabla Markdown con el Top de Materiales en Exceso de Stock / Capital Inmovilizado y acciones concretas recomendadas.
+3. Tabla Markdown con los Materiales en Quiebre de Stock o Bajo Stock de Seguridad que requieren abastecimiento urgente.
+4. Diagnóstico de Parámetros de Stock (materiales con existencias físicas sin límites de stock configurados).
+5. Plan de Acción Inmediato para Compras y Gestión de Demanda.`
+      : `Eres un Científico de Datos de Supply Chain y Demand Planning de Grupo Daabon.
+Analiza las series históricas mensuales provenientes del RFC ZFMM_HISTORICO_CONSUMO.
+Reglas de estilo estrictas:
+- Redacta en español corporativo claro y comprensible para analistas de compras y operaciones.
+- NO uses fórmulas ni símbolos matemáticos en LaTeX ($...$, \\sigma, \\ge, etc.); explica cualquier métrica en texto claro y porcentajes (%).
+- NO uses nombres técnicos de tablas ni campos SAP (evita MVER, MARC, etc.).
 Genera un informe ejecutivo en formato Markdown estructurado que incluya:
 1. Resumen Ejecutivo del Comportamiento de Demanda y Estacionalidad por Centro.
-2. Tabla Markdown de Proyección de Demanda (Próximo Trimestre), Promedio Mensual, Coeficiente de Variación (CV%), Mes Pico Estacional y Stock de Seguridad Sugerido (95% Nivel de Servicio).
-3. Análisis de Patrones Estacionales y Tendencia Interanual (identificación de meses pico de cosecha/mantenimiento y valles).
-4. Recomendaciones Automáticas de Reaprovisionamiento y Ajuste de Parámetros MRP (EISBE, MINBE, MABST) para Compras y Demand Planning.`;
+2. Tabla Markdown de Proyección de Demanda (Próximo Trimestre), Promedio Mensual, Variabilidad %, Mes Pico Estacional y Stock de Seguridad Sugerido (95% Nivel de Servicio).
+3. Análisis de Patrones Estacionales y Tendencia Interanual (meses pico y meses valle).
+4. Recomendaciones de Abastecimiento y Actualización de Parámetros de Stock para Compras.`;
 
   let markdownReport = '';
   let providerUsed = modelDecision.executionChannel;
@@ -1100,7 +1108,7 @@ function buildDeterministicExcessAuditMarkdown(rows, filters, telemetry, modelDe
               `| \`${r.matnr}\` | ${r.maktx} | **${r.werks}** | ${Number(r.stockActual).toLocaleString('es-CO')} | ${Number(r.stockMaximo).toLocaleString('es-CO')} | ${Number(r.stockSeguridad).toLocaleString('es-CO')} | **+${Number(r.excessQty).toLocaleString('es-CO')}** | ${r.recommendation} |`
           )
         ].join('\n')
-      : '> **Sin Excesos Críticos frente a Stock Máximo:** Ningún material del rango consultado supera actualmente el techo `MABST` parametrizado en `MARC`.';
+      : '> **Sin Excesos Críticos frente a Stock Máximo:** Ningún material del rango consultado supera actualmente el límite de Stock Máximo configurado en SAP.';
 
   const topShortageTable =
     shortageRows.length > 0
@@ -1112,33 +1120,33 @@ function buildDeterministicExcessAuditMarkdown(rows, filters, telemetry, modelDe
               `| \`${r.matnr}\` | ${r.maktx} | **${r.werks}** | ${Number(r.stockActual).toLocaleString('es-CO')} | ${Number(r.stockSeguridad).toLocaleString('es-CO')} | **-${Number(r.shortageQty).toLocaleString('es-CO')}** | ${r.statusLabel} — ${r.recommendation} |`
           )
         ].join('\n')
-      : '> **Cobertura de Seguridad Cumplida:** Todos los materiales parametrizados mantienen existencias por encima de su Stock de Seguridad (`EISBE`).';
+      : '> **Cobertura de Seguridad Cumplida:** Todos los materiales con existencias se encuentran por encima de su Stock de Seguridad.';
 
   const topUnparamTable =
     unparamRows.length > 0
       ? [
-          '| Material | Descripción | Centro | Almacenes | Stock Actual Inmovilizado | Riesgo de Gobernanza MRP |',
+          '| Material | Descripción | Centro | Almacenes | Stock Inmovilizado | Diagnóstico de Parámetros |',
           '| :--- | :--- | :---: | :---: | ---: | :--- |',
           ...unparamRows.slice(0, 10).map(
             r =>
-              `| \`${r.matnr}\` | ${r.maktx} | **${r.werks}** | ${(r.almacenes || []).join(', ') || '-'} | **${Number(r.stockActual).toLocaleString('es-CO')}** | Sin \`MABST\` ni \`EISBE\` en vista MRP 1/2 (\`MM02\`) |`
+              `| \`${r.matnr}\` | ${r.maktx} | **${r.werks}** | ${(r.almacenes || []).join(', ') || '-'} | **${Number(r.stockActual).toLocaleString('es-CO')}** | Sin Stock Máximo ni de Seguridad configurados |`
           )
         ].join('\n')
-      : '> **Parametrización MRP Completa:** Todos los materiales con existencias cuentan con umbrales definidos.';
+      : '> **Parametrización Completa:** Todos los materiales con existencias cuentan con umbrales definidos.';
 
   return `# Informe de Auditoría de Inventarios e Inmovilización de Capital (IA)
-**Proceso:** \`EXCESO_INV\` (\`ZFMM_STOCK_BY_WERKS\`) | **Centro Analizado:** \`${centroLabel}\` | **Fecha:** ${nowStr}
+**Proceso:** \`ZFMM_STOCK_BY_WERKS\` | **Centro Analizado:** \`${centroLabel}\` | **Fecha:** ${nowStr}
 **Arquitectura IA Seleccionada:** \`${modelDecision.selectedModel}\` — *${modelDecision.modelTier}* (${telemetry.tokenSavingsPct}% ahorro de tokens: ${telemetry.estimatedRawTokens} -> ${telemetry.estimatedMinifiedTokens} tokens)
 
 ---
 
 ## 1. Resumen Ejecutivo de Salud del Stock
-- **Universo Auditado:** **${totalMaterials}** materiales únicos en el centro \`${centroLabel}\` (**${activeStockRows.length}** con existencias físicas \`LABST > 0\`).
-- **Volumen Físico Total en Libre Utilización (\`LABST\`):** **${totalActual.toLocaleString('es-CO')}** unidades.
+- **Universo Auditado:** **${totalMaterials}** materiales únicos en el centro \`${centroLabel}\` (**${activeStockRows.length}** con existencias físicas).
+- **Volumen Físico Total en Libre Utilización:** **${totalActual.toLocaleString('es-CO')}** unidades.
 - **Alertas de Exceso / Sobrestock:** **${excessRows.length}** materiales (**+${totalExcess.toLocaleString('es-CO')}** unidades sobre el límite óptimo).
-- **Alertas de Quiebre / Bajo Stock de Seguridad (\`EISBE\`):** **${shortageRows.length}** materiales (**-${totalShortage.toLocaleString('es-CO')}** unidades de déficit).
-- **Materiales en Banda Óptima / Punto de Pedido:** **${optimalRows.length}** óptimos y **${reorderRows.length}** en punto de reorden (\`MINBE\`).
-- **Materiales con Stock Físico sin Techo MRP (\`MABST = 0\`):** **${unparamRows.length}** materiales detectados.
+- **Alertas de Quiebre / Bajo Stock de Seguridad:** **${shortageRows.length}** materiales (**-${totalShortage.toLocaleString('es-CO')}** unidades de déficit).
+- **Materiales en Banda Óptima / Punto de Pedido:** **${optimalRows.length}** óptimos y **${reorderRows.length}** en punto de reorden.
+- **Materiales con Stock Físico sin Límite Máximo Configurado:** **${unparamRows.length}** materiales detectados.
 
 ---
 
@@ -1152,15 +1160,15 @@ ${topShortageTable}
 
 ---
 
-## 4. Auditoría de Gobernanza MRP (Existencias sin Techo de Stock Máximo)
+## 4. Auditoría de Parámetros de Stock (Existencias sin Límite Máximo Configurado)
 ${topUnparamTable}
 
 ---
 
 ## 5. Recomendaciones Automáticas para Compras y Demand Planning
-1. **Contención de Capital Inmovilizado (Compras):** Bloquear temporalmente la liberación de nuevas SolPeds para los **${excessRows.length}** materiales identificados con sobrestock y evaluar traslado inter-centros (\`ME21N\` / mov. \`301\`) antes de emitir nuevas órdenes de compra.
-2. **Reposición Prioritaria ( Abastecimiento):** Generar pedidos de reposición inmediata para los **${shortageRows.length}** materiales por debajo del Stock de Seguridad (\`EISBE\`), priorizando aquellos con \`LABST = 0\` para evitar paradas de planta o mantenimiento.
-3. **Higiene de Datos Maestros SAP (\`MM02\` / \`MASS\`):** Actualizar los parámetros \`MABST\` (Stock Máximo) y \`EISBE\` (Stock de Seguridad) en los **${unparamRows.length}** materiales que mantienen existencias activas sin límites MRP configurados en la tabla \`MARC\`.`;
+1. **Contención de Capital Inmovilizado (Compras):** Bloquear temporalmente la liberación de nuevas Solicitudes de Pedido para los **${excessRows.length}** materiales identificados con sobrestock y evaluar traslado entre centros antes de emitir nuevas órdenes de compra.
+2. **Reposición Prioritaria (Abastecimiento):** Generar pedidos de reposición inmediata para los **${shortageRows.length}** materiales por debajo del Stock de Seguridad, priorizando aquellos con existencias en cero para evitar paradas operativas o de mantenimiento.
+3. **Actualización de Parámetros en SAP:** Parametrizar el Stock Máximo y el Stock de Seguridad en los **${unparamRows.length}** materiales que mantienen existencias activas sin límites configurados.`;
 }
 
 /**
@@ -1272,7 +1280,7 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
     .join(', ');
 
   const forecastTable = [
-    '| Material | Descripción | Und | Consumo Histórico Total | Prom. Mensual | CV % (Volatilidad) | Mes Pico Estacional | Proyección Próx. Mes | Proyección Trimestral (3M) | Stock Seg. Sugerido | Punto Pedido Sugerido |',
+    '| Material | Descripción | Und | Consumo Histórico Total | Prom. Mensual | Variabilidad % | Mes Pico Estacional | Proyección Próx. Mes | Proyección Trimestral (3M) | Stock Seg. Sugerido | Punto Pedido Sugerido |',
     '| :--- | :--- | :---: | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |',
     ...profiles.slice(0, 15).map(
       p =>
@@ -1282,7 +1290,7 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
 
   return `# Proyección Estacional de Demanda y Optimización de Stock (IA)
 **Proceso:** \`ZFMM_HISTORICO_CONSUMO\` | **Centro:** \`${centroLabel}\` | **Fecha:** ${nowStr}
-**Arquitectura IA Seleccionada:** \`${modelDecision.selectedModel}\` — *${modelDecision.modelTier}* (${telemetry.tokenSavingsPct}% ahorro de tokens: ${telemetry.estimatedRawTokens} -> ${telemetry.estimatedMinifiedTokens} tokens mediante pivoteo M01..M12)
+**Arquitectura IA Seleccionada:** \`${modelDecision.selectedModel}\` — *${modelDecision.modelTier}* (${telemetry.tokenSavingsPct}% optimización de tokens: ${telemetry.estimatedRawTokens} -> ${telemetry.estimatedMinifiedTokens} tokens procesados)
 
 ---
 
@@ -1290,12 +1298,12 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
 - **Materiales Analizados:** **${profiles.length}** SKUs con **${rows.length}** períodos mensuales evaluados en el centro \`${centroLabel}\`.
 - **Volumen Histórico Acumulado:** **${profiles.reduce((a, p) => a + p.total, 0).toLocaleString('es-CO')}** unidades consumidas.
 - **Meses de Mayor Presión Estacional:** ${topSeasonMonths || 'Sin picos registrados'}.
-- **Perfil de Variabilidad:** **${profiles.filter(p => p.cv < 25 && p.total > 0).length}** materiales de demanda estable (\`CV < 25%\`), **${profiles.filter(p => p.cv >= 25 && p.cv < 60).length}** estacionales moderados y **${profiles.filter(p => p.cv >= 60).length}** con picos de alta volatilidad (\`CV >= 60%\`).
+- **Perfil de Variabilidad:** **${profiles.filter(p => p.cv < 25 && p.total > 0).length}** materiales de demanda estable (variabilidad baja menor a 25%), **${profiles.filter(p => p.cv >= 25 && p.cv < 60).length}** con estacionalidad moderada (25% a 60%) y **${profiles.filter(p => p.cv >= 60).length}** con alta volatilidad o picos de consumo (> 60%).
 
 ---
 
 ## 2. Matriz de Proyección de Demanda y Parámetros Recomendados
-*Nota metodológica: Proyección calculada mediante suavizamiento exponencial ponderado (65% tendencia últimos 6 meses + 35% media histórica) y Stock de Seguridad con nivel de servicio del 95% ($Z = 1.65 \\cdot \\sigma_d$).*
+*Nota metodológica: Proyección calculada mediante suavizamiento exponencial ponderado (65% tendencia de los últimos 6 meses + 35% histórico general) y Stock de Seguridad dimensionado para un nivel de servicio del 95%.*
 
 ${forecastTable}
 
@@ -1303,10 +1311,10 @@ ${forecastTable}
 
 ## 3. Diagnóstico de Estacionalidad y Recomendaciones para Demand Planning
 1. **Anticipación de Picos Estacionales:** Programar órdenes de compra abiertas o contratos marco antes de los meses de mayor presión histórica (${topSeasonMonths || 'meses pico'}) para evitar compras urgentes a sobrecosto.
-2. **Actualización Dinámica de Stock en SAP:** Ajustar el Stock de Seguridad utilizando la columna **Stock Seg. Sugerido** para proteger el nivel de servicio del 95% frente a la desviación estándar real de consumo ($\sigma_d$).
-3. **Estrategia Diferenciada por Coeficiente de Variación ($CV$):**
-   - **Materiales Estables ($CV < 25\\%$):** Automatizar mediante punto de reorden fijo.
-   - **Materiales Estacionales / Volátiles ($CV \\ge 50\\%$):** Gestionar bajo planificación por pronóstico estacional o revisión mensual de Demand Planning evitando inflar el inventario promedio durante los meses valle.`;
+2. **Actualización Dinámica de Stock en SAP:** Ajustar el Stock de Seguridad en SAP utilizando los valores de la columna **Stock Seg. Sugerido** para garantizar una cobertura del 95% protegiendo la operación frente a variaciones imprevistas en la demanda.
+3. **Estrategia Diferenciada según Nivel de Variabilidad:**
+   - **Demanda Estable (Variación menor al 25%):** Automatizar la reposición mediante punto de pedido fijo.
+   - **Demanda Estacional o Volátil (Variación superior al 50%):** Gestionar bajo pronóstico estacional y revisión mensual de Compras, evitando sobrecostos de almacenamiento en meses de bajo consumo.`;
 }
 
 function getSimulatedStockRows(werks) {

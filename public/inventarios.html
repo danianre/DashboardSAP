@@ -1195,7 +1195,23 @@
 
     // Renderizador ligero y seguro de Markdown Estructurado (Tablas, Alertas, Listas y Encabezados)
     function renderMarkdownToHtml(md) {
-      const lines = String(md || '').split('\n');
+      // Limpieza preventiva de expresiones LaTeX o fórmulas estadísticas residuales para formato ejecutivo claro
+      const sanitized = String(md || '')
+        .replace(/\(\$Z\s*=\s*1\.65\s*\\cdot\s*\\sigma_d\$\)/gi, '')
+        .replace(/\(\$\\sigma_d\$\)/gi, '')
+        .replace(/\(\$CV\$\):?/gi, 'según Nivel de Variabilidad:')
+        .replace(/\(\$CV\s*<\s*25\\?%\$\)/gi, '(Variación menor al 25%)')
+        .replace(/\(\$CV\s*\\ge\s*50\\?%\$\)/gi, '(Variación superior al 50%)')
+        .replace(/\\cdot/g, '·')
+        .replace(/\\ge/g, '≥')
+        .replace(/\\le/g, '≤')
+        .replace(/\\sigma_d/g, 'desviación estándar')
+        .replace(/\\sigma/g, 'σ')
+        .replace(/\\%/g, '%')
+        .replace(/\\\$/g, '$')
+        .replace(/\$([^\$\n]+)\$/g, '$1');
+
+      const lines = sanitized.split('\n');
       let html = '';
       let inTable = false;
       let inList = false;
