@@ -61,6 +61,136 @@ function getFallbackData(customBanner) {
   };
 }
 
+// Normaliza y decodifica errores de Web Services y Endpoints CPI (SRT_UTIL / SMICM).
+// SAP almacena el contexto de error en formato XML codificado en Base64 en la tabla SRT_UTIL_ERRLOG.
+// Esta función decodifica el Base64, extrae los parámetros legibles (interfaz, operación, endpoint,
+// puerto lógico, código de error HTTP / SOAP) y genera un mensaje limpio y comprensible.
+function parseWsError(err) {
+  if (!err || typeof err !== 'object') return err;
+
+  let text = String(err.error_text || '').trim();
+  let decodedXml = '';
+
+  // 1. Detectar y decodificar Base64 si aplica
+  if (/^[A-Za-z0-9+/=]+$/.test(text) && text.length % 4 === 0 && text.length > 20) {
+    try {
+      const decoded = Buffer.from(text, 'base64').toString('utf8');
+      if (decoded.includes('<') && decoded.includes('>')) {
+        decodedXml = decoded;
+      }
+    } catch (_) {}
+  } else if (text.includes('<') && text.includes('>')) {
+    decodedXml = text;
+  }
+
+  const getTag = (xml, tag) => {
+    const m = xml.match(new RegExp('<' + tag + '>(.*?)</' + tag + '>', 'i'));
+    return m ? m[1].trim() : '';
+  };
+
+  let ifName = err.if_name && err.if_name !== 'N/A' ? err.if_name : '';
+  let errType = err.err_type && err.err_type !== 'WS_ERROR' ? err.err_type : 'WS_ERROR';
+  let cleanMessage = text;
+  let targetEndpoint = '';
+  let logicalPort = '';
+  let operation = '';
+
+  if (decodedXml) {
+    const xmlIfName = getTag(decodedXml, 'INTERFACE_NAME');
+    const proxyName = getTag(decodedXml, 'CONSUMER_PROXY');
+    const opName = getTag(decodedXml, 'OPERATION_NAME');
+    logicalPort = getTag(decodedXml, 'LOGICAL_PORT');
+    operation = opName;
+
+    if (!ifName || ifName === 'N/A') {
+      ifName = xmlIfName || proxyName || 'Web Service';
+      if (opName && opName !== ifName) {
+        ifName += ` (${opName})`;
+      }
+    }
+
+    const httpErr = getTag(decodedXml, 'HTTP_ERROR_TEXT');
+    const htmlPage = getTag(decodedXml, 'HTML_ERROR_PAGE');
+    const faultStr = getTag(decodedXml, 'faultstring') || getTag(decodedXml, 'EXCEPTION_TEXT') || getTag(decodedXml, 'MESSAGE');
+    const faultCode = getTag(decodedXml, 'faultcode');
+    const host = getTag(decodedXml, 'TARGET_HOST_NAME');
+    const path = getTag(decodedXml, 'TARGET_PATH');
+    const proto = getTag(decodedXml, 'PROTOCOL') || 'https';
+    const port = getTag(decodedXml, 'TARGET_PORT_NUMBER');
+
+    if (host) {
+      targetEndpoint = `${proto}://${host}${port && port !== '443' && port !== '80' ? ':' + port : ''}${path}`;
+    }
+
+    if (httpErr) {
+      if (httpErr.toLowerCase().includes('not found')) {
+        errType = 'HTTP 404 (Not Found)';
+      } else if (httpErr.toLowerCase().includes('unauthorized')) {
+        errType = 'HTTP 401 (Unauthorized)';
+      } else if (httpErr.toLowerCase().includes('forbidden')) {
+        errType = 'HTTP 403 (Forbidden)';
+      } else if (httpErr.toLowerCase().includes('gateway') || httpErr.toLowerCase().includes('bad gateway')) {
+        errType = 'HTTP 502 (Bad Gateway)';
+      } else if (httpErr.toLowerCase().includes('timeout') || httpErr.toLowerCase().includes('gateway timeout')) {
+        errType = 'HTTP 504 (Timeout)';
+      } else {
+        errType = `HTTP: ${httpErr}`;
+      }
+
+      cleanMessage = `Fallo en llamada Web Service: ${httpErr}`;
+      if (htmlPage && htmlPage !== httpErr) {
+        cleanMessage += ` — ${htmlPage}`;
+      }
+      if (targetEndpoint) {
+        cleanMessage += ` hacia ${targetEndpoint}`;
+      }
+      if (logicalPort) {
+        cleanMessage += ` [Puerto Lógico: ${logicalPort}]`;
+      }
+    } else if (faultStr) {
+      errType = faultCode ? `SOAP: ${faultCode}` : 'SOAP Fault';
+      cleanMessage = `Fallo SOAP: ${faultStr}`;
+      if (targetEndpoint) {
+        cleanMessage += ` en ${targetEndpoint}`;
+      }
+      if (logicalPort) {
+        cleanMessage += ` [Puerto Lógico: ${logicalPort}]`;
+      }
+    } else {
+      const stripped = decodedXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      cleanMessage = stripped.slice(0, 300) + (stripped.length > 300 ? '...' : '');
+    }
+  }
+
+  // 2. Formatear timestamp si viene en formato numérico o string YYYYMMDDHHmmss
+  let timeFormatted = String(err.timestamp || '');
+  const tsStr = String(err.timestamp || '').trim();
+  if (/^\d{14}$/.test(tsStr)) {
+    const hh = tsStr.slice(8, 10);
+    const mm = tsStr.slice(10, 12);
+    const ss = tsStr.slice(12, 14);
+    timeFormatted = `${hh}:${mm}:${ss}`;
+  }
+
+  return {
+    ...err,
+    if_name: ifName || 'Web Service',
+    err_type: errType,
+    error_text: cleanMessage,
+    target_endpoint: targetEndpoint,
+    logical_port: logicalPort,
+    operation: operation,
+    timestamp: timeFormatted,
+    raw_error_text: text,
+    raw_decoded: decodedXml
+  };
+}
+
+function normalizeWsErrors(errors) {
+  if (!Array.isArray(errors)) return [];
+  return errors.map(parseWsError);
+}
+
 // Obtener métricas del Dashboard desde SAP (Z_ERP_DASHBOARD_METRICS)
 async function fetchSapDashboardData() {
   if (process.env.SAP_LIVE === 'true') {
@@ -72,7 +202,8 @@ async function fetchSapDashboardData() {
       const parsed = JSON.parse(res.EV_JSON_RESPONSE);
       return {
         mode: `CONECTADO EN VIVO A SAP ${parsed.environment || ''} (${parsed.sysid || 'BOQ'} - Mandante ${parsed.client || SAP_CONFIG.client})`,
-        ...parsed
+        ...parsed,
+        ws_cpi_errors: normalizeWsErrors(parsed.ws_cpi_errors)
       };
     } catch (sapErr) {
       console.error('[ERROR CONEXIÓN SAP RFC]:', sapErr.message || sapErr);

@@ -2069,6 +2069,128 @@
     const VISIBLE_WINDOW_SIZE = 480; // Ventana visible de 2 horas (480 puntos a 15s) sobre el historial de 8 horas
     const MAX_HISTORY_POINTS = 3840; // Buffer de hasta 16 horas (3.840 puntos) para exploración histórica
 
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatClientWsError(err) {
+      if (!err || typeof err !== 'object') return err || {};
+      let text = String(err.error_text || '').trim();
+      let decodedXml = err.raw_decoded || '';
+
+      // Decodificación de respaldo en el navegador si aún viene en Base64
+      if (!decodedXml && /^[A-Za-z0-9+/=]+$/.test(text) && text.length % 4 === 0 && text.length > 20) {
+        try {
+          const decoded = atob(text);
+          if (decoded.includes('<') && decoded.includes('>')) {
+            decodedXml = decoded;
+          }
+        } catch (_) {}
+      } else if (!decodedXml && text.includes('<') && text.includes('>')) {
+        decodedXml = text;
+      }
+
+      const getTag = (xml, tag) => {
+        const m = xml.match(new RegExp('<' + tag + '>(.*?)</' + tag + '>', 'i'));
+        return m ? m[1].trim() : '';
+      };
+
+      let ifName = err.if_name && err.if_name !== 'N/A' ? err.if_name : '';
+      let errType = err.err_type && err.err_type !== 'WS_ERROR' ? err.err_type : 'WS_ERROR';
+      let cleanMessage = text;
+      let targetEndpoint = err.target_endpoint || '';
+      let logicalPort = err.logical_port || '';
+      let operation = err.operation || '';
+
+      if (decodedXml) {
+        const xmlIfName = getTag(decodedXml, 'INTERFACE_NAME');
+        const proxyName = getTag(decodedXml, 'CONSUMER_PROXY');
+        const opName = getTag(decodedXml, 'OPERATION_NAME');
+        logicalPort = logicalPort || getTag(decodedXml, 'LOGICAL_PORT');
+        operation = operation || opName;
+
+        if (!ifName || ifName === 'N/A') {
+          ifName = xmlIfName || proxyName || 'Web Service';
+          if (opName && opName !== ifName) {
+            ifName += ' (' + opName + ')';
+          }
+        }
+
+        const httpErr = getTag(decodedXml, 'HTTP_ERROR_TEXT');
+        const htmlPage = getTag(decodedXml, 'HTML_ERROR_PAGE');
+        const faultStr = getTag(decodedXml, 'faultstring') || getTag(decodedXml, 'EXCEPTION_TEXT') || getTag(decodedXml, 'MESSAGE');
+        const faultCode = getTag(decodedXml, 'faultcode');
+        const host = getTag(decodedXml, 'TARGET_HOST_NAME');
+        const path = getTag(decodedXml, 'TARGET_PATH');
+        const proto = getTag(decodedXml, 'PROTOCOL') || 'https';
+        const port = getTag(decodedXml, 'TARGET_PORT_NUMBER');
+
+        if (host && !targetEndpoint) {
+          targetEndpoint = `${proto}://${host}${port && port !== '443' && port !== '80' ? ':' + port : ''}${path}`;
+        }
+
+        if (httpErr) {
+          if (httpErr.toLowerCase().includes('not found')) {
+            errType = 'HTTP 404 (Not Found)';
+          } else if (httpErr.toLowerCase().includes('unauthorized')) {
+            errType = 'HTTP 401 (Unauthorized)';
+          } else if (httpErr.toLowerCase().includes('forbidden')) {
+            errType = 'HTTP 403 (Forbidden)';
+          } else if (httpErr.toLowerCase().includes('gateway') || httpErr.toLowerCase().includes('bad gateway')) {
+            errType = 'HTTP 502 (Bad Gateway)';
+          } else if (httpErr.toLowerCase().includes('timeout') || httpErr.toLowerCase().includes('gateway timeout')) {
+            errType = 'HTTP 504 (Timeout)';
+          } else {
+            errType = 'HTTP: ' + httpErr;
+          }
+
+          cleanMessage = 'Fallo en llamada Web Service: ' + httpErr;
+          if (htmlPage && htmlPage !== httpErr) {
+            cleanMessage += ' — ' + htmlPage;
+          }
+          if (targetEndpoint) {
+            cleanMessage += ' hacia ' + targetEndpoint;
+          }
+          if (logicalPort) {
+            cleanMessage += ' [Puerto Lógico: ' + logicalPort + ']';
+          }
+        } else if (faultStr) {
+          errType = faultCode ? 'SOAP: ' + faultCode : 'SOAP Fault';
+          cleanMessage = 'Fallo SOAP: ' + faultStr;
+          if (targetEndpoint) {
+            cleanMessage += ' en ' + targetEndpoint;
+          }
+          if (logicalPort) {
+            cleanMessage += ' [Puerto Lógico: ' + logicalPort + ']';
+          }
+        }
+      }
+
+      let timeFormatted = String(err.timestamp || '');
+      const tsStr = String(err.timestamp || '').trim();
+      if (/^\d{14}$/.test(tsStr)) {
+        timeFormatted = `${tsStr.slice(8, 10)}:${tsStr.slice(10, 12)}:${tsStr.slice(12, 14)}`;
+      }
+
+      return {
+        ...err,
+        if_name: ifName || 'Web Service',
+        err_type: errType,
+        error_text: cleanMessage,
+        target_endpoint: targetEndpoint,
+        logical_port: logicalPort,
+        operation: operation,
+        timestamp: timeFormatted,
+        raw_decoded: decodedXml
+      };
+    }
+
     function handleTimeSliderInput(value) {
       const slider = document.getElementById('timeWindowSlider');
       const maxVal = slider ? parseInt(slider.max, 10) : 0;
@@ -4883,21 +5005,69 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
 
         const wsList = document.getElementById('wsCpiErrorsList');
         wsList.innerHTML = '';
-        (data.ws_cpi_errors || []).forEach(err => {
-          wsList.innerHTML += `
-            <div class="p-3 rounded-lg bg-gray-900/90 border border-cyan-500/30 flex justify-between items-start gap-3">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-mono font-bold text-cyan-400">${err.if_name}</span>
-                  <span class="text-[11px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">${err.err_type}</span>
-                </div>
-                <p class="text-xs text-gray-300 mt-1">${err.error_text}</p>
-                <span class="text-[11px] text-gray-500 font-mono">Usuario: ${err.uname}</span>
-              </div>
-              <span class="text-xs font-mono text-gray-400">${err.timestamp}</span>
+        const wsErrors = Array.isArray(data.ws_cpi_errors) ? data.ws_cpi_errors : [];
+        if (wsErrors.length === 0) {
+          wsList.innerHTML = `
+            <div class="p-8 text-center bg-gray-900/40 rounded-xl border border-gray-800">
+              <span class="material-symbols-outlined text-emerald-400 text-3xl mb-2 inline-block">verified</span>
+              <p class="text-sm font-semibold text-emerald-300">Sin errores de Web Services o Endpoints CPI</p>
+              <p class="text-xs text-gray-500 mt-1">Todos los consumos SOAP y REST de hoy se han ejecutado satisfactoriamente.</p>
             </div>
           `;
-        });
+        } else {
+          wsErrors.forEach(err => {
+            const formatted = formatClientWsError(err);
+            const isHttp404 = formatted.err_type.includes('404');
+            const isTimeout = formatted.err_type.toLowerCase().includes('timeout');
+            const badgeClass = isHttp404
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              : isTimeout
+                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                : 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+
+            wsList.innerHTML += `
+              <div class="p-4 rounded-xl bg-gray-900/90 border border-slate-800 hover:border-cyan-500/40 transition shadow-lg space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5 bg-cyan-950/70 px-2 py-0.5 rounded border border-cyan-500/30">
+                      <i class="fa-solid fa-network-wired text-[10px]"></i>
+                      ${escapeHtml(formatted.if_name)}
+                    </span>
+                    <span class="text-[11px] px-2 py-0.5 rounded font-mono font-semibold ${badgeClass}">
+                      ${escapeHtml(formatted.err_type)}
+                    </span>
+                  </div>
+                  <span class="text-xs font-mono text-gray-400 flex items-center gap-1">
+                    <i class="fa-regular fa-clock text-[10px]"></i>
+                    ${escapeHtml(formatted.timestamp || '--:--:--')}
+                  </span>
+                </div>
+
+                <p class="text-xs text-gray-200 font-medium leading-relaxed">
+                  ${escapeHtml(formatted.error_text)}
+                </p>
+
+                <div class="flex flex-wrap items-center justify-between text-[11px] text-gray-400 border-t border-gray-800 pt-2 gap-2 font-mono">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span><span class="text-gray-500">Usuario SAP:</span> <strong class="text-gray-300">${escapeHtml(formatted.uname || '-')}</strong></span>
+                    ${formatted.logical_port ? `<span><span class="text-gray-500">Puerto Lógico:</span> <code class="text-cyan-300 font-bold">${escapeHtml(formatted.logical_port)}</code></span>` : ''}
+                    ${formatted.operation ? `<span><span class="text-gray-500">Operación:</span> <code class="text-amber-300 font-bold">${escapeHtml(formatted.operation)}</code></span>` : ''}
+                  </div>
+                  ${formatted.target_endpoint ? `<div class="truncate max-w-sm text-gray-500" title="${escapeHtml(formatted.target_endpoint)}"><i class="fa-solid fa-arrow-up-right-from-square text-[9px] mr-1"></i>${escapeHtml(formatted.target_endpoint)}</div>` : ''}
+                </div>
+
+                ${formatted.raw_decoded ? `
+                  <details class="mt-1 pt-1.5 border-t border-gray-800/60">
+                    <summary class="text-[10px] text-gray-500 hover:text-cyan-400 cursor-pointer font-mono select-none">
+                      Ver contexto técnico detallado (XML / Payload)
+                    </summary>
+                    <pre class="mt-1.5 p-2.5 bg-slate-950 rounded text-[10px] font-mono text-slate-400 overflow-x-auto whitespace-pre-wrap max-h-36 border border-slate-800">${escapeHtml(formatted.raw_decoded)}</pre>
+                  </details>
+                ` : ''}
+              </div>
+            `;
+          });
+        }
 
         currentSm12Locks = data.sm12_locks || [];
         renderSm12Table();
