@@ -97,7 +97,7 @@ function parseWsError(err) {
 
   if (decodedXml) {
     const xmlIfName = getTag(decodedXml, 'INTERFACE_NAME');
-    const proxyName = getTag(decodedXml, 'CONSUMER_PROXY');
+    const proxyName = getTag(decodedXml, 'CONSUMER_PROXY') || getTag(decodedXml, 'PROVIDER_INTERFACE');
     const opName = getTag(decodedXml, 'OPERATION_NAME');
     logicalPort = getTag(decodedXml, 'LOGICAL_PORT');
     operation = opName;
@@ -113,13 +113,20 @@ function parseWsError(err) {
     const htmlPage = getTag(decodedXml, 'HTML_ERROR_PAGE');
     const faultStr = getTag(decodedXml, 'faultstring') || getTag(decodedXml, 'EXCEPTION_TEXT') || getTag(decodedXml, 'MESSAGE');
     const faultCode = getTag(decodedXml, 'faultcode');
+    const exceptionType = getTag(decodedXml, 'TYPE') || getTag(decodedXml, 'CLASSNAME');
+    const exceptionErrText = getTag(decodedXml, 'ERROR_TEXT');
+    const refName = getTag(decodedXml, 'REF_NAME');
+    const pattern = getTag(decodedXml, 'PATTERN');
     const host = getTag(decodedXml, 'TARGET_HOST_NAME');
     const path = getTag(decodedXml, 'TARGET_PATH');
     const proto = getTag(decodedXml, 'PROTOCOL') || 'https';
     const port = getTag(decodedXml, 'TARGET_PORT_NUMBER');
+    const requestUri = getTag(decodedXml, 'REQUEST_URI');
 
     if (host) {
       targetEndpoint = `${proto}://${host}${port && port !== '443' && port !== '80' ? ':' + port : ''}${path}`;
+    } else if (requestUri) {
+      targetEndpoint = requestUri;
     }
 
     if (httpErr) {
@@ -146,6 +153,18 @@ function parseWsError(err) {
       }
       if (logicalPort) {
         cleanMessage += ` [Puerto Lógico: ${logicalPort}]`;
+      }
+    } else if (exceptionType && exceptionErrText) {
+      errType = exceptionType;
+      cleanMessage = `Excepción ABAP/SOAP: ${exceptionErrText}`;
+      if (refName) {
+        cleanMessage += ` [Campo: ${refName}]`;
+      }
+      if (pattern) {
+        cleanMessage += ` (Formato requerido: ${pattern})`;
+      }
+      if (targetEndpoint) {
+        cleanMessage += ` en ${targetEndpoint}`;
       }
     } else if (faultStr) {
       errType = faultCode ? `SOAP: ${faultCode}` : 'SOAP Fault';
