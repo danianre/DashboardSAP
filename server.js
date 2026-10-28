@@ -9,7 +9,11 @@ const cors = require('cors');
 require('dotenv').config();
 
 const apiRoutes = require('./routes/api');
-const { db: monitorDb } = require('./services/snapshotService');
+const {
+  db: monitorDb,
+  startSnapshotDaemon,
+  getSnapshotDaemonStatus
+} = require('./services/snapshotService');
 const {
   fetchStockByWerks,
   fetchHistoricoConsumo,
@@ -100,6 +104,7 @@ app.get('/api/health', (req, res) => {
     commit: releaseMeta.commit,
     deployedAt: releaseMeta.deployedAt,
     uptimeSeconds: Math.floor(process.uptime()),
+    collectorDaemon: getSnapshotDaemonStatus(),
     routes: {
       portal: '/',
       monitorSap: '/monitor-sap',
@@ -355,4 +360,7 @@ app.listen(PORT, () => {
   console.log(` 🧠 Inventarios IA:       http://localhost:${PORT}/inventarios-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
+
+  // Iniciar servicio demonio de recolección continua 24/7 en segundo plano (cada 15 segundos)
+  startSnapshotDaemon(15000);
 });

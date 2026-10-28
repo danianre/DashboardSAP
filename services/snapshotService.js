@@ -5,6 +5,11 @@ const dbPath = path.resolve(__dirname, '../monitor_sap.sqlite');
 const db = new sqlite3.Database(dbPath);
 
 let lastSavedBucket = null;
+let collectorTimer = null;
+let isCollecting = false;
+let lastCollectedAt = null;
+let lastCollectorError = null;
+let lastCollectedMetrics = null;
 
 // Asegurar que la tabla exista
 db.serialize(() => {
@@ -54,9 +59,9 @@ function saveSnapshot({ active_sessions, dia_busy_pct, btc_busy_pct = 0, sm12_lo
         console.error('[SNAPSHOT DB ERROR]:', err.message);
         resolve(false);
       } else {
-        // Limpieza periódica de muestras mayores a 24 horas (5% de probabilidad para no bloquear I/O)
+        // Limpieza periódica de muestras mayores a 48 horas (5% de probabilidad para no bloquear I/O)
         if (Math.random() < 0.05) {
-          db.run(`DELETE FROM system_snapshots WHERE timestamp < datetime('now', '-24 hours')`);
+          db.run(`DELETE FROM system_snapshots WHERE timestamp < datetime('now', '-48 hours')`);
         }
         resolve(true);
       }
@@ -66,10 +71,11 @@ function saveSnapshot({ active_sessions, dia_busy_pct, btc_busy_pct = 0, sm12_lo
 }
 
 /**
- * Obtiene los registros de las últimas 8 horas en intervalos de 15 segundos (~1.920 puntos)
- * ordenados cronológicamente.
+ * Obtiene los registros REALES de las últimas 8 horas en intervalos de 15 segundos (~1.920 puntos)
+ * ordenados cronológicamente desde la base de datos SQLite.
+ * NUNCA genera datos falsos o simulados; retorna exclusivamente las muestras reales grabadas por el demonio 24/7.
  */
-function getSnapshotsLast8Hours(currentBaseline = { active_sessions: 110, dia_busy_pct: 35.0, btc_busy_pct: 20.0 }) {
+function getSnapshotsLast8Hours() {
   return new Promise((resolve) => {
     const query = `
       SELECT
@@ -88,22 +94,14 @@ function getSnapshotsLast8Hours(currentBaseline = { active_sessions: 110, dia_bu
     db.all(query, (err, rows) => {
       if (err) {
         console.error('[SNAPSHOT QUERY ERROR]:', err.message);
-        return resolve(generateSeedSnapshots(currentBaseline, 8));
+        return resolve([]);
       }
 
-      // Si hay menos de 1500 puntos en base de datos, sembrar el historial de 8 horas continuas a 15 segundos (1.920 pts)
-      if (!rows || rows.length < 1500) {
-        seedHistoricalData(currentBaseline, 8).then(() => {
-          db.all(query, (err2, rows2) => {
-            if (err2 || !rows2) {
-              return resolve(generateSeedSnapshots(currentBaseline, 8));
-            }
-            resolve(formatSnapshots(rows2));
-          });
-        });
-      } else {
-        resolve(formatSnapshots(rows));
+      if (!rows || rows.length === 0) {
+        return resolve([]);
       }
+
+      resolve(formatSnapshots(rows));
     });
   });
 }
@@ -128,72 +126,123 @@ function formatSnapshots(rows) {
   });
 }
 
-function generateSeedSnapshots(baseline, hours = 8) {
-  const list = [];
-  const now = new Date();
-  const baseSessions = baseline.active_sessions || 115;
-  const baseDia = baseline.dia_busy_pct || 35.0;
-  const baseBtc = baseline.btc_busy_pct || 20.0;
-  const totalPoints = hours * 60 * 4; // 1.920 puntos (1 cada 15 segundos durante 8 horas)
+/**
+ * Ciclo de recolección continua en segundo plano (24 Horas):
+ * Consulta SAP en tiempo real y persiste la instantánea exacta cada 15 segundos,
+ * garantizando que al ingresar a cualquier hora del día exista el historial real continuo.
+ */
+async function runCollectorCycle() {
+  if (isCollecting) return;
+  isCollecting = true;
 
-  for (let i = totalPoints - 1; i >= 0; i--) {
-    const t = new Date(now.getTime() - i * 15000);
-    const hh = String(t.getHours()).padStart(2, '0');
-    const mm = String(t.getMinutes()).padStart(2, '0');
-    const ss = String(t.getSeconds()).padStart(2, '0');
-    const timeStr = `${hh}:${mm}:${ss}`;
+  try {
+    const { fetchSapDashboardData } = require('./sapService');
+    const sapData = await fetchSapDashboardData();
 
-    const cycle = (totalPoints - 1 - i) / 160;
-    const factor = Math.sin(cycle / 1.5) * 8 + Math.sin(cycle * 3) * 3 + (Math.random() * 3 - 1.5);
-    const factorBtc = Math.cos(cycle / 2) * 6 + Math.cos(cycle * 2.5) * 2 + (Math.random() * 2.5 - 1.25);
-    const sessions = Math.max(10, Math.round(baseSessions + factor * 1.8));
-    const diaPct = Math.min(100, Math.max(5, parseFloat((baseDia + factor).toFixed(1))));
-    const btcPct = Math.min(100, Math.max(0, parseFloat((baseBtc + factorBtc).toFixed(1))));
+    let diaBusy = 0;
+    let diaTotal = 0;
+    let btcBusy = 0;
+    let btcTotal = 0;
 
-    list.push({
-      secondsAgo: i * 15,
-      timestamp: t.toISOString(),
-      time: timeStr,
-      dia_busy_pct: i === 0 ? baseDia : diaPct,
-      btc_busy_pct: i === 0 ? baseBtc : btcPct,
-      active_sessions: i === 0 ? baseSessions : sessions
+    if (Array.isArray(sapData.work_processes)) {
+      sapData.work_processes.forEach(wp => {
+        const status = (wp.wp_status || '').toLowerCase().trim();
+        const isActive = (status === 'espera' || status === 'waiting')
+          ? Boolean(wp.wp_bname && wp.wp_bname !== '-' && wp.wp_bname.trim() !== '')
+          : true;
+
+        if (wp.wp_typ === 'DIA') {
+          diaTotal++;
+          if (isActive) diaBusy++;
+        } else if (wp.wp_typ === 'BTC') {
+          btcTotal++;
+          if (isActive) btcBusy++;
+        }
+      });
+    }
+
+    const diaBusyPct = diaTotal > 0 ? parseFloat(((diaBusy / diaTotal) * 100).toFixed(1)) : 0;
+    const btcBusyPct = btcTotal > 0 ? parseFloat(((btcBusy / btcTotal) * 100).toFixed(1)) : 0;
+    const activeSessions = Array.isArray(sapData.user_sessions) ? sapData.user_sessions.length : (sapData.active_users || 0);
+    const sm12Locks = (sapData.sm12_locks || []).length;
+    const wsErrors = sapData.ws_errors_count || 0;
+
+    await saveSnapshot({
+      active_sessions: activeSessions,
+      dia_busy_pct: diaBusyPct,
+      btc_busy_pct: btcBusyPct,
+      sm12_locks: sm12Locks,
+      ws_errors: wsErrors
     });
+
+    lastCollectedAt = new Date().toISOString();
+    lastCollectorError = null;
+    lastCollectedMetrics = {
+      diaBusyPct,
+      btcBusyPct,
+      activeSessions,
+      sm12Locks,
+      wsErrors,
+      sapMode: sapData.mode,
+      updatedAt: lastCollectedAt
+    };
+  } catch (err) {
+    lastCollectorError = err.message || String(err);
+    console.error('[SNAPSHOT 24/7 DAEMON ERROR]:', lastCollectorError);
+  } finally {
+    isCollecting = false;
   }
-  return list;
 }
 
-function seedHistoricalData(baseline, hours = 8) {
-  return new Promise((resolve) => {
-    const seeds = generateSeedSnapshots(baseline, hours);
+/**
+ * Inicia el servicio demonio de recolección continua 24/7 en segundo plano.
+ * No depende de conexiones del navegador de usuarios.
+ */
+function startSnapshotDaemon(intervalMs = 15000) {
+  if (collectorTimer) {
+    return;
+  }
 
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
-      // Limpiar registros desalineados de las últimas 8 horas antes de sembrar los 1.920 puntos exactos de 15s
-      db.run(`DELETE FROM system_snapshots WHERE timestamp >= datetime('now', '-8 hours')`);
+  console.log(`[SNAPSHOT 24/7 DAEMON] ⏱️ Iniciando grabación continua de rendimiento DIA/BTC (intervalo: ${intervalMs / 1000}s)`);
 
-      const stmt = db.prepare(`
-        INSERT INTO system_snapshots (timestamp, active_sessions, dia_busy_pct, btc_busy_pct, sm12_locks, ws_errors)
-        VALUES (datetime('now', ?), ?, ?, ?, 0, 0)
-      `);
-
-      seeds.forEach((s) => {
-        const modifier = `-${s.secondsAgo} seconds`;
-        stmt.run([modifier, s.active_sessions, s.dia_busy_pct, s.btc_busy_pct]);
-      });
-
-      stmt.finalize(() => {
-        db.run('COMMIT', () => {
-          lastSavedBucket = Math.floor(Date.now() / 15000);
-          resolve();
-        });
-      });
-    });
+  // Ciclo inicial inmediato
+  runCollectorCycle().catch(err => {
+    console.error('[SNAPSHOT DAEMON START ERROR]:', err.message);
   });
+
+  // Programación cíclica permanente
+  collectorTimer = setInterval(runCollectorCycle, intervalMs);
+
+  if (collectorTimer.unref) {
+    collectorTimer.unref();
+  }
+}
+
+function stopSnapshotDaemon() {
+  if (collectorTimer) {
+    clearInterval(collectorTimer);
+    collectorTimer = null;
+    console.log('[SNAPSHOT 24/7 DAEMON] Demonio detenido.');
+  }
+}
+
+function getSnapshotDaemonStatus() {
+  return {
+    running: Boolean(collectorTimer),
+    intervalMs: 15000,
+    lastCollectedAt,
+    lastError: lastCollectorError,
+    latestMetrics: lastCollectedMetrics
+  };
 }
 
 module.exports = {
   db,
   saveSnapshot,
   getSnapshotsLast8Hours,
-  getSnapshotsLast2Hours: getSnapshotsLast8Hours
+  getSnapshotsLast2Hours: getSnapshotsLast8Hours,
+  startSnapshotDaemon,
+  stopSnapshotDaemon,
+  getSnapshotDaemonStatus,
+  runCollectorCycle
 };
