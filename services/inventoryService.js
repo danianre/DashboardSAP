@@ -127,12 +127,12 @@ function evaluateStockStatus(stockActual, stockMaximo, stockSeguridad, puntoReor
     const impliedExcess = +(stockActual - stockSeguridad * 2).toFixed(3);
     return {
       statusCode: 'EXCESO_SIN_TECHO',
-      statusLabel: 'Posible Sobrestock (Sin Máx.)',
+      statusLabel: 'Posible Sobrestock',
       severity: 'warning',
       excessQty: impliedExcess,
       shortageQty: 0,
       utilizationPct: null,
-      recommendation: `Supera ${(stockActual / stockSeguridad).toFixed(1)}x el Stock de Seguridad sin tener Stock Máximo (MABST) parametrizado en MARC.`
+      recommendation: `Supera ${(stockActual / stockSeguridad).toFixed(1)}x el Stock de Seguridad sin tener Stock Máximo parametrizado.`
     };
   }
 
@@ -175,12 +175,12 @@ function evaluateStockStatus(stockActual, stockMaximo, stockSeguridad, puntoReor
   if (stockMaximo === 0 && stockSeguridad === 0 && stockActual > 0) {
     return {
       statusCode: 'SIN_PARAMETROS_MRP',
-      statusLabel: 'Sin Parámetros MRP',
+      statusLabel: 'Sin Límite Máximo Configurado',
       severity: 'neutral',
       excessQty: 0,
       shortageQty: 0,
       utilizationPct: null,
-      recommendation: `Stock activo (${stockActual.toLocaleString('es-CO')}) sin Stock Máximo ni Seguridad configurados en vista MRP de MARC.`
+      recommendation: `Stock activo (${stockActual.toLocaleString('es-CO')}) sin Stock Máximo ni de Seguridad configurados.`
     };
   }
 
@@ -1272,7 +1272,7 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
     .join(', ');
 
   const forecastTable = [
-    '| Material | Descripción | Und | Consumo Total (MVER) | Prom. Mensual | CV % (Volatilidad) | Mes Pico Estacional | Proyección Próx. Mes | Proyección Trimestral (3M) | Stock Seg. Sugerido (`EISBE`) | Punto Pedido Sugerido (`MINBE`) |',
+    '| Material | Descripción | Und | Consumo Histórico Total | Prom. Mensual | CV % (Volatilidad) | Mes Pico Estacional | Proyección Próx. Mes | Proyección Trimestral (3M) | Stock Seg. Sugerido | Punto Pedido Sugerido |',
     '| :--- | :--- | :---: | ---: | ---: | ---: | :---: | ---: | ---: | ---: | ---: |',
     ...profiles.slice(0, 15).map(
       p =>
@@ -1280,13 +1280,13 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
     )
   ].join('\n');
 
-  return `# Proyección Estacional de Demanda y Optimización MRP (IA)
-**Proceso:** \`PROYECCION_INV\` (\`ZFMM_HISTORICO_CONSUMO\` / Tabla \`MVER\`) | **Centro:** \`${centroLabel}\` | **Fecha:** ${nowStr}
+  return `# Proyección Estacional de Demanda y Optimización de Stock (IA)
+**Proceso:** \`ZFMM_HISTORICO_CONSUMO\` | **Centro:** \`${centroLabel}\` | **Fecha:** ${nowStr}
 **Arquitectura IA Seleccionada:** \`${modelDecision.selectedModel}\` — *${modelDecision.modelTier}* (${telemetry.tokenSavingsPct}% ahorro de tokens: ${telemetry.estimatedRawTokens} -> ${telemetry.estimatedMinifiedTokens} tokens mediante pivoteo M01..M12)
 
 ---
 
-## 1. Resumen Ejecutivo de Series Temporales (\`MVER\`)
+## 1. Resumen Ejecutivo de Series Temporales de Consumo
 - **Materiales Analizados:** **${profiles.length}** SKUs con **${rows.length}** períodos mensuales evaluados en el centro \`${centroLabel}\`.
 - **Volumen Histórico Acumulado:** **${profiles.reduce((a, p) => a + p.total, 0).toLocaleString('es-CO')}** unidades consumidas.
 - **Meses de Mayor Presión Estacional:** ${topSeasonMonths || 'Sin picos registrados'}.
@@ -1294,7 +1294,7 @@ function buildDeterministicForecastMarkdown(rows, filters, telemetry, modelDecis
 
 ---
 
-## 2. Matriz de Proyección de Demanda y Parámetros MRP Recomendados
+## 2. Matriz de Proyección de Demanda y Parámetros Recomendados
 *Nota metodológica: Proyección calculada mediante suavizamiento exponencial ponderado (65% tendencia últimos 6 meses + 35% media histórica) y Stock de Seguridad con nivel de servicio del 95% ($Z = 1.65 \\cdot \\sigma_d$).*
 
 ${forecastTable}
@@ -1303,10 +1303,10 @@ ${forecastTable}
 
 ## 3. Diagnóstico de Estacionalidad y Recomendaciones para Demand Planning
 1. **Anticipación de Picos Estacionales:** Programar órdenes de compra abiertas o contratos marco antes de los meses de mayor presión histórica (${topSeasonMonths || 'meses pico'}) para evitar compras urgentes a sobrecosto.
-2. **Actualización Dinámica de \`EISBE\` y \`MINBE\` en SAP (\`MM02\`):** Ajustar el Stock de Seguridad en \`MARC\` utilizando la columna **Stock Seg. Sugerido (\`EISBE\`)** para proteger el nivel de servicio del 95% frente a la desviación estándar real de consumo ($\sigma_d$).
+2. **Actualización Dinámica de Stock en SAP:** Ajustar el Stock de Seguridad utilizando la columna **Stock Seg. Sugerido** para proteger el nivel de servicio del 95% frente a la desviación estándar real de consumo ($\sigma_d$).
 3. **Estrategia Diferenciada por Coeficiente de Variación ($CV$):**
-   - **Materiales Estables ($CV < 25\\%$):** Automatizar mediante punto de reorden fijo (\`MRP Tipo VB\`).
-   - **Materiales Estacionales / Volátiles ($CV \\ge 50\\%$):** Gestionar bajo planificación por pronóstico estacional (\`MRP Tipo VV\` o revisión mensual de Demand Planning) evitando inflar el inventario promedio durante los meses valle.`;
+   - **Materiales Estables ($CV < 25\\%$):** Automatizar mediante punto de reorden fijo.
+   - **Materiales Estacionales / Volátiles ($CV \\ge 50\\%$):** Gestionar bajo planificación por pronóstico estacional o revisión mensual de Demand Planning evitando inflar el inventario promedio durante los meses valle.`;
 }
 
 function getSimulatedStockRows(werks) {

@@ -219,20 +219,18 @@
     <section class="glass-panel rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Selecciona el Proceso Analítico SAP MM</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Selecciona el Proceso Analítico</span>
           <div class="inline-flex flex-wrap gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800" role="tablist">
             <button type="button" id="tabModeExceso" onclick="switchMode('EXCESO_INV')" role="tab" aria-selected="true"
               class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40">
               <span class="material-symbols-outlined text-lg">inventory</span>
               <span>Modo A: Excesos de Inventario</span>
-              <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 border border-purple-400/30">EXCESO_INV</span>
             </button>
 
             <button type="button" id="tabModeProyeccion" onclick="switchMode('PROYECCION_INV')" role="tab" aria-selected="false"
               class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900">
               <span class="material-symbols-outlined text-lg">timeline</span>
               <span>Modo B: Proyección y Demanda Estacional</span>
-              <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">PROYECCION_INV</span>
             </button>
           </div>
         </div>
@@ -246,20 +244,20 @@
               <code id="activeRfcBadge" class="font-mono font-bold text-emerald-300 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30">ZFMM_STOCK_BY_WERKS</code>
             </div>
             <p id="activeModeDescription" class="text-slate-400 mt-0.5">
-              Auditoría de Stock Actual (`LABST`), Stock Máximo (`MABST`) y Stock de Seguridad (`EISBE`).
+              Auditoría de Stock Actual, Stock Máximo y Stock de Seguridad.
             </p>
           </div>
         </div>
       </div>
 
-      <!-- Barra de Filtros SAP (MATNR y WERKS) -->
+      <!-- Barra de Filtros SAP -->
       <form id="filterForm" onsubmit="handleConsultRfc(event)" class="mt-5 pt-5 border-t border-slate-800/80">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
 
-          <!-- Centro (WERKS) -->
+          <!-- Centro -->
           <div class="lg:col-span-2">
             <label for="inputWerks" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span>Centro (`WERKS`) <span id="werksRequiredStar" class="text-rose-400">*</span></span>
+              <span>Centro <span id="werksRequiredStar" class="text-rose-400">*</span></span>
               <span class="font-mono text-[10px] text-slate-500">4 chars</span>
             </label>
             <div class="relative">
@@ -269,10 +267,10 @@
             </div>
           </div>
 
-          <!-- Material Desde (MATNR Low) -->
+          <!-- Material Desde -->
           <div class="lg:col-span-3">
             <label for="inputMatnrLow" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span>Material Desde (`MATNR`) <span id="matnrRequiredStar" class="text-amber-400 text-[10px]">(Req. en Modo B)</span></span>
+              <span>Material Desde <span id="matnrRequiredStar" class="text-amber-400 text-[10px]">(Req. en Modo B)</span></span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined text-slate-500 text-base absolute left-3 top-2.5">qr_code_2</span>
@@ -281,11 +279,11 @@
             </div>
           </div>
 
-          <!-- Material Hasta (MATNR High) -->
+          <!-- Material Hasta -->
           <div class="lg:col-span-3">
             <label for="inputMatnrHigh" class="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-              <span>Material Hasta (`MATNR`)</span>
-              <span class="text-[10px] text-slate-500">Opcional para rango BT</span>
+              <span>Material Hasta</span>
+              <span class="text-[10px] text-slate-500">Opcional para rango</span>
             </label>
             <div class="relative">
               <span class="material-symbols-outlined text-slate-500 text-base absolute left-3 top-2.5">straighten</span>
@@ -321,7 +319,7 @@
           </button>
           <button type="button" onclick="applyPreset('0901', '408055', '408056')"
             class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
-            Centro 0901 · Espárragos MRP (408055–408056)
+            Centro 0901 · Espárragos (408055–408056)
           </button>
           <button type="button" onclick="applyPreset('1707', '407840', '408100')"
             class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
@@ -329,7 +327,7 @@
           </button>
           <button type="button" onclick="applyPreset('1602', '100020', '100030')"
             class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
-            Centro 1602 · Agrícola MVER (100020–100030)
+            Centro 1602 · Agrícola (100020–100030)
           </button>
           <button type="button" onclick="applyPreset('3301', '100000', '100200')"
             class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 font-mono text-[11px] transition">
@@ -377,16 +375,16 @@
           <span class="material-symbols-outlined text-rose-400 text-lg">notification_important</span>
         </div>
         <div id="kpi3Value" class="text-2xl font-extrabold text-rose-400 font-mono">0</div>
-        <div id="kpi3Sub" class="text-[11px] text-slate-400 mt-1">Riesgo operativo (`EISBE`)</div>
+        <div id="kpi3Sub" class="text-[11px] text-slate-400 mt-1">Riesgo de desabastecimiento</div>
       </div>
 
       <div class="glass-panel rounded-2xl border border-slate-800 p-4">
         <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
-          <span id="kpi4Label">Optimizador de Tokens IA</span>
+          <span id="kpi4Label">Optimización con IA</span>
           <span class="material-symbols-outlined text-purple-400 text-lg">compress</span>
         </div>
         <div id="kpi4Value" class="text-2xl font-extrabold text-purple-300 font-mono">~75%</div>
-        <div id="kpi4Sub" class="text-[11px] text-slate-400 mt-1">Minificación matricial activa</div>
+        <div id="kpi4Sub" class="text-[11px] text-slate-400 mt-1">Compresión matricial activa</div>
       </div>
     </section>
 
@@ -397,10 +395,10 @@
         <div class="flex items-center gap-3">
           <h2 id="tableTitle" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span>
-            <span>Matriz de Stock por Centro (`ZFMM_STOCK_BY_WERKS`)</span>
+            <span>Matriz de Stock por Centro (ZFMM_STOCK_BY_WERKS)</span>
           </h2>
           <span id="sourceBadge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-            SAP_RFC_LIVE
+            Conexión SAP en Vivo
           </span>
         </div>
 
@@ -408,19 +406,43 @@
           <!-- Buscador Rápido en Tabla -->
           <div class="relative">
             <span class="material-symbols-outlined text-slate-500 text-sm absolute left-3 top-2">filter_alt</span>
-            <input type="text" id="tableSearchInput" oninput="handleTableFilterChange()" placeholder="Filtrar material, texto, año..."
-              class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-48 sm:w-56" />
+            <input type="text" id="tableSearchInput" oninput="handleTableFilterChange()" placeholder="Filtrar material o texto..."
+              class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-44 sm:w-52" />
           </div>
 
-          <!-- Filtro rápido por Estado (Modo A) / Año (Modo B) -->
+          <!-- Filtro de Año (Específico para Modo B) -->
+          <select id="yearFilterSelect" onchange="handleTableFilterChange()"
+            class="hidden px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-purple-500 font-semibold">
+            <option value="ALL">Todos los años</option>
+          </select>
+
+          <!-- Filtro de Mes (Específico para Modo B) -->
+          <select id="monthFilterSelect" onchange="handleTableFilterChange()"
+            class="hidden px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-purple-500 font-semibold">
+            <option value="ALL">Todos los meses</option>
+            <option value="01">01 - Enero</option>
+            <option value="02">02 - Febrero</option>
+            <option value="03">03 - Marzo</option>
+            <option value="04">04 - Abril</option>
+            <option value="05">05 - Mayo</option>
+            <option value="06">06 - Junio</option>
+            <option value="07">07 - Julio</option>
+            <option value="08">08 - Agosto</option>
+            <option value="09">09 - Septiembre</option>
+            <option value="10">10 - Octubre</option>
+            <option value="11">11 - Noviembre</option>
+            <option value="12">12 - Diciembre</option>
+          </select>
+
+          <!-- Filtro de Estado (Modo A) / Consumo (Modo B) -->
           <select id="statusFilterSelect" onchange="handleTableFilterChange()"
-            class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+            class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-purple-500 font-semibold">
             <option value="ALL">Todos los registros</option>
           </select>
 
           <!-- Tamaño de página -->
           <select id="pageSizeSelect" onchange="handlePageSizeChange()" aria-label="Filas por página"
-            class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-300 font-mono focus:outline-none">
+            class="px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-300 font-mono focus:outline-none">
             <option value="15">15 / pág</option>
             <option value="30" selected>30 / pág</option>
             <option value="50">50 / pág</option>
@@ -484,7 +506,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h3 id="aiModalTitle" class="text-base sm:text-lg font-bold text-white">Informe Analítico de Inventarios IA</h3>
-              <span id="aiModalProcessBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/30">EXCESO_INV</span>
+              <span id="aiModalProcessBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/30">Auditoría de Stock</span>
             </div>
             <p id="aiModalSubtitle" class="text-xs text-slate-400">Generado por el Motor Analítico SAP + IA</p>
           </div>
@@ -589,20 +611,24 @@
         tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
         tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
         rfcBadge.textContent = 'ZFMM_STOCK_BY_WERKS';
-        modeDesc.textContent = 'Auditoría de Stock Actual (LABST), Stock Máximo (MABST) y Stock de Seguridad (EISBE).';
+        modeDesc.textContent = 'Auditoría de Stock Actual, Stock Máximo y Stock de Seguridad.';
         btnAiLabel.textContent = 'Generar Auditoría con IA';
-        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span><span>Matriz de Stock por Centro (`ZFMM_STOCK_BY_WERKS`)</span>';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span><span>Matriz de Stock por Centro (ZFMM_STOCK_BY_WERKS)</span>';
         matnrReqStar.textContent = '(Opcional si filtra Centro)';
         matnrReqStar.className = 'text-slate-400 text-[10px]';
+        document.getElementById('yearFilterSelect')?.classList.add('hidden');
+        document.getElementById('monthFilterSelect')?.classList.add('hidden');
       } else {
         tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
         tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
         rfcBadge.textContent = 'ZFMM_HISTORICO_CONSUMO';
-        modeDesc.textContent = 'Series históricas mensuales de consumo (MVER) y proyección estacional de demanda.';
+        modeDesc.textContent = 'Series de consumo histórico y proyección estacional de demanda.';
         btnAiLabel.textContent = 'Proyectar Demanda con IA';
-        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">timeline</span><span>Serie Histórica de Consumo (`ZFMM_HISTORICO_CONSUMO` / `MVER`)</span>';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">timeline</span><span>Serie Histórica de Consumo (ZFMM_HISTORICO_CONSUMO)</span>';
         matnrReqStar.textContent = '* Obligatorio';
         matnrReqStar.className = 'text-rose-400 text-[10px] font-bold';
+        document.getElementById('yearFilterSelect')?.classList.remove('hidden');
+        document.getElementById('monthFilterSelect')?.classList.remove('hidden');
       }
 
       // Ejecutar consulta automática al cambiar de modo si los campos requeridos están presentes
@@ -722,59 +748,127 @@
       const k4S = document.getElementById('kpi4Sub');
 
       if (currentMode === 'EXCESO_INV') {
-        k1L.textContent = 'Materiales Auditados';
-        k1V.textContent = (currentSummary.totalMaterials || 0).toLocaleString('es-CO');
-        k1S.textContent = `${currentSummary.withStockCount || 0} con existencias físicas > 0`;
+        const activeRows = (filteredRows && filteredRows.length > 0) ? filteredRows : rawRows;
+        const filteredStock = activeRows.reduce((a, r) => a + (Number(r.stockActual) || 0), 0);
+        const filteredExcess = activeRows.reduce((a, r) => a + (Number(r.excessQty) || 0), 0);
+        const filteredShortage = activeRows.reduce((a, r) => a + (Number(r.shortageQty) || 0), 0);
+        const excessCount = activeRows.filter(r => r.statusCode === 'EXCESO_CRITICO' || r.statusCode === 'EXCESO_SIN_TECHO').length;
+        const shortageCount = activeRows.filter(r => r.statusCode === 'QUIEBRE_STOCK' || r.statusCode === 'BAJO_SEGURIDAD').length;
+        const unparamCount = activeRows.filter(r => r.statusCode === 'SIN_PARAMETROS_MRP').length;
+        const optimalCount = activeRows.filter(r => r.statusCode === 'OPTIMO').length;
 
-        k2L.textContent = 'Excesos / Sin Techo MRP';
-        k2V.textContent = ((currentSummary.excessCount || 0) + (currentSummary.unparameterizedCount || 0)).toLocaleString('es-CO');
-        k2S.textContent = `${currentSummary.excessCount || 0} sobre máx · ${currentSummary.unparameterizedCount || 0} sin MABST`;
+        k1L.textContent = 'Materiales Auditados';
+        k1V.textContent = activeRows.length.toLocaleString('es-CO');
+        k1S.textContent = `${activeRows.filter(r => r.stockActual > 0).length} con existencias físicas > 0`;
+
+        k2L.textContent = 'Excesos / Sin Límite Máximo';
+        k2V.textContent = (excessCount + unparamCount).toLocaleString('es-CO');
+        k2S.textContent = `Exceso detectado: +${filteredExcess.toLocaleString('es-CO')} unds`;
 
         k3L.textContent = 'Quiebres / Bajo Seguridad';
-        k3V.textContent = (currentSummary.shortageCount || 0).toLocaleString('es-CO');
-        k3S.textContent = `Déficit: ${(currentSummary.totalShortageUnits || 0).toLocaleString('es-CO')} unds`;
+        k3V.textContent = shortageCount.toLocaleString('es-CO');
+        k3S.textContent = `Déficit crítico: -${filteredShortage.toLocaleString('es-CO')} unds`;
 
-        k4L.textContent = 'Stock Físico Total (LABST)';
-        k4V.textContent = (currentSummary.totalStockUnits || 0).toLocaleString('es-CO');
-        k4S.textContent = `${currentSummary.optimalCount || 0} materiales en nivel óptimo`;
+        k4L.textContent = 'Stock Físico Total';
+        k4V.textContent = filteredStock.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        k4S.textContent = `${optimalCount} materiales en nivel óptimo`;
       } else {
-        k1L.textContent = 'Períodos MVER Analizados';
-        k1V.textContent = (currentSummary.totalRecords || 0).toLocaleString('es-CO');
-        k1S.textContent = `${currentSummary.uniqueMaterials || 0} materiales únicos`;
+        // MODO B: PROYECCIÓN Y DEMANDA ESTACIONAL
+        const activeRows = (filteredRows && filteredRows.length > 0) ? filteredRows : rawRows;
+        const filteredConsumo = activeRows.reduce((a, r) => a + (Number(r.consumoTotal) || 0), 0);
+        const totalGeneral = rawRows.reduce((a, r) => a + (Number(r.consumoTotal) || 0), 0);
 
-        k2L.textContent = 'Consumo Histórico Total';
-        k2V.textContent = (currentSummary.totalConsumoAcumulado || 0).toLocaleString('es-CO');
-        const years = currentSummary.yearsCovered || [];
-        k2S.textContent = years.length ? `Años: ${years[0]} – ${years[years.length - 1]}` : 'Serie histórica';
+        const allYears = Array.from(new Set(rawRows.map(r => r.anio).filter(Boolean))).sort();
+        const activeYears = Array.from(new Set(activeRows.map(r => r.anio).filter(Boolean))).sort();
+        const activeMaterials = Array.from(new Set(activeRows.map(r => r.matnr).filter(Boolean))).length;
 
-        k3L.textContent = 'Alta Volatilidad Estacional';
-        k3V.textContent = (currentSummary.highVariabilityMaterials || 0).toLocaleString('es-CO');
-        k3S.textContent = 'Materiales con CV >= 50%';
+        const selectedYear = document.getElementById('yearFilterSelect')?.value || 'ALL';
+        const selectedMonth = document.getElementById('monthFilterSelect')?.value || 'ALL';
+        const hasSearch = (document.getElementById('tableSearchInput')?.value.trim() !== '');
+        const hasStatus = (document.getElementById('statusFilterSelect')?.value === 'NON_ZERO');
+        const isFiltered = selectedYear !== 'ALL' || selectedMonth !== 'ALL' || hasSearch || hasStatus;
 
-        k4L.textContent = 'Compresión Serie M01..M12';
-        k4V.textContent = '~92%';
-        k4S.textContent = 'Pivoteo anual para ahorro de tokens';
+        // KPI 1: Años o Período Seleccionado
+        if (selectedYear !== 'ALL' && selectedMonth !== 'ALL') {
+          const mNum = parseInt(selectedMonth, 10);
+          const mName = MONTH_NAMES[mNum] || selectedMonth;
+          k1L.textContent = 'Período Seleccionado';
+          k1V.textContent = `${mName} ${selectedYear}`;
+          k1S.textContent = `${activeRows.length} registro(s) · ${activeMaterials} material(es)`;
+        } else if (selectedYear !== 'ALL') {
+          k1L.textContent = 'Año Seleccionado';
+          k1V.textContent = `Año ${selectedYear}`;
+          k1S.textContent = `${activeRows.length} meses registrados (${activeMaterials} material${activeMaterials > 1 ? 'es' : ''})`;
+        } else if (selectedMonth !== 'ALL') {
+          const mNum = parseInt(selectedMonth, 10);
+          const mName = MONTH_NAMES[mNum] || selectedMonth;
+          k1L.textContent = 'Mes Seleccionado';
+          k1V.textContent = `Mes de ${mName}`;
+          k1S.textContent = `${activeYears.length} años evaluados (${activeRows.length} registros)`;
+        } else {
+          k1L.textContent = 'Años en Historial';
+          k1V.textContent = `${allYears.length} Años`;
+          const yearRange = allYears.length ? `${allYears[0]} – ${allYears[allYears.length - 1]}` : 'Historial anual';
+          k1S.textContent = `${yearRange} (${activeMaterials} material${activeMaterials > 1 ? 'es' : ''})`;
+        }
+
+        // KPI 2: Consumo Total DINÁMICO
+        if (isFiltered) {
+          k2L.textContent = selectedYear !== 'ALL'
+            ? `Consumo (Año ${selectedYear})`
+            : selectedMonth !== 'ALL'
+              ? `Consumo (${MONTH_NAMES[parseInt(selectedMonth, 10)]})`
+              : 'Consumo (Filtro Activo)';
+          k2V.textContent = filteredConsumo.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+          k2S.textContent = `Total general acumulado: ${totalGeneral.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        } else {
+          k2L.textContent = 'Consumo Histórico Total';
+          k2V.textContent = totalGeneral.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+          k2S.textContent = `${allYears.length} años acumulados (${rawRows.length} registros)`;
+        }
+
+        // KPI 3: Meses con Consumo Activo
+        const activeMonths = activeRows.filter(r => r.consumoTotal > 0).length;
+        k3L.textContent = 'Meses con Consumo Activo';
+        k3V.textContent = activeMonths.toLocaleString('es-CO');
+        k3S.textContent = `De ${activeRows.length} registros en la vista actual`;
+
+        // KPI 4: Promedio Mensual
+        const avgMensual = activeRows.length > 0 ? (filteredConsumo / activeRows.length) : 0;
+        k4L.textContent = isFiltered ? 'Promedio Mensual (Filtro)' : 'Promedio Mensual';
+        k4V.textContent = avgMensual.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        k4S.textContent = 'Consumo promedio por período mensual';
       }
     }
 
     function populateFilterDropdown() {
-      const sel = document.getElementById('statusFilterSelect');
+      const statusSel = document.getElementById('statusFilterSelect');
+      const yearSel = document.getElementById('yearFilterSelect');
+      const monthSel = document.getElementById('monthFilterSelect');
+
       if (currentMode === 'EXCESO_INV') {
-        sel.innerHTML = `
+        yearSel?.classList.add('hidden');
+        monthSel?.classList.add('hidden');
+        statusSel.innerHTML = `
           <option value="ALL">Todos los estados (${rawRows.length})</option>
-          <option value="WITH_STOCK">Con Stock Actual > 0</option>
+          <option value="WITH_STOCK">Con Stock Físico > 0</option>
           <option value="ALERTS">Con Alerta (Exceso o Quiebre)</option>
           <option value="EXCESO_CRITICO">Exceso de Stock</option>
-          <option value="QUIEBRE_STOCK">Quiebre de Stock / Bajo Seg.</option>
+          <option value="QUIEBRE_STOCK">Quiebre de Stock / Bajo Seguridad</option>
           <option value="OPTIMO">Nivel Óptimo</option>
-          <option value="SIN_PARAMETROS_MRP">Sin Parámetros MRP</option>
+          <option value="SIN_PARAMETROS_MRP">Sin Límite Máximo Configurado</option>
         `;
       } else {
-        const years = Array.from(new Set(rawRows.map(r => r.anio))).sort().reverse();
-        sel.innerHTML = `
-          <option value="ALL">Todos los años (${rawRows.length} períodos)</option>
-          <option value="NON_ZERO">Solo meses con Consumo > 0</option>
-          ${years.map(y => `<option value="YEAR_${y}">Año ${y}</option>`).join('')}
+        yearSel?.classList.remove('hidden');
+        monthSel?.classList.remove('hidden');
+
+        const years = Array.from(new Set(rawRows.map(r => r.anio).filter(Boolean))).sort().reverse();
+        yearSel.innerHTML = '<option value="ALL">Todos los años</option>' +
+          years.map(y => `<option value="${y}">Año ${y}</option>`).join('');
+
+        statusSel.innerHTML = `
+          <option value="ALL">Todos los registros (${rawRows.length})</option>
+          <option value="NON_ZERO">Solo meses con consumo > 0</option>
         `;
       }
     }
@@ -782,6 +876,8 @@
     function handleTableFilterChange() {
       const q = document.getElementById('tableSearchInput').value.trim().toLowerCase();
       const statusFilter = document.getElementById('statusFilterSelect').value;
+      const yearFilter = document.getElementById('yearFilterSelect')?.value || 'ALL';
+      const monthFilter = document.getElementById('monthFilterSelect')?.value || 'ALL';
 
       filteredRows = rawRows.filter(r => {
         const matchText =
@@ -795,8 +891,8 @@
 
         if (!matchText) return false;
 
-        if (statusFilter === 'ALL') return true;
         if (currentMode === 'EXCESO_INV') {
+          if (statusFilter === 'ALL') return true;
           if (statusFilter === 'WITH_STOCK') return r.stockActual > 0;
           if (statusFilter === 'ALERTS') {
             return ['EXCESO_CRITICO', 'EXCESO_SIN_TECHO', 'QUIEBRE_STOCK', 'BAJO_SEGURIDAD'].includes(r.statusCode);
@@ -806,10 +902,9 @@
           }
           return r.statusCode === statusFilter;
         } else {
+          if (yearFilter !== 'ALL' && r.anio !== yearFilter) return false;
+          if (monthFilter !== 'ALL' && r.mes !== monthFilter) return false;
           if (statusFilter === 'NON_ZERO') return r.consumoTotal > 0;
-          if (statusFilter.startsWith('YEAR_')) {
-            return r.anio === statusFilter.replace('YEAR_', '');
-          }
           return true;
         }
       });
@@ -822,6 +917,9 @@
           return b.mesNum - a.mesNum;
         });
       }
+
+      // Actualizar dinámicamente las tarjetas de KPI con base en las filas filtradas
+      updateKpiCards();
 
       currentPage = 1;
       renderTable();
@@ -850,7 +948,7 @@
             <th scope="col" class="py-3.5 px-4 text-right">Stock Actual</th>
             <th scope="col" class="py-3.5 px-4 text-right">Stock Máximo</th>
             <th scope="col" class="py-3.5 px-4 text-right">Stock de Seguridad</th>
-            <th scope="col" class="py-3.5 px-4 text-center">Diagnóstico MRP</th>
+            <th scope="col" class="py-3.5 px-4 text-center">Diagnóstico de Stock</th>
           </tr>
         `;
       } else {
@@ -1008,8 +1106,9 @@
       document.getElementById('aiModalTitle').textContent =
         currentMode === 'EXCESO_INV'
           ? 'Auditoría Inteligente de Excesos y Quiebres de Stock'
-          : 'Proyección Estacional de Demanda (Series MVER)';
-      document.getElementById('aiModalProcessBadge').textContent = data.process;
+          : 'Proyección Estacional de Demanda';
+      document.getElementById('aiModalProcessBadge').textContent =
+        currentMode === 'EXCESO_INV' ? 'Auditoría de Stock' : 'Proyección de Demanda';
       document.getElementById('aiModalSubtitle').textContent = `${data.providerUsed} · ${data.modelDecision?.rationale || ''}`;
 
       const tel = data.telemetry || {};
@@ -1053,7 +1152,7 @@
 
       let csvLines = [];
       if (currentMode === 'EXCESO_INV') {
-        csvLines.push(['Material', 'Descripcion', 'Centro', 'Stock_Actual', 'Stock_Maximo', 'Stock_Seguridad', 'Punto_Reorden', 'Estado_MRP', 'Recomendacion'].join(';'));
+        csvLines.push(['Material', 'Descripcion', 'Centro', 'Stock_Actual', 'Stock_Maximo', 'Stock_Seguridad', 'Punto_Reorden', 'Estado_Stock', 'Recomendacion'].join(';'));
         for (const r of filteredRows) {
           csvLines.push([
             r.matnr,
