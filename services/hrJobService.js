@@ -2,6 +2,21 @@ const { executeRfc } = require('../config/sap');
 const { db } = require('./snapshotService');
 
 /**
+ * Limpia el texto de mensaje SAP de la tabla ZHR_LOG_BLOQUEO para no mostrar la cédula
+ * (evita redundancia y protege datos, dado que la cédula ya se muestra en su propia columna).
+ */
+function cleanRetiredSapMessage(msg, idCard) {
+  let clean = String(msg || '');
+  clean = clean.replace(/\s*\((?:cédula|cedula|cc|id)\s*[:\s][^)]*\)/gi, '');
+  clean = clean.replace(/\s*(?:cédula|cedula|cc)\s*:\s*\d+/gi, '');
+  if (idCard && String(idCard).trim()) {
+    const safeCard = String(idCard).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    clean = clean.replace(new RegExp('\\s*\\(?' + safeCard + '\\)?', 'gi'), '');
+  }
+  return clean.replace(/\s{2,}/g, ' ').trim();
+}
+
+/**
  * Consulta en tiempo real la tabla ZHR_LOG_BLOQUEO desde SAP mediante RFC_READ_TABLE
  */
 async function fetchFromSapTable() {
@@ -30,7 +45,8 @@ async function fetchFromSapTable() {
       const rawTime = (parts[3] || '').trim();
       const cedula = (parts[4] || '').trim();
       const nombre = (parts[5] || '').trim();
-      const msgSap = (parts[6] || '').trim();
+      const rawMsgSap = (parts[6] || '').trim();
+      const msgSap = cleanRetiredSapMessage(rawMsgSap, cedula);
 
       // Formateo YYYY-MM-DD
       let lockDate = rawDate;
@@ -155,11 +171,15 @@ function fetchFromSqliteFallback() {
         });
       }
 
-      const users = rows.map(r => ({
-        ...r,
-        has_sap_user: Boolean(r.bname && r.bname !== '-'),
-        msg_sap: r.action_taken
-      }));
+      const users = rows.map(r => {
+        const cleanMsg = cleanRetiredSapMessage(r.action_taken, r.id_card || r.pernr);
+        return {
+          ...r,
+          has_sap_user: Boolean(r.bname && r.bname !== '-'),
+          action_taken: cleanMsg,
+          msg_sap: cleanMsg
+        };
+      });
 
       const sapUsers = users.filter(u => u.has_sap_user);
       const availableMonths = buildAvailableMonths(users);
@@ -195,5 +215,6 @@ async function getRetiredBlockedUsersHistory() {
 }
 
 module.exports = {
-  getRetiredBlockedUsersHistory
+  getRetiredBlockedUsersHistory,
+  cleanRetiredSapMessage
 };

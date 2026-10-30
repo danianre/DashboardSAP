@@ -321,7 +321,7 @@
   </header>
 
   <!-- CINTA DE KPIS PRINCIPALES (TOP RIBBON) -->
-  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
     <div class="card p-4 flex flex-col justify-between" id="kpiUserCard">
       <div class="flex justify-between items-center text-gray-400 text-xs font-semibold uppercase">
         <span>Licencias (Diálogo/Comun.)</span>
@@ -350,16 +350,6 @@
       </div>
       <div class="text-2xl font-bold text-amber-400 mt-2" id="kpiInactive30d">--</div>
       <div class="text-xs text-gray-400 mt-1">Candidatos a bloqueo preventivo</div>
-    </div>
-
-    <div class="card p-4">
-      <div class="flex justify-between items-center text-gray-400 text-xs font-semibold uppercase">
-        <span>Bloqueados (Fallos / Admin)</span>
-        <i class="fa-solid fa-lock text-rose-400"></i>
-      </div>
-      <div class="text-2xl font-bold text-white mt-2"><span id="kpiLockedFailed" class="text-rose-400">--</span> / <span
-          id="kpiLockedAdmin">--</span></div>
-      <div class="text-xs text-gray-400 mt-1">Vencidos de fecha: <span id="kpiExpired">--</span></div>
     </div>
 
     <div class="card p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between">
@@ -1471,20 +1461,7 @@
           <i class="fa-solid fa-user-check text-gray-600 text-3xl mb-2"></i>
           <div>No se encontraron registros en ZHR_LOG_BLOQUEO con los filtros seleccionados.</div>
         </div>
-        </div>
 
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="px-6 py-3.5 border-t border-gray-800 bg-gray-950/80 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs">
-        <div class="text-gray-400 font-sans text-[11px] flex items-center gap-2">
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>Control SOX / Seguridad: Los usuarios retirados tienen revocación de logon activa y GLTGB fijada al día del retiro.</span>
-        </div>
-        <button onclick="closeRetiredUsersModal()"
-          class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
-          Cerrar
-        </button>
       </div>
 
     </div>
@@ -3211,6 +3188,17 @@
       updateRetiredKpisAndTable();
     }
 
+    function cleanRetiredSapMessage(msg, idCard) {
+      let clean = String(msg || '');
+      clean = clean.replace(/\s*\((?:cédula|cedula|cc|id)\s*[:\s][^)]*\)/gi, '');
+      clean = clean.replace(/\s*(?:cédula|cedula|cc)\s*:\s*\d+/gi, '');
+      if (idCard && String(idCard).trim()) {
+        const safeCard = String(idCard).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        clean = clean.replace(new RegExp('\\s*\\(?' + safeCard + '\\)?', 'gi'), '');
+      }
+      return clean.replace(/\s{2,}/g, ' ').trim();
+    }
+
     function renderRetiredUsersTable(list) {
       const tbody = document.getElementById('retiredUsersTableBody');
       const container = document.getElementById('retiredTableContainer');
@@ -3231,6 +3219,7 @@
       list.forEach(u => {
         const hasSap = u.has_sap_user;
         const rowBg = hasSap ? 'bg-rose-950/20' : '';
+        const cleanMsg = cleanRetiredSapMessage(u.msg_sap, u.id_card);
 
         tbody.innerHTML += `
           <tr class="${rowBg} hover:bg-gray-800/50 transition-colors">
@@ -3258,7 +3247,7 @@
             <td class="py-2.5 px-3 font-sans max-w-md">
               <div class="text-xs ${hasSap ? 'text-emerald-300 font-medium' : 'text-gray-400'}">
                 ${hasSap ? `<i class="fa-solid fa-shield-halved text-emerald-400 mr-1 text-[11px]"></i>` : `<i class="fa-solid fa-circle-info text-gray-500 mr-1 text-[11px]"></i>`}
-                ${u.msg_sap}
+                ${escapeHtml(cleanMsg)}
               </div>
             </td>
             <td class="py-2.5 px-3 text-center">
@@ -3291,7 +3280,7 @@
         `"${(u.full_name || '').replace(/"/g, '""')}"`,
         `"${u.lock_date || ''}"`,
         `"${u.lock_time || ''}"`,
-        `"${(u.msg_sap || '').replace(/"/g, '""')}"`,
+        `"${cleanRetiredSapMessage(u.msg_sap || '', u.id_card).replace(/"/g, '""')}"`,
         `"${u.has_sap_user ? 'BLOQUEADO' : 'SIN USUARIO'}"`
       ]);
 
@@ -5004,10 +4993,14 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
           alertText.classList.add('hidden');
         }
 
-        document.getElementById('kpiInactive30d').textContent = (data.inactive_30d || []).length;
-        document.getElementById('kpiLockedFailed').textContent = data.locked_failed ?? 0;
-        document.getElementById('kpiLockedAdmin').textContent = data.locked_admin ?? 0;
-        document.getElementById('kpiExpired').textContent = data.expired_users ?? 0;
+        const elInactive = document.getElementById('kpiInactive30d');
+        if (elInactive) elInactive.textContent = (data.inactive_30d || []).length;
+        const elFailed = document.getElementById('kpiLockedFailed');
+        if (elFailed) elFailed.textContent = data.locked_failed ?? 0;
+        const elAdmin = document.getElementById('kpiLockedAdmin');
+        if (elAdmin) elAdmin.textContent = data.locked_admin ?? 0;
+        const elExpired = document.getElementById('kpiExpired');
+        if (elExpired) elExpired.textContent = data.expired_users ?? 0;
 
         const ssm = data.self_service_metrics || {};
         const resetCount = ssm.total_resets ?? ssm.resets_month ?? (data.resets_month ?? 4);
