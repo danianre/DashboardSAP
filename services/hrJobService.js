@@ -7,6 +7,7 @@ const { db } = require('./snapshotService');
  */
 function cleanRetiredSapMessage(msg, idCard) {
   let clean = String(msg || '');
+  clean = clean.replace(/El usuario con\s+(?:cédula|cedula|cc|id)?\s*[:\s]*[\d\w.-]*\s*no tiene usuario en SAP\.?/gi, 'El colaborador no tiene usuario en SAP.');
   clean = clean.replace(/\s*\((?:cédula|cedula|cc|id)\s*[:\s][^)]*\)/gi, '');
   clean = clean.replace(/\s*(?:cédula|cedula|cc)\s*:\s*\d+/gi, '');
   if (idCard && String(idCard).trim()) {
