@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { executeRfc } = require('../config/sap');
 
 // Catálogo oficial de las 23 empresas y límites de licencias SAP acordados (Suma total = 334)
 const COMPANIES_CONFIG = [
@@ -30,10 +31,11 @@ const COMPANIES_CONFIG = [
 ];
 
 let _cachedLicenseData = null;
-let _cachedMtime = 0;
+let _cachedTimestamp = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60 segundos de caché en memoria
 
 /**
- * Localiza el archivo Excel de exportación de usuarios en la raíz del proyecto
+ * Localiza el archivo Excel de exportación de usuarios en la raíz del proyecto (modo respaldo)
  */
 function resolveExcelFilePath() {
   const rootDir = path.resolve(__dirname, '..');
@@ -86,7 +88,7 @@ function extractZipFiles(zipBuffer) {
 }
 
 /**
- * Parsea el archivo XLSX y extrae la lista de usuarios y datos de dirección/departamento
+ * Parsea el archivo XLSX de respaldo y extrae la lista de usuarios
  */
 function parseUsersFromExcel(filePath) {
   const zipBuffer = fs.readFileSync(filePath);
@@ -128,7 +130,6 @@ function parseUsersFromExcel(filePath) {
   }
 
   const users = [];
-  // Fila 0 es encabezado, empezamos desde la fila 1
   for (let i = 1; i < rawRows.length; i++) {
     const r = rawRows[i];
     const bname = String(r.A || '').trim();
@@ -142,11 +143,130 @@ function parseUsersFromExcel(filePath) {
       department: String(r.D || '').trim(),
       userGroup: String(r.E || '').trim(),
       userType: String(r.F || '').trim() || 'A Diálogo',
-      lockStatus: String(r.O || '').trim()
+      lockStatus: String(r.O || '').trim(),
+      validTo: '31.12.9999'
     });
   }
 
   return users;
+}
+
+/**
+ * Consulta en TIEMPO REAL los usuarios activos y sus departamentos desde SAP ERP vía RFC
+ * (Tablas USR02 + USR21 + ADCP + ADRP)
+ */
+async function fetchUsersFromSapLive() {
+  if (process.env.SAP_LIVE !== 'true') {
+    throw new Error('SAP_LIVE no está habilitado en las variables de entorno.');
+  }
+
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+  // 1. Consultar USR02 para usuarios activos (Diálogo A o Comunicación C, vigentes y sin bloqueo administrativo)
+  const usr02Res = await executeRfc('RFC_READ_TABLE', {
+    QUERY_TABLE: 'USR02',
+    FIELDS: [
+      { FIELDNAME: 'BNAME' },
+      { FIELDNAME: 'GLTGB' },
+      { FIELDNAME: 'USTYP' },
+      { FIELDNAME: 'UFLAG' }
+    ],
+    DELIMITER: '|'
+  });
+
+  const activeUsersMap = new Map();
+  (usr02Res.DATA || []).forEach(d => {
+    const [bname, gltgb, ustyp, uflagStr] = (d.WA || '').split('|').map(s => s.trim());
+    const uflag = parseInt(uflagStr || '0', 10);
+    const isNotExpired = gltgb >= today || gltgb === '00000000';
+    const isDialogOrComm = ustyp === 'A' || ustyp === 'C';
+
+    if (isDialogOrComm && isNotExpired && uflag === 0) {
+      let formattedDate = '31.12.9999';
+      if (gltgb && gltgb !== '00000000' && gltgb.length === 8) {
+        formattedDate = `${gltgb.slice(6, 8)}.${gltgb.slice(4, 6)}.${gltgb.slice(0, 4)}`;
+      }
+      activeUsersMap.set(bname, {
+        bname,
+        validTo: formattedDate,
+        userType: ustyp === 'A' ? 'A Diálogo' : (ustyp === 'C' ? 'C Comunicación' : ustyp),
+        lockStatus: '',
+        department: '',
+        fullName: bname
+      });
+    }
+  });
+
+  if (activeUsersMap.size === 0) {
+    throw new Error('No se obtuvieron usuarios activos desde USR02');
+  }
+
+  // 2. Consultar USR21 para relacionar BNAME con PERSNUMBER y ADDRNUMBER
+  const usr21Res = await executeRfc('RFC_READ_TABLE', {
+    QUERY_TABLE: 'USR21',
+    FIELDS: [
+      { FIELDNAME: 'BNAME' },
+      { FIELDNAME: 'PERSNUMBER' },
+      { FIELDNAME: 'ADDRNUMBER' }
+    ],
+    DELIMITER: '|'
+  });
+
+  const persToBname = new Map();
+  (usr21Res.DATA || []).forEach(d => {
+    const [bname, pers, addr] = (d.WA || '').split('|').map(s => s.trim());
+    if (activeUsersMap.has(bname)) {
+      persToBname.set(pers, bname);
+      const u = activeUsersMap.get(bname);
+      u.persnumber = pers;
+      u.addrnumber = addr;
+    }
+  });
+
+  // 3. Consultar ADCP para obtener Departamento (filtrando por la dirección central de usuarios de Daabon)
+  const adcpRes = await executeRfc('RFC_READ_TABLE', {
+    QUERY_TABLE: 'ADCP',
+    FIELDS: [
+      { FIELDNAME: 'PERSNUMBER' },
+      { FIELDNAME: 'DEPARTMENT' }
+    ],
+    OPTIONS: [{ TEXT: "ADDRNUMBER = '0000023396'" }],
+    DELIMITER: '|'
+  });
+
+  (adcpRes.DATA || []).forEach(d => {
+    const [pers, dept] = (d.WA || '').split('|').map(s => s.trim());
+    const bname = persToBname.get(pers);
+    if (bname && activeUsersMap.has(bname)) {
+      activeUsersMap.get(bname).department = dept;
+    }
+  });
+
+  // 4. Consultar ADRP para nombres y apellidos completos
+  const adrpRes = await executeRfc('RFC_READ_TABLE', {
+    QUERY_TABLE: 'ADRP',
+    FIELDS: [
+      { FIELDNAME: 'PERSNUMBER' },
+      { FIELDNAME: 'NAME_TEXT' },
+      { FIELDNAME: 'NAME_FIRST' },
+      { FIELDNAME: 'NAME_LAST' }
+    ],
+    DELIMITER: '|'
+  });
+
+  (adrpRes.DATA || []).forEach(d => {
+    const [pers, nameText, nameFirst, nameLast] = (d.WA || '').split('|').map(s => s.trim());
+    const bname = persToBname.get(pers);
+    if (bname && activeUsersMap.has(bname)) {
+      const u = activeUsersMap.get(bname);
+      const nameParts = [nameFirst, nameLast].filter(Boolean).join(' ');
+      u.fullName = nameText || nameParts || bname;
+      u.firstName = nameFirst || '';
+      u.lastName = nameLast || '';
+    }
+  });
+
+  return Array.from(activeUsersMap.values());
 }
 
 /**
@@ -167,33 +287,33 @@ function matchCompanyByDepartment(department) {
   const clean = normalizeText(department);
   if (!clean) return null;
 
-  for (const comp of COMPANIES_CONFIG) {
-    for (const pat of comp.patterns) {
-      if (pat.test(clean)) {
-        return comp;
+  for (const company of COMPANIES_CONFIG) {
+    for (const pattern of company.patterns) {
+      if (pattern.test(clean)) {
+        return company;
       }
     }
   }
+
+  // Búsqueda aproximada secundaria por fragmentos clave
+  for (const company of COMPANIES_CONFIG) {
+    const normName = normalizeText(company.name);
+    const keywords = normName.split(/\s+/).filter(w => w.length >= 4 && !['CORP', 'CORPO', 'CORPORATION', 'CIA', 'SCA', 'DEL', 'LAS', 'LOS'].includes(w));
+    if (keywords.length > 0) {
+      const matchFound = keywords.some(kw => clean.includes(kw));
+      if (matchFound) {
+        return company;
+      }
+    }
+  }
+
   return null;
 }
 
 /**
- * Obtiene el reporte estructurado de distribución de licencias SAP por empresa
+ * Procesa la lista de usuarios y clasifica por empresa y cuotas
  */
-function getLicenseDistribution() {
-  const filePath = resolveExcelFilePath();
-  if (!filePath) {
-    throw new Error('No se encontró el archivo de exportación de usuarios SAP (EXPORT_*.XLSX) en el servidor.');
-  }
-
-  const stat = fs.statSync(filePath);
-  if (_cachedLicenseData && _cachedMtime === stat.mtimeMs) {
-    return _cachedLicenseData;
-  }
-
-  const users = parseUsersFromExcel(filePath);
-
-  // Inicializar acumuladores para cada empresa
+function processUserDistribution(users, sourceInfo) {
   const companyMap = new Map();
   COMPANIES_CONFIG.forEach(c => {
     companyMap.set(c.id, {
@@ -254,7 +374,7 @@ function getLicenseDistribution() {
     }
 
     // Ordenar colaboradores alfabéticamente
-    data.users.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    data.users.sort((a, b) => (a.fullName || a.bname).localeCompare(b.fullName || b.bname));
     return data;
   });
 
@@ -273,7 +393,7 @@ function getLicenseDistribution() {
   const totalGlobalAvailable = Math.max(0, totalLimit - totalActiveUsers);
   const globalUsagePct = totalLimit > 0 ? parseFloat(((totalActiveUsers / totalLimit) * 100).toFixed(1)) : 0;
 
-  const result = {
+  return {
     summary: {
       total_limit: totalLimit,
       total_active_users: totalActiveUsers,
@@ -285,8 +405,10 @@ function getLicenseDistribution() {
       companies_overlimit_count: companiesOverlimit,
       companies_at_limit_count: companiesAtLimit,
       companies_available_count: companiesAvailable,
-      source_file: path.basename(filePath),
-      file_updated_at: new Date(stat.mtimeMs).toISOString()
+      source_file: sourceInfo.sourceFile,
+      source_type: sourceInfo.sourceType,
+      is_live: sourceInfo.isLive,
+      file_updated_at: sourceInfo.updatedAt
     },
     companies: companiesList,
     other_accounts: {
@@ -296,14 +418,66 @@ function getLicenseDistribution() {
       users: otherUsers
     }
   };
+}
 
+/**
+ * Obtiene la distribución de licencias SAP por empresa.
+ * Prioriza conexión en tiempo real con SAP vía RFC y cuenta con respaldo automático en Excel.
+ *
+ * @param {boolean} forceRefresh - Forzar actualización ignorando caché
+ */
+async function getLicenseDistribution(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && _cachedLicenseData && (now - _cachedTimestamp < CACHE_TTL_MS)) {
+    return _cachedLicenseData;
+  }
+
+  let users = null;
+  let sourceInfo = {
+    sourceFile: 'SAP ERP RFC (USR02 / USR21 / ADCP / ADRP)',
+    sourceType: 'SAP_LIVE',
+    isLive: true,
+    updatedAt: new Date().toISOString()
+  };
+
+  // 1. Intentar extracción en vivo desde SAP
+  if (process.env.SAP_LIVE === 'true') {
+    try {
+      users = await fetchUsersFromSapLive();
+      console.log(`[LICENSE SERVICE] Extracción en vivo exitosa: ${users.length} usuarios activos en SAP.`);
+    } catch (sapErr) {
+      console.warn('[LICENSE SERVICE] Conexión en vivo a SAP no disponible o falló:', sapErr.message);
+      users = null;
+    }
+  }
+
+  // 2. Si no se pudo obtener de SAP (ej. modo simulación o error de red), recurrir al archivo Excel
+  if (!users || users.length === 0) {
+    const filePath = resolveExcelFilePath();
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new Error('No se pudo obtener información de licencias en vivo de SAP ni se encontró archivo Excel de respaldo.');
+    }
+    const stat = fs.statSync(filePath);
+    users = parseUsersFromExcel(filePath);
+    sourceInfo = {
+      sourceFile: path.basename(filePath),
+      sourceType: 'EXCEL_BACKUP',
+      isLive: false,
+      updatedAt: new Date(stat.mtimeMs).toISOString()
+    };
+    console.log(`[LICENSE SERVICE] Usando archivo Excel de respaldo (${users.length} usuarios).`);
+  }
+
+  const result = processUserDistribution(users, sourceInfo);
   _cachedLicenseData = result;
-  _cachedMtime = stat.mtimeMs;
+  _cachedTimestamp = now;
+
   return result;
 }
 
 module.exports = {
   COMPANIES_CONFIG,
   getLicenseDistribution,
-  matchCompanyByDepartment
+  matchCompanyByDepartment,
+  fetchUsersFromSapLive
 };

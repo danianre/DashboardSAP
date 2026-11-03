@@ -3511,7 +3511,7 @@
       if (!modal) return;
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-      loadLicenseDistribution();
+      loadLicenseDistribution(true);
     }
 
     function closeLicenseDistributionModal() {
@@ -3544,7 +3544,8 @@
       if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
       try {
-        const res = await fetch('/api/licenses/by-company');
+        const url = '/api/licenses/by-company' + (forceRefresh ? '?refresh=true' : '');
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Error al obtener licencias');
@@ -3582,6 +3583,17 @@
       if (kpiOverlimit) kpiOverlimit.textContent = summary.companies_overlimit_count ?? 0;
       if (kpiAtLimit) kpiAtLimit.textContent = summary.companies_at_limit_count ?? 0;
       if (kpiAvailable) kpiAvailable.textContent = summary.companies_available_count ?? 0;
+
+      const licSourceBadge = document.getElementById('licSourceBadge');
+      if (licSourceBadge) {
+        if (summary.is_live) {
+          licSourceBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm';
+          licSourceBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> SAP En Vivo RFC (USR02 / ADCP)';
+        } else {
+          licSourceBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30';
+          licSourceBadge.textContent = 'Ficha Maestra Excel (Respaldo)';
+        }
+      }
 
       const bAll = document.getElementById('licBadgeAll');
       const bOverlimit = document.getElementById('licBadgeOverlimit');

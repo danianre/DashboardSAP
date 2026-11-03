@@ -409,7 +409,8 @@ router.get('/dbacockpit', async (req, res) => {
 const { getLicenseDistribution } = require('../services/licenseService');
 router.get('/licenses/by-company', async (req, res) => {
   try {
-    const distribution = getLicenseDistribution();
+    const forceRefresh = req.query.refresh === 'true';
+    const distribution = await getLicenseDistribution(forceRefresh);
     res.json({
       success: true,
       ...distribution
