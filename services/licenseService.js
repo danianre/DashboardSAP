@@ -2,13 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-// Catálogo oficial de las 24 empresas y límites de licencias SAP acordados (Suma total = 334)
+// Catálogo oficial de las 23 empresas y límites de licencias SAP acordados (Suma total = 334)
 const COMPANIES_CONFIG = [
   { id: 'AFD', name: 'AFD CORPORATION & CIA SCA', limit: 3, patterns: [/\bAFD\b/i] },
-  { id: 'AGROINGENIUM', name: 'AGROINGENIUM', limit: 7, patterns: [/\bAGROINGENIUM\b/i] },
+  { id: 'AGROINGENIUM', name: 'AGROINGENIUM', limit: 16, patterns: [/\bAGROINGENIUM\b/i] },
   { id: 'BIOCOMBUSTIBLES', name: 'BIOCOMBUSTIBLES', limit: 17, patterns: [/\bBIOCOMBUSTIBLES\b/i] },
   { id: 'CARIBBEAN', name: 'CARIBBEAN', limit: 30, patterns: [/\bCARIBBEAN\b/i] },
-  { id: 'CERESAGRO', name: 'CERESAGRO', limit: 9, patterns: [/\bCERESAGRO\b/i, /\bCERES\b/i] },
   { id: 'DERIVADOS', name: 'DERIVADOS Y FRACCION', limit: 2, patterns: [/\bDERIVADOS\b/i, /\bFRACCION\b/i] },
   { id: 'EL_GRAN_SINU', name: 'EL GRAN SINU', limit: 2, patterns: [/\bEL GRAN SINU\b/i, /\bGRAN SINU\b/i, /\bSINU\b/i] },
   { id: 'ELOGIA', name: 'ELOGIA', limit: 23, patterns: [/\bELOGIA\b/i] },
@@ -162,7 +161,7 @@ function normalizeText(str) {
 }
 
 /**
- * Determina a cuál de las 24 empresas pertenece un departamento según coincidencia aproximada
+ * Determina a cuál de las 23 empresas pertenece un departamento según coincidencia aproximada
  */
 function matchCompanyByDepartment(department) {
   const clean = normalizeText(department);

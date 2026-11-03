@@ -343,7 +343,7 @@
       </div>
       <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
         <span class="text-gray-500 group-hover:text-blue-400 transition-colors flex items-center gap-1">
-          <i class="fa-solid fa-building text-[9px]"></i> 24 empresas
+          <i class="fa-solid fa-building text-[9px]"></i> <span id="kpiCompanyCount">23</span> empresas
         </span>
         <span id="kpiUserAlertText" class="hidden font-bold"></span>
       </div>
@@ -1428,7 +1428,7 @@
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
             <button onclick="setLicenseFilter('ALL')" id="licFilterBtn_ALL"
               class="px-2.5 py-1 rounded-lg font-medium transition bg-blue-600 text-white shadow-sm">
-              Todas (24)
+              Todas (<span id="licBadgeAll">23</span>)
             </button>
             <button onclick="setLicenseFilter('OVERLIMIT')" id="licFilterBtn_OVERLIMIT"
               class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700">
@@ -1444,7 +1444,7 @@
             </button>
             <button onclick="setLicenseFilter('OTHER')" id="licFilterBtn_OTHER"
               class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700"
-              title="Cuentas especiales, Joint Ventures o técnicas no ligadas a las 24 empresas">
+              title="Cuentas especiales, Joint Ventures o técnicas no ligadas a las empresas configuradas">
               Otras Cuentas <span id="licBadgeOther" class="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-purple-900/60 text-purple-300">21</span>
             </button>
           </div>
@@ -3583,15 +3583,19 @@
       if (kpiAtLimit) kpiAtLimit.textContent = summary.companies_at_limit_count ?? 0;
       if (kpiAvailable) kpiAvailable.textContent = summary.companies_available_count ?? 0;
 
+      const bAll = document.getElementById('licBadgeAll');
       const bOverlimit = document.getElementById('licBadgeOverlimit');
       const bAtLimit = document.getElementById('licBadgeAtLimit');
       const bAvailable = document.getElementById('licBadgeAvailable');
       const bOther = document.getElementById('licBadgeOther');
+      const kpiCompCount = document.getElementById('kpiCompanyCount');
 
+      if (bAll) bAll.textContent = summary.companies_count ?? 23;
       if (bOverlimit) bOverlimit.textContent = summary.companies_overlimit_count ?? 0;
       if (bAtLimit) bAtLimit.textContent = summary.companies_at_limit_count ?? 0;
       if (bAvailable) bAvailable.textContent = summary.companies_available_count ?? 0;
       if (bOther) bOther.textContent = (data.other_accounts?.assigned ?? 0);
+      if (kpiCompCount) kpiCompCount.textContent = summary.companies_count ?? 23;
 
       renderLicenseTable();
     }
