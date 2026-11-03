@@ -405,4 +405,19 @@ router.get('/dbacockpit', async (req, res) => {
   }
 });
 
+// Endpoint de Distribución y Control de Licencias SAP por Empresa
+const { getLicenseDistribution } = require('../services/licenseService');
+router.get('/licenses/by-company', async (req, res) => {
+  try {
+    const distribution = getLicenseDistribution();
+    res.json({
+      success: true,
+      ...distribution
+    });
+  } catch (error) {
+    console.error('[ERROR ENDPOINT GET /api/licenses/by-company]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

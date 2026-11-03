@@ -322,10 +322,13 @@
 
   <!-- CINTA DE KPIS PRINCIPALES (TOP RIBBON) -->
   <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-    <div class="card p-4 flex flex-col justify-between" id="kpiUserCard">
+    <div class="card p-4 flex flex-col justify-between cursor-pointer hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-950/20 transition-all group" id="kpiUserCard" onclick="openLicenseDistributionModal()" title="Clic para ver distribución de licencias SAP por empresa y cuotas">
       <div class="flex justify-between items-center text-gray-400 text-xs font-semibold uppercase">
-        <span>Licencias (Diálogo/Comun.)</span>
-        <i class="fa-solid fa-users text-blue-400"></i>
+        <span class="group-hover:text-blue-300 transition-colors">Licencias (Diálogo/Comun.)</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-500/30 group-hover:bg-blue-900/80 transition-colors">Ver por Empresa</span>
+          <i class="fa-solid fa-users text-blue-400 group-hover:scale-110 transition-transform"></i>
+        </div>
       </div>
       <div class="mt-2">
         <div class="text-2xl font-bold text-white flex items-end gap-1">
@@ -338,7 +341,10 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-end text-[10px] text-gray-400 mt-1">
+      <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
+        <span class="text-gray-500 group-hover:text-blue-400 transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-building text-[9px]"></i> 24 empresas
+        </span>
         <span id="kpiUserAlertText" class="hidden font-bold"></span>
       </div>
     </div>
@@ -1304,6 +1310,200 @@
         </div>
         <button onclick="closeWhitelistModal()"
           class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: CONTROL Y DISTRIBUCIÓN DE LICENCIAS SAP POR EMPRESA -->
+  <div id="licenseDistributionModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-5" onclick="handleLicenseModalBackdropClick(event)">
+    <div class="card max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-gray-700/80 shadow-2xl bg-gray-900/95" onclick="event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-950/70">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 text-lg shadow-sm">
+            <i class="fa-solid fa-building-user"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-base font-bold text-white tracking-wide">Distribución de Licencias SAP por Empresa</h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950/70 text-blue-300 border border-blue-500/30">Capacidad Total: 334 Licencias</span>
+              <span id="licSourceBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/70 text-purple-300 border border-purple-500/30">Ficha Maestra SU01 / Depto</span>
+            </div>
+            <p class="text-xs text-gray-400">Control de cuotas y asignación de licencias activas (Diálogo y Comunicación) clasificadas por departamento corporativo</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="exportLicensesCsv()"
+            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-medium flex items-center gap-1.5 transition active:scale-95"
+            title="Exportar resumen y detalle de usuarios en CSV">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i>
+            <span class="hidden sm:inline">Exportar CSV</span>
+          </button>
+          <button id="btnRefreshLicenseDistribution" onclick="loadLicenseDistribution(true)"
+            class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 flex items-center justify-center transition active:scale-95"
+            title="Actualizar datos">
+            <i class="fa-solid fa-rotate text-blue-400" id="licRefreshIcon"></i>
+          </button>
+          <button onclick="closeLicenseDistributionModal()"
+            class="w-8 h-8 rounded-lg bg-gray-800/80 hover:bg-rose-950 hover:text-rose-400 text-gray-400 border border-gray-700/80 flex items-center justify-center transition"
+            title="Cerrar modal (Esc)">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-5">
+        
+        <!-- Tarjetas Resumen / KPIs -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="p-3 rounded-xl bg-gray-950/70 border border-gray-800 flex flex-col justify-between">
+            <div class="text-[11px] font-medium text-gray-400 uppercase flex items-center justify-between">
+              <span>Total Activas</span>
+              <i class="fa-solid fa-users text-blue-400"></i>
+            </div>
+            <div class="mt-2">
+              <div class="text-xl font-bold font-mono text-white flex items-baseline gap-1">
+                <span id="licKpiTotalActive">--</span>
+                <span class="text-xs text-gray-500 font-normal">/ <span id="licKpiTotalLimit">334</span></span>
+              </div>
+              <div class="text-[10px] text-gray-400 mt-0.5">Ocupación global: <span id="licKpiUsagePct" class="text-blue-300 font-mono font-semibold">--%</span></div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-950/70 border border-gray-800 flex flex-col justify-between">
+            <div class="text-[11px] font-medium text-gray-400 uppercase flex items-center justify-between">
+              <span>Cupo Libre Global</span>
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+            </div>
+            <div class="mt-2">
+              <div class="text-xl font-bold font-mono text-emerald-400" id="licKpiAvailableGlobal">--</div>
+              <div class="text-[10px] text-gray-400 mt-0.5">Licencias disponibles en SAP</div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-rose-950/20 border border-rose-800/40 flex flex-col justify-between">
+            <div class="text-[11px] font-medium text-rose-300 uppercase flex items-center justify-between">
+              <span>Con Sobrecupo</span>
+              <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+            </div>
+            <div class="mt-2">
+              <div class="text-xl font-bold font-mono text-rose-400" id="licKpiOverlimit">--</div>
+              <div class="text-[10px] text-rose-300/70 mt-0.5">Empresas superan su límite</div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-amber-950/20 border border-amber-800/40 flex flex-col justify-between">
+            <div class="text-[11px] font-medium text-amber-300 uppercase flex items-center justify-between">
+              <span>Al Límite (100%)</span>
+              <i class="fa-solid fa-gauge-high text-amber-400"></i>
+            </div>
+            <div class="mt-2">
+              <div class="text-xl font-bold font-mono text-amber-400" id="licKpiAtLimit">--</div>
+              <div class="text-[10px] text-amber-300/70 mt-0.5">Sin margen para nuevos usuarios</div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-950/70 border border-gray-800 flex flex-col justify-between col-span-2 sm:col-span-1">
+            <div class="text-[11px] font-medium text-gray-400 uppercase flex items-center justify-between">
+              <span>Con Disponibilidad</span>
+              <i class="fa-solid fa-arrow-trend-down text-cyan-400"></i>
+            </div>
+            <div class="mt-2">
+              <div class="text-xl font-bold font-mono text-cyan-400" id="licKpiAvailable">--</div>
+              <div class="text-[10px] text-gray-400 mt-0.5">Empresas con cupos libres</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros y Búsqueda -->
+        <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-gray-950/60 p-3 rounded-xl border border-gray-800">
+          
+          <!-- Filtros de Estado -->
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <button onclick="setLicenseFilter('ALL')" id="licFilterBtn_ALL"
+              class="px-2.5 py-1 rounded-lg font-medium transition bg-blue-600 text-white shadow-sm">
+              Todas (24)
+            </button>
+            <button onclick="setLicenseFilter('OVERLIMIT')" id="licFilterBtn_OVERLIMIT"
+              class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700">
+              Sobrecupo <span id="licBadgeOverlimit" class="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-rose-900/60 text-rose-300">0</span>
+            </button>
+            <button onclick="setLicenseFilter('AT_LIMIT')" id="licFilterBtn_AT_LIMIT"
+              class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700">
+              Al Límite <span id="licBadgeAtLimit" class="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-amber-900/60 text-amber-300">0</span>
+            </button>
+            <button onclick="setLicenseFilter('AVAILABLE')" id="licFilterBtn_AVAILABLE"
+              class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700">
+              Con Cupo <span id="licBadgeAvailable" class="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-emerald-900/60 text-emerald-300">0</span>
+            </button>
+            <button onclick="setLicenseFilter('OTHER')" id="licFilterBtn_OTHER"
+              class="px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700"
+              title="Cuentas especiales, Joint Ventures o técnicas no ligadas a las 24 empresas">
+              Otras Cuentas <span id="licBadgeOther" class="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-purple-900/60 text-purple-300">21</span>
+            </button>
+          </div>
+
+          <!-- Buscador en Vivo -->
+          <div class="relative w-full md:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-500 text-xs"></i>
+            <input type="text" id="licSearchInput" oninput="handleLicenseSearch(this.value)"
+              placeholder="Buscar empresa, usuario o depto..."
+              class="w-full bg-gray-900 border border-gray-700/80 rounded-lg pl-8 pr-8 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500">
+            <button id="licClearSearchBtn" onclick="clearLicenseSearch()"
+              class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-white text-xs">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Estado de Carga -->
+        <div id="licLoadingState" class="py-12 flex flex-col items-center justify-center gap-3">
+          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-500"></i>
+          <span class="text-xs text-gray-400">Analizando exportación y cuadrando licencias por empresa...</span>
+        </div>
+
+        <!-- Tabla de Empresas y Licencias -->
+        <div id="licTableContainer" class="hidden overflow-x-auto rounded-xl border border-gray-800 bg-gray-950/40">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/90 text-gray-400 border-b border-gray-800 text-[11px] uppercase font-semibold">
+                <th class="py-3 px-4">Empresa / Razón Social</th>
+                <th class="py-3 px-3 text-center">Límite SAP</th>
+                <th class="py-3 px-3 text-center">Asignadas</th>
+                <th class="py-3 px-4 text-center min-w-[140px]">Ocupación (% uso)</th>
+                <th class="py-3 px-3 text-center">Estado / Margen</th>
+                <th class="py-3 px-4 text-right">Detalle Colaboradores</th>
+              </tr>
+            </thead>
+            <tbody id="licTableBody" class="divide-y divide-gray-800/60 font-normal">
+              <!-- Se puebla dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div id="licEmptyState" class="hidden py-12 flex flex-col items-center justify-center text-center">
+          <i class="fa-solid fa-filter text-3xl text-gray-600 mb-2"></i>
+          <h4 class="text-sm font-semibold text-gray-300">No se encontraron empresas</h4>
+          <p class="text-xs text-gray-500 mt-1">Intenta ajustando el filtro o término de búsqueda.</p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-2 bg-gray-950/80 text-xs">
+        <div class="flex items-center gap-2 text-gray-400 text-[11px]">
+          <i class="fa-solid fa-circle-info text-blue-400"></i>
+          <span>La asignación se clasifica según la coincidencia aproximada de la columna <strong class="text-gray-300">Departamento</strong> de la ficha de usuario SAP (SU01 / USR21).</span>
+        </div>
+        <button onclick="closeLicenseDistributionModal()"
+          class="w-full sm:w-auto px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
           Cerrar
         </button>
       </div>
@@ -2684,6 +2884,7 @@
         closePasswordResetsModal();
         closeProcessDiagnosisModal();
         closeRetiredUsersModal();
+        closeLicenseDistributionModal();
         closeSm12St22Modal();
         closeWsCpiModal();
         closeWhitelistModal();
@@ -3292,6 +3493,385 @@
       const monthTag = _retiredSelectedMonth === 'all' ? 'historico' : _retiredSelectedMonth;
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       link.setAttribute('download', `bloqueos_retiros_ZHR_${monthTag}_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ==========================================
+    // MODAL: DISTRIBUCIÓN DE LICENCIAS SAP POR EMPRESA
+    // ==========================================
+    let _licenseDataCache = null;
+    let _currentLicenseFilter = 'ALL'; // ALL | OVERLIMIT | AT_LIMIT | AVAILABLE | OTHER
+    let _currentLicenseSearch = '';
+    let _expandedCompanyIds = new Set();
+
+    function openLicenseDistributionModal() {
+      const modal = document.getElementById('licenseDistributionModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      loadLicenseDistribution();
+    }
+
+    function closeLicenseDistributionModal() {
+      const modal = document.getElementById('licenseDistributionModal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleLicenseModalBackdropClick(event) {
+      if (event.target && event.target.id === 'licenseDistributionModal') {
+        closeLicenseDistributionModal();
+      }
+    }
+
+    async function loadLicenseDistribution(forceRefresh = false) {
+      const loading = document.getElementById('licLoadingState');
+      const tableContainer = document.getElementById('licTableContainer');
+      const emptyState = document.getElementById('licEmptyState');
+      const refreshIcon = document.getElementById('licRefreshIcon');
+
+      if (!forceRefresh && _licenseDataCache) {
+        renderLicenseData(_licenseDataCache);
+        return;
+      }
+
+      if (loading) loading.classList.remove('hidden');
+      if (tableContainer) tableContainer.classList.add('hidden');
+      if (emptyState) emptyState.classList.add('hidden');
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+      try {
+        const res = await fetch('/api/licenses/by-company');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error al obtener licencias');
+
+        _licenseDataCache = data;
+        renderLicenseData(data);
+      } catch (err) {
+        console.error('Error cargando distribución de licencias:', err);
+        if (loading) loading.classList.add('hidden');
+        if (emptyState) {
+          emptyState.classList.remove('hidden');
+          emptyState.querySelector('h4').textContent = 'Error al cargar distribución de licencias';
+          emptyState.querySelector('p').textContent = err.message || 'Verifica la conexión con el servidor.';
+        }
+      } finally {
+        if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+      }
+    }
+
+    function renderLicenseData(data) {
+      const summary = data.summary || {};
+      
+      const kpiTotalActive = document.getElementById('licKpiTotalActive');
+      const kpiTotalLimit = document.getElementById('licKpiTotalLimit');
+      const kpiUsagePct = document.getElementById('licKpiUsagePct');
+      const kpiAvailableGlobal = document.getElementById('licKpiAvailableGlobal');
+      const kpiOverlimit = document.getElementById('licKpiOverlimit');
+      const kpiAtLimit = document.getElementById('licKpiAtLimit');
+      const kpiAvailable = document.getElementById('licKpiAvailable');
+
+      if (kpiTotalActive) kpiTotalActive.textContent = summary.total_active_users ?? '--';
+      if (kpiTotalLimit) kpiTotalLimit.textContent = summary.total_limit ?? 334;
+      if (kpiUsagePct) kpiUsagePct.textContent = `${summary.global_usage_pct ?? 0}%`;
+      if (kpiAvailableGlobal) kpiAvailableGlobal.textContent = summary.total_available_global ?? 0;
+      if (kpiOverlimit) kpiOverlimit.textContent = summary.companies_overlimit_count ?? 0;
+      if (kpiAtLimit) kpiAtLimit.textContent = summary.companies_at_limit_count ?? 0;
+      if (kpiAvailable) kpiAvailable.textContent = summary.companies_available_count ?? 0;
+
+      const bOverlimit = document.getElementById('licBadgeOverlimit');
+      const bAtLimit = document.getElementById('licBadgeAtLimit');
+      const bAvailable = document.getElementById('licBadgeAvailable');
+      const bOther = document.getElementById('licBadgeOther');
+
+      if (bOverlimit) bOverlimit.textContent = summary.companies_overlimit_count ?? 0;
+      if (bAtLimit) bAtLimit.textContent = summary.companies_at_limit_count ?? 0;
+      if (bAvailable) bAvailable.textContent = summary.companies_available_count ?? 0;
+      if (bOther) bOther.textContent = (data.other_accounts?.assigned ?? 0);
+
+      renderLicenseTable();
+    }
+
+    function setLicenseFilter(filter) {
+      _currentLicenseFilter = filter;
+      const filters = ['ALL', 'OVERLIMIT', 'AT_LIMIT', 'AVAILABLE', 'OTHER'];
+      filters.forEach(f => {
+        const btn = document.getElementById(`licFilterBtn_${f}`);
+        if (!btn) return;
+        if (f === filter) {
+          btn.className = 'px-2.5 py-1 rounded-lg font-medium transition bg-blue-600 text-white shadow-sm';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg font-medium transition bg-gray-800 text-gray-300 hover:bg-gray-700';
+        }
+      });
+      renderLicenseTable();
+    }
+
+    function handleLicenseSearch(val) {
+      _currentLicenseSearch = (val || '').trim().toLowerCase();
+      const clearBtn = document.getElementById('licClearSearchBtn');
+      if (clearBtn) {
+        if (_currentLicenseSearch) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+      renderLicenseTable();
+    }
+
+    function clearLicenseSearch() {
+      const input = document.getElementById('licSearchInput');
+      if (input) input.value = '';
+      handleLicenseSearch('');
+    }
+
+    function toggleCompanyAccordion(companyId) {
+      if (_expandedCompanyIds.has(companyId)) {
+        _expandedCompanyIds.delete(companyId);
+      } else {
+        _expandedCompanyIds.add(companyId);
+      }
+      renderLicenseTable();
+    }
+
+    function renderLicenseTable() {
+      const loading = document.getElementById('licLoadingState');
+      const tableContainer = document.getElementById('licTableContainer');
+      const emptyState = document.getElementById('licEmptyState');
+      const tbody = document.getElementById('licTableBody');
+
+      if (!_licenseDataCache) return;
+      if (loading) loading.classList.add('hidden');
+
+      const companies = _licenseDataCache.companies || [];
+      const otherAccounts = _licenseDataCache.other_accounts || { id: 'OTHER_ACCOUNTS', name: 'Otras Cuentas / Técnicas', assigned: 0, users: [] };
+
+      let listToRender = [];
+
+      if (_currentLicenseFilter === 'OTHER') {
+        listToRender = [{
+          id: otherAccounts.id,
+          name: otherAccounts.name,
+          limit: 0,
+          assigned: otherAccounts.assigned,
+          available: 0,
+          excess: 0,
+          diff: 0,
+          usage_pct: 100,
+          status: 'OTHER',
+          status_label: 'Sin Cuota Formal',
+          users: otherAccounts.users
+        }];
+      } else {
+        listToRender = companies.filter(c => {
+          if (_currentLicenseFilter === 'OVERLIMIT') return c.status === 'OVERLIMIT';
+          if (_currentLicenseFilter === 'AT_LIMIT') return c.status === 'AT_LIMIT';
+          if (_currentLicenseFilter === 'AVAILABLE') return c.status === 'AVAILABLE';
+          return true;
+        });
+      }
+
+      if (_currentLicenseSearch) {
+        const q = _currentLicenseSearch;
+        listToRender = listToRender.filter(c => {
+          const nameMatch = (c.name || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q);
+          const userMatch = (c.users || []).some(u => 
+            (u.bname || '').toLowerCase().includes(q) ||
+            (u.fullName || '').toLowerCase().includes(q) ||
+            (u.department || '').toLowerCase().includes(q)
+          );
+          return nameMatch || userMatch;
+        });
+      }
+
+      if (listToRender.length === 0) {
+        if (tableContainer) tableContainer.classList.add('hidden');
+        if (emptyState) {
+          emptyState.classList.remove('hidden');
+          emptyState.querySelector('h4').textContent = 'No se encontraron empresas';
+          emptyState.querySelector('p').textContent = 'Intenta ajustando el filtro o término de búsqueda.';
+        }
+        return;
+      }
+
+      if (emptyState) emptyState.classList.add('hidden');
+      if (tableContainer) tableContainer.classList.remove('hidden');
+
+      let html = '';
+      listToRender.forEach(c => {
+        const isExpanded = _expandedCompanyIds.has(c.id) || (_currentLicenseSearch.length > 0);
+        const usersCount = (c.users || []).length;
+        
+        let barColor = 'bg-emerald-500';
+        let badgeClass = 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30';
+        let rowHighlight = '';
+
+        if (c.status === 'OVERLIMIT') {
+          barColor = 'bg-rose-500';
+          badgeClass = 'bg-rose-950/80 text-rose-300 border-rose-500/40';
+          rowHighlight = 'bg-rose-950/10';
+        } else if (c.status === 'AT_LIMIT') {
+          barColor = 'bg-amber-500';
+          badgeClass = 'bg-amber-950/70 text-amber-300 border-amber-500/40';
+          rowHighlight = 'bg-amber-950/5';
+        } else if (c.status === 'OTHER') {
+          barColor = 'bg-purple-500';
+          badgeClass = 'bg-purple-950/70 text-purple-300 border-purple-500/40';
+          rowHighlight = 'bg-purple-950/10';
+        }
+
+        const barWidth = Math.min(100, c.usage_pct);
+
+        html += `
+          <tr class="${rowHighlight} hover:bg-gray-850/60 transition-colors border-b border-gray-800/40 cursor-pointer" onclick="toggleCompanyAccordion('${c.id}')">
+            <td class="py-3 px-4 font-medium text-white">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-gray-300 text-xs font-bold border border-gray-700">
+                  <i class="fa-solid fa-building text-[11px] ${c.status === 'OVERLIMIT' ? 'text-rose-400' : 'text-blue-400'}"></i>
+                </div>
+                <div>
+                  <div class="text-white font-semibold text-xs tracking-wide">${c.name}</div>
+                  <div class="text-[10px] text-gray-400 font-mono">${c.id !== 'OTHER_ACCOUNTS' ? 'ID: ' + c.id : 'Joint Ventures / Cuentas Técnicas'}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-gray-300 text-xs">
+              ${c.limit > 0 ? c.limit : '<span class="text-gray-500 font-sans font-normal">-</span>'}
+            </td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-white text-xs">
+              <span class="px-2 py-0.5 rounded ${c.status === 'OVERLIMIT' ? 'bg-rose-900/50 text-rose-300 font-bold' : 'bg-gray-800 text-gray-200'}">
+                ${c.assigned}
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              <div class="w-full flex items-center gap-2">
+                <div class="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
+                  <div class="${barColor} h-2 rounded-full transition-all duration-300" style="width: ${barWidth}%"></div>
+                </div>
+                <span class="text-[11px] font-mono font-bold w-12 text-right ${c.status === 'OVERLIMIT' ? 'text-rose-400' : (c.status === 'AT_LIMIT' ? 'text-amber-400' : 'text-emerald-400')}">
+                  ${c.usage_pct}%
+                </span>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${badgeClass}">
+                ${c.status === 'OVERLIMIT' ? '<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> +' + c.excess + ' Exceso' : 
+                  (c.status === 'AT_LIMIT' ? '<i class="fa-solid fa-check text-[9px]"></i> 100% Cubierto' : 
+                  (c.status === 'OTHER' ? '<i class="fa-solid fa-asterisk text-[9px]"></i> Especial' : 
+                  '<i class="fa-solid fa-circle-check text-[9px]"></i> ' + c.available + ' Libres'))}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="event.stopPropagation(); toggleCompanyAccordion('${c.id}')"
+                class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 text-[11px] font-medium transition inline-flex items-center gap-1.5">
+                <span>Ver Usuarios (${usersCount})</span>
+                <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+
+        if (isExpanded) {
+          html += `
+            <tr class="bg-gray-950/80 border-b border-gray-800/80">
+              <td colspan="6" class="p-4">
+                <div class="rounded-lg border border-gray-800 bg-gray-900/90 p-3 space-y-2">
+                  <div class="flex justify-between items-center text-[11px] text-gray-400 font-semibold uppercase px-1 pb-1 border-b border-gray-800">
+                    <span>Usuarios Asignados a ${c.name} (${usersCount} colaboradores)</span>
+                    <span class="text-[10px] text-gray-500 font-normal lowercase">Clic en fila para ocultar</span>
+                  </div>
+                  ${usersCount === 0 ? `
+                    <div class="py-3 text-center text-xs text-gray-500 italic">No hay colaboradores activos asignados a esta empresa en la exportación.</div>
+                  ` : `
+                    <div class="overflow-x-auto max-h-64 overflow-y-auto pr-1">
+                      <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr class="text-[10px] uppercase text-gray-500 border-b border-gray-800 sticky top-0 bg-gray-900/95">
+                            <th class="py-1.5 px-2">Usuario SAP (BNAME)</th>
+                            <th class="py-1.5 px-2">Nombre del Colaborador</th>
+                            <th class="py-1.5 px-2">Departamento en SAP (SU01)</th>
+                            <th class="py-1.5 px-2 text-center">Tipo Licencia</th>
+                            <th class="py-1.5 px-2 text-right">Validez</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800/40 text-[11px]">
+                          ${c.users.map(u => `
+                            <tr class="hover:bg-gray-800/40 transition-colors">
+                              <td class="py-1.5 px-2 font-mono font-bold text-purple-300">
+                                <span class="px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-[10px]">
+                                  ${u.bname}
+                                </span>
+                              </td>
+                              <td class="py-1.5 px-2 font-medium text-white">${u.fullName || '-'}</td>
+                              <td class="py-1.5 px-2 font-mono text-cyan-300/90 text-[10px]">${u.department || '<span class="text-gray-500 italic">Sin departamento</span>'}</td>
+                              <td class="py-1.5 px-2 text-center">
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono ${u.userType.includes('Diálogo') || u.userType.includes('A ') ? 'bg-blue-950/60 text-blue-300 border border-blue-500/30' : 'bg-gray-800 text-gray-300'}">
+                                  ${u.userType}
+                                </span>
+                              </td>
+                              <td class="py-1.5 px-2 text-right font-mono text-gray-400 text-[10px]">${u.validTo || '31.12.9999'}</td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  `}
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function exportLicensesCsv() {
+      if (!_licenseDataCache) {
+        alert('No hay datos disponibles para exportar.');
+        return;
+      }
+
+      const companies = _licenseDataCache.companies || [];
+      const otherAccounts = _licenseDataCache.other_accounts || { users: [] };
+
+      const lines = [];
+      lines.push('DISTRIBUCION DE LICENCIAS SAP POR EMPRESA - GRUPO DAABON');
+      lines.push(`Fecha de Generación: ${new Date().toLocaleString()}`);
+      lines.push(`Capacidad Contractual Global: ${_licenseDataCache.summary?.total_limit || 334} licencias`);
+      lines.push(`Total Usuarios Activos: ${_licenseDataCache.summary?.total_active_users || 331} licencias`);
+      lines.push(`Cupo Disponible Global: ${_licenseDataCache.summary?.total_available_global || 3} licencias`);
+      lines.push('');
+      lines.push('--- 1. RESUMEN DE EMPRESAS Y CUOTAS ---');
+      lines.push('Empresa,ID_Empresa,Limite_SAP,Asignadas_Actuales,Ocupacion_Pct,Estado,Balance');
+
+      companies.forEach(c => {
+        lines.push(`"${c.name}","${c.id}",${c.limit},${c.assigned},${c.usage_pct}%,"${c.status}","${c.diff > 0 ? '+' + c.diff + ' Exceso' : (c.diff === 0 ? 'Al Limite' : c.available + ' Libres')}"`);
+      });
+      lines.push(`"${otherAccounts.name}","OTHER_ACCOUNTS",0,${otherAccounts.assigned},100%,"OTHER","Sin Cuota"`);
+
+      lines.push('');
+      lines.push('--- 2. DETALLE DE USUARIOS ASIGNADOS ---');
+      lines.push('Usuario_SAP,Nombre_Completo,Empresa_Asignada,Departamento_SAP,Tipo_Usuario,Valido_Hasta');
+
+      companies.forEach(c => {
+        (c.users || []).forEach(u => {
+          lines.push(`"${u.bname}","${(u.fullName || '').replace(/"/g, '""')}","${c.name}","${(u.department || '').replace(/"/g, '""')}","${u.userType}","${u.validTo}"`);
+        });
+      });
+
+      (otherAccounts.users || []).forEach(u => {
+        lines.push(`"${u.bname}","${(u.fullName || '').replace(/"/g, '""')}","${otherAccounts.name}","${(u.department || '').replace(/"/g, '""')}","${u.userType}","${u.validTo}"`);
+      });
+
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + lines.join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.setAttribute('download', `distribucion_licencias_sap_empresas_${dateStr}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
