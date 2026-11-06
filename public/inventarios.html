@@ -240,8 +240,8 @@
           <span class="material-symbols-outlined text-emerald-400 text-2xl">cable</span>
           <div class="text-xs">
             <div class="flex items-center gap-2">
-              <span class="text-slate-400">RFC Activo:</span>
-              <code id="activeRfcBadge" class="font-mono font-bold text-emerald-300 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30">ZFMM_STOCK_BY_WERKS</code>
+              <span class="text-slate-400">Módulo Activo:</span>
+              <code id="activeRfcBadge" data-rfc="ZFMM_STOCK_BY_WERKS" class="font-mono font-bold text-emerald-300 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30">Stock por Centro</code>
             </div>
             <p id="activeModeDescription" class="text-slate-400 mt-0.5">
               Auditoría de Stock Actual, Stock Máximo y Stock de Seguridad.
@@ -297,7 +297,7 @@
             <button type="submit" id="btnConsultarRfc"
               class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-bold text-xs sm:text-sm border border-slate-600/80 flex items-center justify-center gap-2 transition shadow">
               <span class="material-symbols-outlined text-lg text-blue-400">search</span>
-              <span>Consultar SAP RFC</span>
+              <span>Consultar Inventario SAP</span>
             </button>
 
             <button type="button" id="btnRunAi" onclick="handleRunAiAnalysis()"
@@ -395,7 +395,7 @@
         <div class="flex items-center gap-3">
           <h2 id="tableTitle" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span>
-            <span>Matriz de Stock por Centro (ZFMM_STOCK_BY_WERKS)</span>
+            <span>Matriz de Stock por Centro Logístico</span>
           </h2>
           <span id="sourceBadge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
             Conexión SAP en Vivo
@@ -610,10 +610,11 @@
       if (mode === 'EXCESO_INV') {
         tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
         tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
-        rfcBadge.textContent = 'ZFMM_STOCK_BY_WERKS';
+        rfcBadge.textContent = 'Stock por Centro';
+        rfcBadge.setAttribute('data-rfc', 'ZFMM_STOCK_BY_WERKS');
         modeDesc.textContent = 'Auditoría de Stock Actual, Stock Máximo y Stock de Seguridad.';
         btnAiLabel.textContent = 'Generar Auditoría con IA';
-        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span><span>Matriz de Stock por Centro (ZFMM_STOCK_BY_WERKS)</span>';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">table_chart</span><span>Matriz de Stock por Centro Logístico</span>';
         matnrReqStar.textContent = '(Opcional si filtra Centro)';
         matnrReqStar.className = 'text-slate-400 text-[10px]';
         document.getElementById('yearFilterSelect')?.classList.add('hidden');
@@ -621,10 +622,11 @@
       } else {
         tabProy.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-purple-600 text-white shadow-lg shadow-purple-900/40';
         tabExceso.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-900';
-        rfcBadge.textContent = 'ZFMM_HISTORICO_CONSUMO';
+        rfcBadge.textContent = 'Histórico de Demanda';
+        rfcBadge.setAttribute('data-rfc', 'ZFMM_HISTORICO_CONSUMO');
         modeDesc.textContent = 'Series de consumo histórico y proyección estacional de demanda.';
         btnAiLabel.textContent = 'Proyectar Demanda con IA';
-        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">timeline</span><span>Serie Histórica de Consumo (ZFMM_HISTORICO_CONSUMO)</span>';
+        tableTitle.innerHTML = '<span class="material-symbols-outlined text-purple-400 text-xl">timeline</span><span>Serie Histórica de Consumo y Demanda</span>';
         matnrReqStar.textContent = '* Obligatorio';
         matnrReqStar.className = 'text-rose-400 text-[10px] font-bold';
         document.getElementById('yearFilterSelect')?.classList.remove('hidden');
@@ -660,16 +662,16 @@
       // Validación de obligatoriedad
       if (currentMode === 'PROYECCION_INV' && (!werks || !matnrLow)) {
         showValidationAlert(
-          'Campos Obligatorios en Proyección de Demanda (PROYECCION_INV)',
-          'Para consultar el RFC ZFMM_HISTORICO_CONSUMO debes ingresar obligatoriamente el Centro (WERKS) y el Rango de Material (MATNR) para prevenir sobrecarga de consultas masivas en SAP.'
+          'Campos Obligatorios en Proyección de Demanda',
+          'Para consultar las proyecciones debes ingresar obligatoriamente el Centro y el Código de Material inicial para optimizar los tiempos de respuesta.'
         );
         return;
       }
 
       if (currentMode === 'EXCESO_INV' && !werks && !matnrLow) {
         showValidationAlert(
-          'Filtro Requerido (EXCESO_INV)',
-          'Ingresa al menos el Centro (WERKS) o un Rango de Material (MATNR) para consultar ZFMM_STOCK_BY_WERKS.'
+          'Filtro Requerido',
+          'Ingresa al menos el Centro o un Rango de Material para consultar el inventario disponible.'
         );
         return;
       }

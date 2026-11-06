@@ -189,7 +189,7 @@
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3">
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-2.5 items-end">
         <div>
-          <label for="fYear" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Año (FKDAT)</label>
+          <label for="fYear" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Año</label>
           <select id="fYear" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todos (2024-2026)</option>
             <option value="2026">2026</option>
@@ -218,49 +218,49 @@
         </div>
 
         <div>
-          <label for="fVkorg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Org. Ventas (VKORG)</label>
+          <label for="fVkorg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Organización de Ventas</label>
           <select id="fVkorg" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
-            <option value="ALL">Todas las Org.</option>
+            <option value="ALL">Todas las Organizaciones</option>
           </select>
         </div>
 
         <div>
-          <label for="fVtweg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Canal (VTWEG)</label>
+          <label for="fVtweg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Canal de Distribución</label>
           <select id="fVtweg" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todos los Canales</option>
           </select>
         </div>
 
         <div>
-          <label for="fSpart" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sector (SPART)</label>
+          <label for="fSpart" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sector Comercial</label>
           <select id="fSpart" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todos los Sectores</option>
           </select>
         </div>
 
         <div>
-          <label for="fRegio" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Región (REGIO)</label>
+          <label for="fRegio" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Región / Departamento</label>
           <select id="fRegio" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todas las Regiones</option>
           </select>
         </div>
 
         <div>
-          <label for="fMatkl" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Familia (MATKL)</label>
+          <label for="fMatkl" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Familia de Productos</label>
           <select id="fMatkl" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todas las Familias</option>
           </select>
         </div>
 
         <div>
-          <label for="fKunnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Cliente (KUNAG)</label>
+          <label for="fKunnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Cliente</label>
           <select id="fKunnr" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todos los Clientes</option>
           </select>
         </div>
 
         <div>
-          <label for="fMatnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Producto (MATNR)</label>
+          <label for="fMatnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Producto</label>
           <select id="fMatnr" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
             <option value="ALL">Todos los Productos</option>
           </select>
@@ -287,7 +287,7 @@
           <span id="activeFiltersSummary" class="text-amber-300 font-mono text-[11px]">Mostrando: Histórico Completo (2024–2026)</span>
         </div>
         <div id="auditSummaryBanner" class="font-mono text-[11px] text-slate-400">
-          Verificando integridad documental VBRK / VBRP / VBAK...
+          Verificando integridad documental comercial...
         </div>
       </div>
     </div>
@@ -303,9 +303,9 @@
       <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 text-amber-400">
         <span class="material-symbols-outlined text-3xl animate-spin">sync</span>
       </div>
-      <h2 class="text-lg font-bold text-white mb-1">Extrayendo y procesando modelo comercial SAP SD (`VBRK`, `VBRP`, `VBAK`, `KNA1`)</h2>
+      <h2 class="text-lg font-bold text-white mb-1">Cargando y procesando analítica comercial de ventas</h2>
       <p class="text-xs text-slate-400 max-w-xl mx-auto">
-        Aplicando reglas contables de conversión monetaria (`TCURX` / `KURRF`), excluyendo facturas proforma (`VBTYP='U'`), calculando segmentación RFM y ejecutando backtesting del motor predictivo Smart Predict...
+        Consolidando facturación real, pedidos en firme, notas de crédito, conversión de monedas y modelos predictivos de demanda...
       </p>
     </div>
 
@@ -319,23 +319,23 @@
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
-              Gobernanza y Separación Estricta de Conceptos Comerciales SAP SD
+              Gobernanza y Separación Estricta de Conceptos Comerciales
             </span>
             <p class="text-xs text-slate-300 mt-0.5">
-              Los <strong>Pedidos de Venta (`VBAK` `VBTYP='C'`)</strong> representan demanda solicitada; los <strong>Ingresos Netos Reconocidos</strong> se calculan exclusivamente sobre facturas contabilizadas (`VBRK` `M`+`P`) menos Notas de Crédito (`O`), excluyendo Proformas (`VBTYP='U'`, `RFBSK='D'`) y Anulaciones (`FKSTO='X'`).
+              Los <strong>Pedidos de Venta</strong> representan demanda solicitada; los <strong>Ingresos Netos Reconocidos</strong> se calculan exclusivamente sobre facturas válidas contabilizadas menos Notas de Crédito y devoluciones, excluyendo proformas y facturas anuladas.
             </p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-right shrink-0">
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
-              <span class="text-[10px] text-slate-400 uppercase block">1. Pedidos Venta (`VBAK`)</span>
+              <span class="text-[10px] text-slate-400 uppercase block">1. Pedidos Registrados</span>
               <span id="reconcilOrdersCop" class="text-xs sm:text-sm font-mono font-bold text-blue-400 tabular-nums">$0</span>
             </div>
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
-              <span class="text-[10px] text-slate-400 uppercase block">2. Facturación Bruta (`M`+`P`)</span>
+              <span class="text-[10px] text-slate-400 uppercase block">2. Facturación Bruta</span>
               <span id="reconcilGrossCop" class="text-xs sm:text-sm font-mono font-bold text-slate-100 tabular-nums">$0</span>
             </div>
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
-              <span class="text-[10px] text-slate-400 uppercase block">3. Notas Crédito (`VBTYP='O'`)</span>
+              <span class="text-[10px] text-slate-400 uppercase block">3. Notas de Crédito</span>
               <span id="reconcilCreditCop" class="text-xs sm:text-sm font-mono font-bold text-rose-400 tabular-nums">-$0</span>
             </div>
             <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-3 py-2">
@@ -358,10 +358,10 @@
                 <span class="material-symbols-outlined text-amber-400 text-xl">monitoring</span>
                 Evolución de Ingresos Netos Reconocidos vs. Pedidos de Venta (COP)
               </h2>
-              <p class="text-xs text-slate-400">Comparativa histórica mensual (`VBRK` neto vs. `VBAK` pedidos válidos · Mes parcial señalizado)</p>
+              <p class="text-xs text-slate-400">Comparativa histórica mensual (ingresos netos vs. pedidos de venta registrados · Mes parcial señalizado)</p>
             </div>
             <span class="text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300">
-              Moneda Homogeneizada: COP (`KURRF` / `TCURX`)
+              Moneda Homogeneizada: COP
             </span>
           </div>
           <div class="h-80 w-full relative">
@@ -374,7 +374,7 @@
           <div class="glass-panel rounded-2xl p-5">
             <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
               <span class="material-symbols-outlined text-blue-400 text-lg">pie_chart</span>
-              Participación por Canal de Distribución (`VTWEG`)
+              Participación por Canal de Distribución
             </h3>
             <p class="text-[11px] text-slate-400 mb-3">Contribución porcentual a los ingresos netos reconocidos</p>
             <div class="h-44 w-full relative mb-3">
@@ -456,14 +456,14 @@
         </div>
       </div>
 
-      <!-- D. Análisis Geográfico y Comercial (VKORG, REGIO, VTWEG, SPART, VKGRP) -->
+      <!-- D. Análisis Geográfico y Comercial -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
             <span class="material-symbols-outlined text-emerald-400 text-xl">domain</span>
-            Ingresos por Organización de Ventas (`VKORG` / Sociedades Grupo Daabon)
+            Ingresos por Organización de Ventas (Sociedades Corporativas)
           </h3>
-          <p class="text-xs text-slate-400 mb-4">Contribución comercial neta por organización en SAP SD</p>
+          <p class="text-xs text-slate-400 mb-4">Contribución comercial neta por organización de ventas</p>
           <div class="h-72 w-full relative">
             <canvas id="histVkorgChart"></canvas>
           </div>
@@ -476,14 +476,14 @@
                 <span class="material-symbols-outlined text-purple-400 text-xl">public</span>
                 Desglose Geográfico y Comercial Multidimensional
               </h3>
-              <p class="text-xs text-slate-400">Seleccione la dimensión comercial de SAP SD a inspeccionar</p>
+              <p class="text-xs text-slate-400">Seleccione la dimensión comercial a inspeccionar</p>
             </div>
             <select id="dimBreakdownSelector" onchange="renderCommercialDimensionTable()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold">
-              <option value="byRegion">Región / Departamento (`REGIO`)</option>
-              <option value="byCity">Ciudad (`KNA1-ORT01`)</option>
-              <option value="byDivision">Sector Comercial (`SPART`)</option>
-              <option value="bySalesGroup">Grupo de Vendedores / Ejecutivo (`VKGRP`)</option>
-              <option value="bySalesOffice">Oficina de Ventas (`VKBUR`)</option>
+              <option value="byRegion">Región / Departamento</option>
+              <option value="byCity">Ciudad</option>
+              <option value="byDivision">Sector Comercial</option>
+              <option value="bySalesGroup">Grupo de Vendedores / Ejecutivo</option>
+              <option value="bySalesOffice">Oficina de Ventas</option>
             </select>
           </div>
 
@@ -519,7 +519,7 @@
               B. Modelo de Segmentación RFM Configurable (Recencia, Frecuencia y Valor Monetario)
             </h2>
             <p class="text-xs text-slate-400">
-              Clasificación automática de la cartera según días transcurridos desde la última factura (`VBRK-FKDAT`), frecuencia documental y volumen monetario neto en COP.
+              Clasificación automática de la cartera según días transcurridos desde la última compra, frecuencia documental y volumen monetario neto en COP.
             </p>
           </div>
           <div class="flex flex-wrap items-end gap-2.5">
@@ -550,12 +550,12 @@
           <div>
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <span class="material-symbols-outlined text-amber-400 text-xl">leaderboard</span>
-              A. Ranking de Clientes por Ingresos, Frecuencia y Evolución de Compra (`KNA1` / `VBRK`)
+              A. Ranking de Clientes por Ingresos, Frecuencia y Evolución de Compra
             </h3>
             <p class="text-xs text-slate-400">Detalle de comportamiento comercial, ticket promedio, recencia y segmento RFM asignado</p>
           </div>
           <div class="flex items-center gap-2">
-            <input type="search" id="customerSearchInput" oninput="filterCustomersTable()" placeholder="Buscar cliente, código SAP o ciudad..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
+            <input type="search" id="customerSearchInput" oninput="filterCustomersTable()" placeholder="Buscar cliente, código o ciudad..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
           </div>
         </div>
 
@@ -563,7 +563,7 @@
           <table class="text-left text-xs">
             <thead>
               <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
-                <th scope="col" class="py-3 px-3">Cliente (`KUNNR` · Razón Social)</th>
+                <th scope="col" class="py-3 px-3">Cliente / Razón Social</th>
                 <th scope="col" class="py-3 px-3">Ciudad / Región</th>
                 <th scope="col" class="py-3 px-3 text-right">Ingresos Netos (COP)</th>
                 <th scope="col" class="py-3 px-3 text-right">% Part.</th>
@@ -585,9 +585,9 @@
         <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
             <span class="material-symbols-outlined text-blue-400 text-xl">shopping_basket</span>
-            C. Afinidad de Productos Comprados Conjuntamente (Market Basket `VBRP`)
+            C. Afinidad de Productos Comprados Conjuntamente (Patrones de Compra)
           </h3>
-          <p class="text-xs text-slate-400 mb-4">Combinaciones de materiales con co-ocurrencia demostrada en las mismas facturas comerciales</p>
+          <p class="text-xs text-slate-400 mb-4">Combinaciones de productos con co-ocurrencia demostrada en las mismas compras comerciales</p>
           <div tabindex="0" role="region" aria-label="Afinidad de productos" class="table-region rounded-xl border border-slate-800">
             <table class="text-left text-xs">
               <thead>
@@ -627,7 +627,7 @@
             <span class="material-symbols-outlined text-amber-400 text-xl">paid</span>
             Top 10 Productos que Generan Mayores Ingresos Netos (COP)
           </h2>
-          <p class="text-xs text-slate-400 mb-4">Diferenciación por valor monetario aportado (`VBRP-NETWR` convertido a COP)</p>
+          <p class="text-xs text-slate-400 mb-4">Diferenciación por valor monetario aportado (convertido a COP)</p>
           <div class="h-72 w-full relative">
             <canvas id="prodTopRevenueChart"></canvas>
           </div>
@@ -636,7 +636,7 @@
         <div class="glass-panel rounded-2xl p-5">
           <h2 class="text-base font-bold text-white flex items-center gap-2 mb-1">
             <span class="material-symbols-outlined text-purple-400 text-xl">inventory</span>
-            Top 10 Productos por Volumen Físico Comercializado (`VBRP-FKIMG`)
+            Top 10 Productos por Volumen Físico Comercializado
           </h2>
           <p class="text-xs text-slate-400 mb-4">Diferenciación entre productos de alto volumen de unidades y productos de mayor facturación</p>
           <div class="h-72 w-full relative">
@@ -645,12 +645,12 @@
         </div>
       </div>
 
-      <!-- Participación por Familia de Producto (MATKL) + Crecimiento vs Caída -->
+      <!-- Participación por Familia de Producto + Crecimiento vs Caída -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
             <span class="material-symbols-outlined text-blue-400 text-lg">category</span>
-            Participación por Familia de Artículos (`MATKL` / `T023T`)
+            Participación por Familia de Artículos
           </h3>
           <p class="text-xs text-slate-400 mb-3">Distribución porcentual del ingreso por línea de negocio</p>
           <div class="h-56 w-full relative mb-3">
@@ -673,7 +673,7 @@
             <span class="material-symbols-outlined text-rose-400 text-lg">trending_down</span>
             Productos con Disminución de Ventas (YTD)
           </h3>
-          <p class="text-xs text-slate-400 mb-3">Materiales que presentan contracción comercial respecto al año anterior</p>
+          <p class="text-xs text-slate-400 mb-3">Productos que presentan contracción comercial respecto al año anterior</p>
           <div id="prodDecliningList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
         </div>
       </div>
@@ -684,27 +684,27 @@
           <div>
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <span class="material-symbols-outlined text-purple-400 text-xl">analytics</span>
-              Matriz de Comportamiento de Demanda y Volatilidad por Producto (`MATNR`)
+              Matriz de Comportamiento de Demanda y Volatilidad por Producto
             </h3>
             <p class="text-xs text-slate-400">
-              Clasificación técnica según Coeficiente de Variación mensual (`CV%`), meses con actividad y tendencia interanual en unidades e ingresos
+              Clasificación según Coeficiente de Variación mensual (CV%), meses con actividad y tendencia interanual en unidades e ingresos
             </p>
           </div>
-          <input type="search" id="productSearchInput" oninput="filterProductsTable()" placeholder="Buscar material, código o familia..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
+          <input type="search" id="productSearchInput" oninput="filterProductsTable()" placeholder="Buscar producto o familia..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
         </div>
 
         <div tabindex="0" role="region" aria-label="Matriz de productos y demanda" class="table-region rounded-xl border border-slate-800">
           <table class="text-left text-xs">
             <thead>
               <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
-                <th scope="col" class="py-3 px-3">Material (`MATNR` · Descripción `ARKTX`)</th>
-                <th scope="col" class="py-3 px-3">Familia (`MATKL`)</th>
-                <th scope="col" class="py-3 px-3 text-right">Unidades (`FKIMG`)</th>
+                <th scope="col" class="py-3 px-3">Producto / Descripción</th>
+                <th scope="col" class="py-3 px-3">Familia de Productos</th>
+                <th scope="col" class="py-3 px-3 text-right">Unidades Vendidas</th>
                 <th scope="col" class="py-3 px-3 text-center">UM</th>
                 <th scope="col" class="py-3 px-3 text-right">Ingresos Netos (COP)</th>
                 <th scope="col" class="py-3 px-3 text-right">% Part.</th>
                 <th scope="col" class="py-3 px-3 text-right">Var. Unidades %</th>
-                <th scope="col" class="py-3 px-3 text-right">Volatilidad (`CV%`)</th>
+                <th scope="col" class="py-3 px-3 text-right">Volatilidad (CV%)</th>
                 <th scope="col" class="py-3 px-3">Patrón de Demanda</th>
               </tr>
             </thead>
@@ -758,7 +758,7 @@
               A. Proyección de Ingresos Netos Futuros con Banda de Confianza al 95%
             </h3>
             <p class="text-xs text-slate-400">
-              Diferenciación visual estricta: <strong>Línea sólida azul</strong> = Ingresos reales cerrados (`VBRK`) · <strong>Línea punteada ámbar</strong> = Pronóstico Smart Predict · <strong>Área sombreada</strong> = Intervalo de confianza 95%
+              Diferenciación visual: <strong>Línea sólida azul</strong> = Ingresos reales facturados · <strong>Línea punteada ámbar</strong> = Pronóstico Smart Predict · <strong>Área sombreada</strong> = Intervalo de confianza 95%
             </p>
           </div>
         </div>
@@ -811,7 +811,7 @@
 
           <div class="pt-3 border-t border-slate-800">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-              Distribución de Ingresos Proyectados por Canal (`VTWEG`) en el Horizonte Activo
+              Distribución de Ingresos Proyectados por Canal de Distribución en el Horizonte Activo
             </h4>
             <div id="mlChannelForecastList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
           </div>
@@ -832,7 +832,7 @@
             <table class="text-left text-xs">
               <thead>
                 <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
-                  <th scope="col" class="py-2.5 px-3">Producto (`MATNR`)</th>
+                  <th scope="col" class="py-2.5 px-3">Producto / Código</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Prom. Hist./Mes</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Demanda Proy. Horizonte</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Ingreso Proy. (COP)</th>
@@ -856,7 +856,7 @@
             <table class="text-left text-xs">
               <thead>
                 <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
-                  <th scope="col" class="py-2.5 px-3">Cliente (`KUNNR`)</th>
+                  <th scope="col" class="py-2.5 px-3">Cliente / Código</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Recencia</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Prob. Recompra 90d</th>
                   <th scope="col" class="py-2.5 px-3 text-right">Riesgo Caída</th>
@@ -881,8 +881,8 @@
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-amber-400 text-2xl">architecture</span>
           <div>
-            <h2 class="text-base font-bold text-white">Documentación Técnica del Modelo SAC, Fuentes SAP y Diccionario de Indicadores</h2>
-            <p class="text-xs text-slate-400">Entregables de Gobernanza Analítica (Secciones 2, 8, 11 y 12)</p>
+            <h2 class="text-base font-bold text-white">Documentación del Modelo Analítico, Entidades Comerciales y Diccionario de Indicadores</h2>
+            <p class="text-xs text-slate-400">Entregables de Gobernanza Analítica y Reglas de Negocio</p>
           </div>
         </div>
         <button type="button" onclick="closeDocumentationModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
@@ -893,7 +893,7 @@
       <div class="p-6 overflow-y-auto space-y-6 text-xs text-slate-300" id="sacDocModalContent"></div>
 
       <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center text-[11px] text-slate-400">
-        <span>Modelo Analítico: <strong class="text-white font-mono">SAC_SD_SALES_REVENUE_PREDICT_M01</strong></span>
+        <span>Modelo Analítico: <strong class="text-white font-mono">MODELO_COMERCIAL_VENTAS_Y_PREDICCION</strong></span>
         <button type="button" onclick="closeDocumentationModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold">
           Cerrar
         </button>
@@ -905,7 +905,7 @@
   <footer class="border-t border-slate-800/80 bg-slate-950/70 py-4 px-4 sm:px-6 text-xs text-slate-500 mt-8">
     <div class="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
       <span>Portal Corporativo SAP · Inteligencia Comercial y Predicción de Ingresos (SAC Architecture)</span>
-      <span id="footerAuditText" class="font-mono text-[11px] text-slate-400">SAP ECC 6.0 · Tablas VBRK / VBRP / VBAK / KNA1</span>
+      <span id="footerAuditText" class="font-mono text-[11px] text-slate-400">Sistema Comercial Corporativo · Auditoría de Facturación y Pedidos</span>
     </div>
   </footer>
 
@@ -1020,13 +1020,13 @@
         if ([...sel.options].some(o => o.value === curVal)) sel.value = curVal;
       };
 
-      fillSelect('fVkorg', opts.vkorgs, 'Todas las Org. (VKORG)');
-      fillSelect('fVtweg', opts.vtwegs, 'Todos los Canales (VTWEG)');
-      fillSelect('fSpart', opts.sparts, 'Todos los Sectores (SPART)');
-      fillSelect('fRegio', opts.regios, 'Todas las Regiones (REGIO)');
-      fillSelect('fMatkl', opts.matkls, 'Todas las Familias (MATKL)');
-      fillSelect('fKunnr', opts.topCustomers, 'Todos los Clientes (Top 50)');
-      fillSelect('fMatnr', opts.topMaterials, 'Todos los Productos (Top 50)');
+      fillSelect('fVkorg', opts.vkorgs, 'Todas las Organizaciones');
+      fillSelect('fVtweg', opts.vtwegs, 'Todos los Canales');
+      fillSelect('fSpart', opts.sparts, 'Todos los Sectores');
+      fillSelect('fRegio', opts.regios, 'Todas las Regiones');
+      fillSelect('fMatkl', opts.matkls, 'Todas las Familias');
+      fillSelect('fKunnr', opts.topCustomers, 'Todos los Clientes');
+      fillSelect('fMatnr', opts.topMaterials, 'Todos los Productos');
     }
 
     function applySacFilters() {
@@ -1083,7 +1083,7 @@
       if (f.regio && f.regio !== 'ALL') activeParts.push(`Región: ${f.regio}`);
       if (f.matkl && f.matkl !== 'ALL') activeParts.push(`Familia: ${f.matkl}`);
       if (f.kunnr && f.kunnr !== 'ALL') activeParts.push(`Cliente: ${f.kunnr}`);
-      if (f.matnr && f.matnr !== 'ALL') activeParts.push(`Material: ${f.matnr}`);
+      if (f.matnr && f.matnr !== 'ALL') activeParts.push(`Producto: ${f.matnr}`);
 
       document.getElementById('activeFiltersSummary').textContent = activeParts.length > 0
         ? `Filtros activos: ${activeParts.join(' · ')}`
@@ -1092,8 +1092,8 @@
       document.getElementById('auditSummaryBanner').innerHTML =
         `Facturas válidas: <strong class="text-white">${formatNum(st.validInvoicesCount)}</strong> · ` +
         `Notas Crédito: <strong class="text-rose-400">${formatNum(st.creditMemosCount)}</strong> · ` +
-        `Proformas excluidas (U): <strong class="text-amber-400">${formatNum(st.proformasExcludedCount)}</strong> · ` +
-        `Posiciones VBRP: <strong class="text-blue-400">${formatNum(st.totalVbrpItemsRead)}</strong>`;
+        `Proformas excluidas: <strong class="text-amber-400">${formatNum(st.proformasExcludedCount)}</strong> · ` +
+        `Posiciones Facturadas: <strong class="text-blue-400">${formatNum(st.totalVbrpItemsRead)}</strong>`;
     }
 
     function renderAllViews(data) {
@@ -1155,29 +1155,29 @@
         {
           title: '4. Unidades Comercializadas',
           value: formatNum(exec.totalUnitsSold),
-          subValue: 'Suma física VBRP-FKIMG',
+          subValue: 'Volumen físico facturado',
           badge: 'Multi-UM (TO/GL/CJ/KG)',
           badgePositive: true,
           icon: 'local_shipping',
-          interpretation: 'Volumen físico neto facturado (ver desglose por unidad VRKME en Pág. 4).'
+          interpretation: 'Volumen físico neto facturado (ver desglose por unidad de medida en Pág. 4).'
         },
         {
           title: '5. Número de Pedidos Válidos',
           value: formatNum(exec.totalOrdersCount),
           subValue: `${formatNum(exec.validInvoiceDocsCount)} facturas emitidas`,
-          badge: 'VBAK VBTYP = C',
+          badge: 'Pedidos en Firme',
           badgePositive: true,
           icon: 'receipt_long',
-          interpretation: 'Pedidos de venta en firme (excluye cotizaciones B y solicitudes de abono K).'
+          interpretation: 'Pedidos de venta en firme registrados formalmente.'
         },
         {
           title: '6. Clientes Activos',
           value: formatNum(exec.activeCustomersCount),
           subValue: `Top 10 concentra ${exec.concentration.top10SharePct}%`,
-          badge: 'VBRK-KUNAG',
+          badge: 'Clientes con Factura',
           badgePositive: true,
           icon: 'groups',
-          interpretation: 'Solicitantes únicos con facturación efectiva registrada en el período.'
+          interpretation: 'Clientes comerciales únicos con facturación efectiva registrada en el período.'
         },
         {
           title: '7. Valor Promedio por Pedido',
@@ -1220,7 +1220,7 @@
 
       document.getElementById('execChannelList').innerHTML = (exec.channelBreakdown || []).slice(0, 5).map(c => `
         <div class="flex items-center justify-between py-1 border-b border-slate-800/50">
-          <span class="text-slate-300 font-medium">${c.vtweg} · ${c.name}</span>
+          <span class="text-slate-300 font-medium">${c.name}</span>
           <div class="text-right font-mono tabular-nums">
             <span class="text-white font-bold">${formatCopCompact(c.netCop)}</span>
             <span class="text-amber-400 ml-1.5">(${c.sharePct}%)</span>
@@ -1244,7 +1244,7 @@
           labels: series.map(s => s.isPartialMonth ? `${s.ym}*` : s.ym),
           datasets: [
             {
-              label: 'Ingresos Netos Reconocidos (VBRK)',
+              label: 'Ingresos Netos Reconocidos',
               data: series.map(s => s.netCop),
               borderColor: '#f59e0b',
               backgroundColor: 'rgba(245, 158, 11, 0.14)',
@@ -1253,7 +1253,7 @@
               tension: 0.3
             },
             {
-              label: 'Pedidos de Venta Comprometidos (VBAK)',
+              label: 'Pedidos de Venta Registrados',
               data: series.map(s => s.ordersCop),
               borderColor: '#3b82f6',
               borderDash: [5, 4],
@@ -1295,7 +1295,7 @@
       charts.execChannelChart = new Chart(ctx2, {
         type: 'doughnut',
         data: {
-          labels: channels.map(c => `${c.vtweg} - ${c.name}`),
+          labels: channels.map(c => c.name),
           datasets: [{
             data: channels.map(c => c.netCop),
             backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#a855f7', '#ec4899', '#06b6d4'],
@@ -1515,8 +1515,8 @@
 
       document.getElementById('productAffinityTableBody').innerHTML = (custInt.productAffinity || []).map(pair => `
         <tr class="hover:bg-slate-800/40">
-          <th scope="row" class="py-2.5 px-3 font-medium text-white">${pair.nameA} <span class="text-slate-500 font-mono">(${pair.matnrA})</span></th>
-          <td class="py-2.5 px-3 text-slate-200">${pair.nameB} <span class="text-slate-500 font-mono">(${pair.matnrB})</span></td>
+          <th scope="row" class="py-2.5 px-3 font-medium text-white">${pair.nameA} <span class="text-slate-500 font-mono">(Cód: ${pair.matnrA})</span></th>
+          <td class="py-2.5 px-3 text-slate-200">${pair.nameB} <span class="text-slate-500 font-mono">(Cód: ${pair.matnrB})</span></td>
           <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-300">${pair.coOccurrences}</td>
           <td class="py-2.5 px-3 text-right font-mono text-emerald-300">${pair.confidencePct}%</td>
           <td class="py-2.5 px-3 text-right font-mono text-blue-300">${pair.lift}x</td>
@@ -1530,7 +1530,7 @@
         return `
           <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-bold text-white">${al.customerName} <span class="font-mono text-slate-400">(${al.kunnr})</span></span>
+              <span class="text-xs font-bold text-white">${al.customerName} <span class="font-mono text-slate-400">(Cód: ${al.kunnr})</span></span>
               <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${badgeColor}">${al.type} · ${al.severity}</span>
             </div>
             <div class="text-xs font-mono text-amber-300">${al.metric}</div>
@@ -1548,7 +1548,7 @@
           <tr class="hover:bg-slate-800/40">
             <th scope="row" class="py-2.5 px-3 font-semibold text-white">
               <div>${c.name}</div>
-              <div class="text-[10px] font-mono text-slate-400">SAP KUNNR: ${c.kunnr} · Pref: ${c.favoriteFamily}</div>
+              <div class="text-[10px] font-mono text-slate-400">Cód: ${c.kunnr} · Línea: ${c.favoriteFamily}</div>
             </th>
             <td class="py-2.5 px-3 text-slate-300">${c.city} <span class="text-slate-500">(${c.country})</span></td>
             <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-300">${formatCop(c.netCop)}</td>
@@ -1585,7 +1585,7 @@
     function renderPage4Products(prodData) {
       document.getElementById('prodFamilyList').innerHTML = (prodData.familiesAnalysis || []).slice(0, 10).map(f => `
         <div class="flex items-center justify-between py-1 border-b border-slate-800/50">
-          <span class="text-slate-200 font-medium">${f.matkl} · ${f.familyName}</span>
+          <span class="text-slate-200 font-medium">${f.familyName}</span>
           <span class="font-mono text-amber-300 font-bold tabular-nums">${formatCopCompact(f.netCop)} (${f.sharePct}%)</span>
         </div>
       `).join('');
@@ -1594,7 +1594,7 @@
         <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2">
           <div>
             <div class="font-semibold text-white">${p.name}</div>
-            <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr} · ${p.familyName}</div>
+            <div class="text-[10px] font-mono text-slate-400">Cód: ${p.matnr} · ${p.familyName}</div>
           </div>
           <div class="text-right font-mono tabular-nums shrink-0">
             <div class="text-emerald-400 font-bold">+${p.revenueGrowthPct}% YoY</div>
@@ -1607,7 +1607,7 @@
         <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2">
           <div>
             <div class="font-semibold text-white">${p.name}</div>
-            <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr} · ${p.familyName}</div>
+            <div class="text-[10px] font-mono text-slate-400">Cód: ${p.matnr} · ${p.familyName}</div>
           </div>
           <div class="text-right font-mono tabular-nums shrink-0">
             <div class="text-rose-400 font-bold">${p.revenueGrowthPct}% YoY</div>
@@ -1626,9 +1626,9 @@
           <tr class="hover:bg-slate-800/40">
             <th scope="row" class="py-2.5 px-3 font-semibold text-white">
               <div>${p.name}</div>
-              <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr}</div>
+              <div class="text-[10px] font-mono text-slate-400">Cód: ${p.matnr}</div>
             </th>
-            <td class="py-2.5 px-3 text-slate-300">${p.familyName} <span class="font-mono text-slate-500">(${p.matkl})</span></td>
+            <td class="py-2.5 px-3 text-slate-300">${p.familyName}</td>
             <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-300">${formatNum(p.unitsSold)}</td>
             <td class="py-2.5 px-3 text-center font-mono text-slate-400">${p.uom}</td>
             <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-300">${formatCop(p.netCop)}</td>
@@ -1689,7 +1689,7 @@
         data: {
           labels: topUnits.map(p => `${p.name.slice(0, 24)} (${p.uom})`),
           datasets: [{
-            label: 'Unidades Vendidas (FKIMG)',
+            label: 'Unidades Vendidas',
             data: topUnits.map(p => p.unitsSold),
             backgroundColor: 'rgba(168, 85, 247, 0.8)',
             borderRadius: 4
@@ -1801,7 +1801,7 @@
 
       document.getElementById('mlChannelForecastList').innerHTML = (pred.channelForecasts || []).slice(0, 4).map(ch => `
         <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-          <span class="text-slate-300 font-medium">${ch.vtweg} · ${ch.name}</span>
+          <span class="text-slate-300 font-medium">${ch.name}</span>
           <span class="font-mono font-bold text-emerald-400 tabular-nums">${formatCopCompact(ch.projectedHorizonCop)}</span>
         </div>
       `).join('');
@@ -1810,7 +1810,7 @@
         <tr class="hover:bg-slate-800/40">
           <th scope="row" class="py-2.5 px-3 font-semibold text-white">
             <div>${p.name}</div>
-            <div class="text-[10px] font-mono text-slate-400">${p.matnr} · ${p.uom}</div>
+            <div class="text-[10px] font-mono text-slate-400">Cód: ${p.matnr} · ${p.uom}</div>
           </th>
           <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatNum(p.historicalMonthlyAvgUnits)}</td>
           <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-300">${formatNum(p.projectedHorizonUnits)} ${p.uom}</td>
@@ -1823,7 +1823,7 @@
         <tr class="hover:bg-slate-800/40">
           <th scope="row" class="py-2.5 px-3 font-semibold text-white">
             <div>${c.name}</div>
-            <div class="text-[10px] font-mono text-slate-400">${c.kunnr} · ${c.segment}</div>
+            <div class="text-[10px] font-mono text-slate-400">Cód: ${c.kunnr} · ${c.segment}</div>
           </th>
           <td class="py-2.5 px-3 text-right font-mono text-slate-300">${c.recencyDays}d</td>
           <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">${c.repurchaseProb90dPct}%</td>
@@ -1867,7 +1867,7 @@
           labels: allLabels,
           datasets: [
             {
-              label: 'Ingreso Real Cerrado (VBRK)',
+              label: 'Ingreso Real Facturado',
               data: actualData,
               borderColor: '#3b82f6',
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -1961,14 +1961,14 @@
         </div>
 
         <div>
-          <h3 class="text-sm font-bold text-white mb-2">2. Tablas del Módulo Comercial SAP SD Consultadas</h3>
+          <h3 class="text-sm font-bold text-white mb-2">2. Entidades Comerciales Consultadas</h3>
           <div class="overflow-x-auto rounded-xl border border-slate-800">
             <table class="w-full text-left text-xs">
               <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
                 <tr>
-                  <th class="py-2 px-3">Tabla SAP</th>
+                  <th class="py-2 px-3">Entidad Comercial</th>
                   <th class="py-2 px-3">Función en el Modelo</th>
-                  <th class="py-2 px-3">Campos Técnicos Extraídos</th>
+                  <th class="py-2 px-3">Datos Extraídos</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800">
@@ -1976,7 +1976,7 @@
                   <tr>
                     <td class="py-2 px-3 font-mono font-bold text-amber-300">${t.table}</td>
                     <td class="py-2 px-3 text-white">${t.description}</td>
-                    <td class="py-2 px-3 font-mono text-slate-400">${t.keyFields}</td>
+                    <td class="py-2 px-3 text-slate-400">${t.keyFields}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1985,14 +1985,14 @@
         </div>
 
         <div>
-          <h3 class="text-sm font-bold text-white mb-2">3. Diccionario Oficial de Indicadores y Fórmulas</h3>
+          <h3 class="text-sm font-bold text-white mb-2">3. Diccionario de Indicadores y Reglas de Negocio</h3>
           <div class="overflow-x-auto rounded-xl border border-slate-800">
             <table class="w-full text-left text-xs">
               <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
                 <tr>
-                  <th class="py-2 px-3">Indicador (Español)</th>
-                  <th class="py-2 px-3">ID Técnico SAC</th>
-                  <th class="py-2 px-3">Fórmula de Cálculo y Regla de Negocio</th>
+                  <th class="py-2 px-3">Indicador</th>
+                  <th class="py-2 px-3">Código del Indicador</th>
+                  <th class="py-2 px-3">Fórmula y Regla de Negocio</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800">
@@ -2028,7 +2028,7 @@
 
     function exportCurrentViewCsv() {
       if (!currentAnalytics) return;
-      const rows = [['Periodo_YM', 'Ingresos_Brutos_COP', 'Notas_Credito_COP', 'Ingresos_Netos_Reconocidos_COP', 'Pedidos_Venta_COP', 'Unidades_FKIMG', 'Clientes_Activos']];
+      const rows = [['Periodo_YM', 'Ingresos_Brutos_COP', 'Notas_Credito_COP', 'Ingresos_Netos_Reconocidos_COP', 'Pedidos_Venta_COP', 'Unidades_Vendidas', 'Clientes_Activos']];
       (currentAnalytics.historicalAnalysis?.monthlySeries || []).forEach(m => {
         rows.push([m.ym, m.grossCop, m.creditNotesCop, m.netCop, m.ordersCop, m.unitsSold, m.activeCustomersCount]);
       });

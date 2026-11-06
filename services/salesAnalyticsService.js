@@ -1591,7 +1591,7 @@ function computeSalesAnalytics(dataset, filters = {}) {
         customerName: c.name,
         metric: `${c.yoyGrowthPct}% YoY (${c.lastPurchaseDate})`,
         criterion: 'Disminución interanual >= 25% en clientes de volumen relevante',
-        recommendation: 'Contactar al ejecutivo de cuenta (VKGRP) para revisar precios, tiempos de entrega o competencia.'
+        recommendation: 'Contactar al ejecutivo comercial de cuenta para revisar precios, tiempos de entrega o competencia.'
       });
     }
     if (c.recencyDays > rfmRecencyRiskDays && (c.prevYearYtdCop >= p20MonetaryThreshold * 0.08 || c.netCop >= p20MonetaryThreshold * 0.08)) {
@@ -1601,7 +1601,7 @@ function computeSalesAnalytics(dataset, filters = {}) {
         kunnr: c.kunnr,
         customerName: c.name,
         metric: `${c.recencyDays} días sin facturación (Última: ${c.lastPurchaseDate})`,
-        criterion: `Criterio temporal > ${rfmRecencyRiskDays} días sin registro de factura en VBRK`,
+        criterion: `Criterio temporal > ${rfmRecencyRiskDays} días sin nuevas compras registradas`,
         recommendation: 'Ejecutar gestión de reactivación comercial y validar si existen pedidos bloqueados en crédito/entrega.'
       });
     }
@@ -1753,19 +1753,19 @@ function computeSalesAnalytics(dataset, filters = {}) {
     years: allYears,
     vkorgs: Object.entries(vkorgMap)
       .filter(([code]) => invoices.some(i => i.vkorg === code))
-      .map(([code, name]) => ({ code, label: `${code} - ${name}` })),
+      .map(([code, name]) => ({ code, label: name || code })),
     vtwegs: Object.entries(vtwegMap)
       .filter(([code]) => invoices.some(i => i.vtweg === code))
-      .map(([code, name]) => ({ code, label: `${code} - ${name}` })),
+      .map(([code, name]) => ({ code, label: name || code })),
     sparts: Object.entries(spartMap)
       .filter(([code]) => invoices.some(i => i.spart === code))
-      .map(([code, name]) => ({ code, label: `${code} - ${name}` })),
+      .map(([code, name]) => ({ code, label: name || code })),
     regios: Object.entries(regioMap)
       .filter(([code]) => invoices.some(i => i.regio === code))
-      .map(([code, name]) => ({ code, label: `${code} - ${name}` })),
-    matkls: familiesAnalysis.slice(0, 40).map(f => ({ code: f.matkl, label: `${f.matkl} - ${f.familyName}` })),
-    topCustomers: allCustomersList.slice(0, 50).map(c => ({ code: c.kunnr, label: `${c.name} (${c.kunnr})` })),
-    topMaterials: productsAnalysis.slice(0, 50).map(p => ({ code: p.matnr, label: `${p.name} (${p.matnr})` }))
+      .map(([code, name]) => ({ code, label: name || code })),
+    matkls: familiesAnalysis.slice(0, 40).map(f => ({ code: f.matkl, label: f.familyName || f.matkl })),
+    topCustomers: allCustomersList.slice(0, 50).map(c => ({ code: c.kunnr, label: c.name || c.kunnr })),
+    topMaterials: productsAnalysis.slice(0, 50).map(p => ({ code: p.matnr, label: p.name || p.matnr }))
   };
 
   return {
@@ -1795,7 +1795,7 @@ function computeSalesAnalytics(dataset, filters = {}) {
         top20SharePct
       },
       channelBreakdown,
-      costLimitationNote: `Indicador de Margen Bruto deshabilitado por regla de integridad: el campo de costo interno SAP (VBRP-WAVWR) presenta valor 0.00 en el ${meta.auditStats.itemsWithoutCostPct}% de las posiciones (servicios, arrendamientos y operaciones sin costo estándar imputado en factura).`
+      costLimitationNote: `Indicador de Margen Bruto deshabilitado por regla de integridad: el registro de costo interno presenta valor 0.00 en el ${meta.auditStats.itemsWithoutCostPct}% de las posiciones (servicios, arrendamientos y operaciones sin costo estándar imputado en factura).`
     },
     historicalAnalysis: {
       monthlySeries,
@@ -2149,9 +2149,9 @@ function runSmartPredictEngine(closedMonths, productsAnalysis, salesOrgList, cha
         explanation: 'Los picos de embarque en meses de cosecha y cierre de contratos internacionales explican el 38.5% de la varianza mensual.'
       },
       {
-        driver: 'Tipo de Cambio Contable USD/COP (VBRK-KURRF) en Canal Exportación (VTWEG 20)',
+        driver: 'Tipo de Cambio Contable USD/COP en Canal Exportación',
         impactWeightPct: 27.0,
-        explanation: 'Las ventas en USD convertidas mediante KURRF introducen sensibilidad cambiaria directa sobre el ingreso neto reconocido en COP.'
+        explanation: 'Las ventas en USD convertidas a moneda local introducen sensibilidad cambiaria directa sobre el ingreso neto reconocido en COP.'
       },
       {
         driver: 'Demanda Industrial Continua de Biodiésel y Aceites RBD (Canal Nacional / End Users)',
@@ -2173,87 +2173,87 @@ function runSmartPredictEngine(closedMonths, productsAnalysis, salesOrgList, cha
 function buildSacDocumentationAndDictionary(meta) {
   return {
     architectureOverview: {
-      sacModelName: 'SAC_SD_SALES_REVENUE_PREDICT_M01',
-      modelType: 'Analytical & Planning Model (SAP Analytics Cloud Story + Smart Predict Compatible)',
+      sacModelName: 'MODELO_COMERCIAL_VENTAS_Y_PREDICCION',
+      modelType: 'Modelo Analítico y Predictivo (Compatible con Historias SAC y Motor Smart Predict)',
       sourceSystem: meta.sourceSystem,
-      connectionMethod: 'Extracción directa SAP NetWeaver RFC (RFC_READ_TABLE) sobre tablas transaccionales SD + motor analítico en memoria',
-      sisNote: 'Las estructuras info estándar del Sistema de Información de Ventas (S001, S002, S003, S004, S006) fueron auditadas en el mandante 300 y se encuentran inactivas (0 registros), por lo que el modelo lee directamente de VBRK, VBRP y VBAK garantizando exactitud documental.'
+      connectionMethod: 'Extracción directa de datos comerciales corporativos + motor analítico en memoria',
+      sisNote: 'El modelo procesa directamente los documentos de facturación, notas de crédito y pedidos en firme, garantizando exactitud contable y comercial.'
     },
     sapTablesUsed: [
-      { table: 'VBRK', description: 'Datos de cabecera de documento de facturación', keyFields: 'VBELN, FKART, VBTYP, FKDAT, VKORG, VTWEG, SPART, KUNAG, WAERK, KURRF, NETWR, MWSBK, FKSTO, SFAKN, RFBSK' },
-      { table: 'VBRP', description: 'Datos de posición de documento de facturación', keyFields: 'VBELN, POSNR, MATNR, ARKTX, MATKL, FKIMG, VRKME, NETWR, WAVWR, WERKS, AUBEL, VKBUR, VKGRP' },
-      { table: 'VBAK', description: 'Datos de cabecera de documentos de ventas (Pedidos)', keyFields: 'VBELN, ERDAT, AUART, VBTYP, VKORG, VTWEG, SPART, KUNNR, NETWR, WAERK, VKBUR, VKGRP' },
-      { table: 'KNA1', description: 'Maestro de clientes (Parte general)', keyFields: 'KUNNR, NAME1, ORT01, LAND1, REGIO' },
-      { table: 'TVKOT / TVTWT / TSPAT', description: 'Textos de Organizaciones de Ventas, Canales de Distribución y Sectores', keyFields: 'VKORG, VTWEG, SPART, VTEXT' },
-      { table: 'T023T / T005U / TVKBT / TVGRT', description: 'Textos de Grupos de Artículos (Familias), Regiones, Oficinas y Grupos de Vendedores', keyFields: 'MATKL, BLAND, VKBUR, VKGRP' }
+      { table: 'Facturación Comercial (Cabeceras)', description: 'Documentos de facturación y notas de crédito autorizadas', keyFields: 'Número de factura, fecha de emisión, cliente, organización de ventas, moneda, tasa de cambio y valor neto' },
+      { table: 'Facturación Comercial (Posiciones)', description: 'Detalle de partidas y productos facturados', keyFields: 'Producto, descripción comercial, familia de producto, volumen físico, unidad de medida y valor neto' },
+      { table: 'Pedidos de Venta', description: 'Órdenes de pedido comercial en firme registradas', keyFields: 'Número de pedido, fecha de orden, cliente, organización de ventas y valor comercial' },
+      { table: 'Directorio de Clientes', description: 'Maestro comercial y territorial de clientes', keyFields: 'Código de cliente, razón social comercial, ciudad, departamento y país' },
+      { table: 'Estructura Comercial', description: 'Catálogo de organizaciones de ventas, canales de distribución y sectores', keyFields: 'Organización comercial, canal de ventas y sector' },
+      { table: 'Familias de Productos y Territorios', description: 'Agrupación de familias de productos, oficinas comerciales y regiones', keyFields: 'Familia comercial, oficina de ventas y región geográfica' }
     ],
     indicatorDictionary: [
       {
         nameEs: 'Ingresos Netos Efectivamente Reconocidos (COP)',
-        technicalName: 'Z_NET_REVENUE_COP',
-        formula: "Σ (VBRK-NETWR × Factor_Moneda) para VBTYP ∈ ('M','P') y FKSTO = ''  MENOS  Σ (VBRK-NETWR × Factor_Moneda) para VBTYP = 'O' (Notas Crédito). Excluye VBTYP = 'U' (Proformas, RFBSK = 'D') y anulaciones (FKSTO = 'X', VBTYP ∈ ('N','S'))."
+        technicalName: 'INGRESOS_NETOS_COP',
+        formula: 'Suma de facturación comercial neta menos notas de crédito y devoluciones. Excluye proformas y facturas anuladas.'
       },
       {
-        nameEs: 'Factor de Conversión Monetaria SAP (TCURX / KURRF)',
-        technicalName: 'Z_CURR_CONV_FACTOR',
-        formula: "Si WAERK = 'COP' → Valor_Tabla × 100 (compensación de 0 decimales en TCURX sobre campo CURR 15.2). Si WAERK ∈ ('USD','EUR') → Valor_Tabla × |VBRK-KURRF| (tipo de cambio contable exacto del documento)."
+        nameEs: 'Factor de Conversión Monetaria',
+        technicalName: 'FACTOR_MONEDA',
+        formula: 'Conversión de monedas extranjeras (USD / EUR) al tipo de cambio contable oficial del documento hacia pesos colombianos (COP).'
       },
       {
         nameEs: 'Ventas Brutas Facturadas (COP)',
-        technicalName: 'Z_GROSS_BILLED_COP',
-        formula: "Σ (VBRK-NETWR × Factor_Moneda) únicamente para facturas comerciales (VBTYP = 'M') y notas de débito (VBTYP = 'P') no anuladas."
+        technicalName: 'VENTAS_BRUTAS_COP',
+        formula: 'Suma de facturas comerciales emitidas antes de deducciones por notas de crédito.'
       },
       {
         nameEs: 'Notas de Crédito y Devoluciones (COP)',
-        technicalName: 'Z_CREDIT_MEMOS_COP',
-        formula: "Σ (VBRK-NETWR × Factor_Moneda) para documentos de abono/nota de crédito (VBTYP = 'O') con FKSTO = ''."
+        technicalName: 'NOTAS_CREDITO_COP',
+        formula: 'Suma de notas de crédito comerciales y devoluciones autorizadas.'
       },
       {
         nameEs: 'Variación Porcentual de Ingresos (MoM / YoY / QoQ)',
-        technicalName: 'Z_REV_VAR_PCT',
-        formula: '((Ingresos_Período_Actual - Ingresos_Período_Base) / Ingresos_Período_Base) × 100'
+        technicalName: 'VARIACION_INGRESOS_PCT',
+        formula: '((Ingresos Período Actual - Ingresos Período Base) / Ingresos Período Base) × 100'
       },
       {
         nameEs: 'Ventas Acumuladas del Año (YTD)',
-        technicalName: 'Z_REV_YTD_COP',
-        formula: 'Σ Ingresos Netos Reconocidos desde el 01 de Enero del ejercicio hasta la fecha de corte equivalente.'
+        technicalName: 'VENTAS_ACUMULADAS_YTD',
+        formula: 'Suma de ingresos netos reconocidos desde el 01 de enero del ejercicio hasta la fecha de corte equivalente.'
       },
       {
         nameEs: 'Cantidad de Unidades Comercializadas',
-        technicalName: 'Z_UNITS_SOLD_FKIMG',
-        formula: "Σ (VBRP-FKIMG × Signo_Documento) sobre posiciones de facturas válidas."
+        technicalName: 'UNIDADES_COMERCIALIZADAS',
+        formula: 'Suma de cantidades físicas facturadas en posiciones de venta válidas.'
       },
       {
         nameEs: 'Número de Pedidos Comerciales Válidos',
-        technicalName: 'Z_VALID_ORDERS_CNT',
-        formula: "COUNT(DISTINCT VBAK-VBELN) donde VBAK-VBTYP = 'C' (excluyendo ofertas VBTYP = 'B' y solicitudes de abono VBTYP = 'K')."
+        technicalName: 'PEDIDOS_VALIDOS',
+        formula: 'Conteo de pedidos comerciales en firme registrados (excluyendo ofertas y solicitudes en borrador).'
       },
       {
         nameEs: 'Valor Promedio por Pedido (Ticket Promedio)',
-        technicalName: 'Z_AVG_ORDER_VALUE',
-        formula: 'Z_NET_REVENUE_COP / Z_VALID_ORDERS_CNT'
+        technicalName: 'VALOR_PROMEDIO_PEDIDO',
+        formula: 'Ingresos netos reconocidos dividido entre el número de pedidos válidos.'
       },
       {
         nameEs: 'Ingreso Promedio por Cliente Activo (ARPU)',
-        technicalName: 'Z_AVG_REV_PER_CUST',
-        formula: 'Z_NET_REVENUE_COP / COUNT(DISTINCT VBRK-KUNAG)'
+        technicalName: 'INGRESO_PROMEDIO_CLIENTE',
+        formula: 'Ingresos netos reconocidos dividido entre el número de clientes con compras en el período.'
       },
       {
         nameEs: 'Coeficiente de Variación de Demanda (CV%)',
-        technicalName: 'Z_DEMAND_CV_PCT',
-        formula: '(Desviación_Estándar_Mensual_Unidades / Promedio_Mensual_Unidades) × 100'
+        technicalName: 'COEFICIENTE_VARIACION_CV',
+        formula: '(Desviación estándar mensual de unidades / Promedio mensual de unidades) × 100'
       },
       {
         nameEs: 'Error Porcentual Absoluto Ponderado (WAPE)',
-        technicalName: 'Z_ML_WAPE_PCT',
-        formula: '(Σ |Ingreso_Real_t - Ingreso_Predicho_t| / Σ Ingreso_Real_t) × 100'
+        technicalName: 'ERROR_PONDERADO_WAPE',
+        formula: '(Suma de errores absolutos de predicción / Suma de ventas reales observadas) × 100'
       }
     ],
     limitationsAndGovernance: [
-      `Exclusión de Margen Bruto: En el mandante 300, el ${meta.auditStats.itemsWithoutCostPct}% de las posiciones de facturación (VBRP-WAVWR) tienen costo interno igual a 0.00 (servicios portuarios, maquilas, arrendamientos). Siguiendo las buenas prácticas de negocio, no se calcula margen bruto para evitar distorsiones de rentabilidad.`,
-      `Exclusión de Facturas Proforma: Se detectaron ${meta.auditStats.proformasExcludedCount} documentos con VBTYP = 'U' y estado contable RFBSK = 'D' (sin relevancia contable en FI), los cuales fueron filtrados automáticamente.`,
-      'Unidades de Medida Heterogéneas (VRKME): El portafolio combina toneladas (TO), galones (GL), cajas (CJ), kilogramos (KG) y servicios (ST). El análisis detallado de volumen en la Página 4 indica explícitamente la unidad de medida (VRKME) de cada material.',
-      'Procedimiento de Mantenimiento: El modelo actualiza su caché analítico automáticamente cada 15 minutos o en tiempo real mediante el botón «Sincronizar SAP RFC», recalibrando los índices estacionales y métricas de error (MAE, RMSE, MAPE, WAPE) con cada cierre mensual.'
+      `Exclusión de Margen Bruto: El ${meta.auditStats.itemsWithoutCostPct}% de las posiciones facturadas corresponden a servicios, maquilas o arrendamientos sin costo estándar imputado. Siguiendo las mejores prácticas de analítica ejecutiva, el margen bruto no se calcula para evitar distorsiones de rentabilidad.`,
+      `Exclusión de Facturas Proforma: Se detectaron ${meta.auditStats.proformasExcludedCount} documentos proforma o preliminares sin efecto contable, los cuales fueron excluidos automáticamente.`,
+      'Unidades de Medida Heterogéneas: El portafolio combina toneladas, galones, cajas y kilogramos. El desglose de volumen especifica la unidad de medida correspondiente a cada producto.',
+      'Procedimiento de Mantenimiento: El modelo actualiza su información automáticamente cada 15 minutos o en tiempo real mediante el botón «Sincronizar SAP RFC», recalibrando índices estacionales y métricas de error con cada período.'
     ]
   };
 }
