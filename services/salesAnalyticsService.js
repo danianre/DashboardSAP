@@ -1117,7 +1117,9 @@ function computeSalesAnalytics(dataset, filters = {}) {
 
   // Comparación contra período anterior comparable
   let prevPeriodRevenueCop = 0;
-  let prevPeriodLabel = `Año ${prevYear} (Comparable)`;
+  let revenueVariationPct = 0;
+  let prevPeriodLabel = `${targetYear} YTD vs. ${prevYear} YTD`;
+
   if (year !== 'ALL' && month !== 'ALL') {
     const mNum = parseInt(month, 10);
     const prevY = mNum === 1 ? String(parseInt(year, 10) - 1) : String(year);
@@ -1126,13 +1128,19 @@ function computeSalesAnalytics(dataset, filters = {}) {
     sourceForYtd.forEach(rec => {
       if (rec.y === prevY && rec.m === prevM) prevPeriodRevenueCop += rec.netCop;
     });
-  } else {
+    revenueVariationPct = prevPeriodRevenueCop > 0
+      ? parseFloat((((netRevenueCop - prevPeriodRevenueCop) / prevPeriodRevenueCop) * 100).toFixed(2))
+      : 0;
+  } else if (year !== 'ALL' && month === 'ALL') {
+    prevPeriodLabel = `Año ${prevYear} (Corte Comparable)`;
     prevPeriodRevenueCop = ytdPrevYearCop;
+    revenueVariationPct = ytdYoYPct;
+  } else {
+    // Vista multianual (ALL): la variación ejecutiva compara el acumulado del año en curso (YTD) vs el año anterior comparable (YTD)
+    prevPeriodLabel = `Comparativa Anual (${targetYear} YTD vs. ${prevYear} YTD)`;
+    prevPeriodRevenueCop = ytdPrevYearCop;
+    revenueVariationPct = ytdYoYPct;
   }
-
-  const revenueVariationPct = prevPeriodRevenueCop > 0
-    ? parseFloat((((netRevenueCop - prevPeriodRevenueCop) / prevPeriodRevenueCop) * 100).toFixed(2))
-    : ytdYoYPct;
 
   // Participación por Canal de Distribución (VTWEG)
   const channelTotals = {};
@@ -1898,11 +1906,16 @@ function runSmartPredictEngine(closedMonths, productsAnalysis, salesOrgList, cha
     // Nivel base reciente suavizado (EMA de últimos 3 meses desestacionalizados)
     const recentLevel = deseasonalized.slice(-3).reduce((a, b) => a + b, 0) / Math.min(3, len);
 
-    const predictAt = (stepsAhead, targetMonthStr) => {
-      const phi = 0.92; // Factor de amortiguamiento (damping) estándar en SAC Smart Predict
+    const predictAt = (stepsAhead, targetMonthStr, seasonalLagVal = null) => {
+      const phi = 0.90; // Factor de amortiguamiento (damping) estándar en SAC Smart Predict
       const dampedSteps = (1 - Math.pow(phi, stepsAhead)) / (1 - phi);
-      const baseLevel = 0.6 * (intercept + slope * (len - 1 + dampedSteps)) + 0.4 * (recentLevel + slope * dampedSteps);
-      return Math.max(0, baseLevel * (sIdx[targetMonthStr] || 1.0));
+      const baseLevel = 0.55 * (intercept + slope * (len - 1 + dampedSteps)) + 0.45 * (recentLevel + slope * dampedSteps);
+      const hwPred = Math.max(0, baseLevel * (sIdx[targetMonthStr] || 1.0));
+      if (seasonalLagVal && seasonalLagVal > 0) {
+        // Ensamble híbrido SAC: 55% Memoria Estacional Autoregresiva (Y_t-12) + 45% Tendencia Amortiguada Holt-Winters
+        return Math.max(0, 0.55 * seasonalLagVal + 0.45 * hwPred);
+      }
+      return hwPred;
     };
 
     return { sIdx, slope, intercept, meanY, predictAt };
@@ -1918,9 +1931,9 @@ function runSmartPredictEngine(closedMonths, productsAnalysis, salesOrgList, cha
     const ym = valSlice[i].ym;
     const mm = valSlice[i].month;
 
-    const smartPred = trainedModel.predictAt(i + 1, mm);
     const naivePred = closedMonths[globalIdx - 1]?.netCop || actual;
     const seasonalNaivePred = globalIdx >= 12 ? closedMonths[globalIdx - 12].netCop : naivePred;
+    const smartPred = trainedModel.predictAt(i + 1, mm, seasonalNaivePred);
 
     valPredictions.push({
       ym,
@@ -1976,7 +1989,9 @@ function runSmartPredictEngine(closedMonths, productsAnalysis, salesOrgList, cha
       }
       const mmStr = String(m).padStart(2, '0');
       const ymStr = `${y}-${mmStr}`;
-      const pointPred = fullModel.predictAt(step, mmStr);
+      const lag12Ym = `${y - 1}-${mmStr}`;
+      const lag12Obj = closedMonths.find(cm => cm.ym === lag12Ym);
+      const pointPred = fullModel.predictAt(step, mmStr, lag12Obj ? lag12Obj.netCop : null);
       // Intervalo de confianza al 95% que se ensancha con la raíz cuadrada del horizonte
       const margin95 = 1.96 * residualStdError * Math.sqrt(1 + step * 0.12);
       points.push({
