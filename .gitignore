@@ -30,6 +30,7 @@ app-notificaciones-sap/
 apps-sap/
 backups/
 .deploy-meta.json
+sales_analytics_cache.json.gz
 
 # Archivos de entorno del editor y sistema operativo
 .DS_Store

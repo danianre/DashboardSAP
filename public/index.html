@@ -118,8 +118,8 @@
         </button>
       </div>
 
-      <!-- Grid de Selección de Aplicaciones (3 Tarjetas) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-7">
+      <!-- Grid de Selección de Aplicaciones (4 Tarjetas) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
         <!-- APLICACIÓN 1: MONITOR SAP -->
         <article class="glass-card rounded-2xl border border-slate-800 hover:border-blue-500/60 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-950/40 group relative overflow-hidden">
@@ -224,7 +224,7 @@
         </article>
 
         <!-- APLICACIÓN 3: OPTIMIZADOR DE INVENTARIOS IA -->
-        <article class="glass-card rounded-2xl border border-slate-800 hover:border-purple-500/60 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-purple-950/40 group relative overflow-hidden md:col-span-2 lg:col-span-1">
+        <article class="glass-card rounded-2xl border border-slate-800 hover:border-purple-500/60 p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-purple-950/40 group relative overflow-hidden">
           <div class="absolute top-0 right-0 w-36 h-36 bg-purple-600/10 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none group-hover:bg-purple-500/20 transition-all"></div>
 
           <div>
@@ -270,6 +270,57 @@
              class="w-full py-3.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-purple-900/40 flex items-center justify-center space-x-2 transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900">
             <span class="material-symbols-outlined text-xl">inventory_2</span>
             <span>Ingresar al optimizador</span>
+            <span class="material-symbols-outlined text-lg ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </a>
+        </article>
+
+        <!-- APLICACIÓN 4: ANÁLISIS DE VENTAS Y PREDICCIÓN SAC -->
+        <article class="glass-card rounded-2xl border border-slate-800 hover:border-amber-500/60 p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-amber-950/40 group relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none group-hover:bg-amber-500/20 transition-all"></div>
+
+          <div>
+            <!-- Cabecera de Tarjeta -->
+            <div class="flex items-start justify-between mb-6">
+              <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 group-hover:scale-105 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300 shadow-inner">
+                <span class="material-symbols-outlined text-3xl">query_stats</span>
+              </div>
+              <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/30">
+                <span class="material-symbols-outlined text-xs mr-1">insights</span>
+                SAP SD + Smart Predict ML
+              </span>
+            </div>
+
+            <!-- Título y Descripción -->
+            <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-amber-300 transition-colors">
+              Ventas y Predicción SAC
+            </h2>
+            <p class="text-slate-300 text-sm leading-relaxed mb-5">
+              Inteligencia comercial, segmentación RFM y pronóstico de ingresos (SAP Analytics Cloud).
+            </p>
+
+            <!-- Características del Módulo -->
+            <ul class="space-y-2.5 text-xs text-slate-400 mb-8 border-t border-slate-800/80 pt-5">
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Ingresos netos reconocidos (`VBRK`/`VBRP`) vs. pedidos (`VBAK`)
+              </li>
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Inteligencia de clientes RFM, afinidad de productos y alertas
+              </li>
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Pronóstico ML a 3, 6 y 12 meses validado (`MAE`, `RMSE`, `WAPE`)
+              </li>
+            </ul>
+          </div>
+
+          <!-- Botón de Acción -->
+          <a href="/ventas-sap" id="btnEnterVentas" onclick="navegarConEstado(event, '/ventas-sap', 'btnEnterVentas', 'Abriendo Ventas & Predicción...')"
+             aria-label="Ingresar a ventas y predicción"
+             class="w-full py-3.5 px-5 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-amber-900/40 flex items-center justify-center space-x-2 transition-all focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+            <span class="material-symbols-outlined text-xl">trending_up</span>
+            <span>Ingresar a inteligencia comercial</span>
             <span class="material-symbols-outlined text-lg ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
           </a>
         </article>

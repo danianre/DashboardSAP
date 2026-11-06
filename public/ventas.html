@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Análisis de Ventas y Predicción de Ingresos · SAP Analytics Cloud (SAC)</title>
+  <link rel="icon" type="image/png" href="icon.jpg" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg-canvas: #080d1a;
+      --bg-surface: #0f172a;
+      --bg-elevated: #1e293b;
+      --border-hairline: rgba(148, 163, 184, 0.14);
+    }
+    body {
+      background-color: var(--bg-canvas);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(245, 158, 11, 0.10) 0px, transparent 45%),
+        radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.12) 0px, transparent 48%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 50%);
+      color: #f8fafc;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-hairline);
+    }
+    /* Modern Web Guidance: Responsive Table & Layout Containment */
+    .table-region {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(520px, 70vh);
+      container-type: inline-size;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 960px auto 420px;
+    }
+    @supports not (content-visibility: auto) {
+      .table-region {
+        contain: layout style paint;
+      }
+    }
+    .table-region table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+    .table-region thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 20;
+      background-color: #090f1f;
+    }
+    .table-region tbody th[scope="row"] {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 10;
+      background-color: #0f172a;
+      border-right: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .table-region tbody tr:hover th[scope="row"] {
+      background-color: #1e293b;
+    }
+    .sac-tab-btn {
+      transition: all 0.18s ease;
+    }
+    .sac-tab-btn.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(37, 99, 235, 0.22));
+      border-color: rgba(245, 158, 11, 0.65);
+      color: #ffffff;
+      box-shadow: 0 4px 16px -2px rgba(245, 158, 11, 0.2);
+    }
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- ====================================================================== -->
+  <!-- BARRA SUPERIOR CORPORATIVA (ESTILO SAP ANALYTICS CLOUD STORY HEADER)   -->
+  <!-- ====================================================================== -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/85 backdrop-blur-md">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <a href="/" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition flex items-center justify-center" title="Volver al Portal Corporativo SAP">
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
+        </a>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-blue-600 flex items-center justify-center shadow-lg shadow-amber-900/30 border border-amber-400/30">
+          <span class="material-symbols-outlined text-white text-2xl">query_stats</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[10px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              SAP Analytics Cloud · Smart Predict
+            </span>
+            <span id="connectionStatusBadge" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="connectionStatusText">Conectando a SAP ECC...</span>
+            </span>
+          </div>
+          <h1 class="text-base sm:text-lg font-extrabold text-white tracking-tight mt-0.5">
+            Dashboard de Análisis de Ventas y Predicción de Ingresos
+          </h1>
+        </div>
+      </div>
+
+      <!-- Acciones Globales -->
+      <div class="flex items-center flex-wrap gap-2">
+        <button type="button" onclick="openDocumentationModal()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span class="material-symbols-outlined text-base text-blue-400">menu_book</span>
+          <span>Modelo SAC y Diccionario</span>
+        </button>
+        <button type="button" onclick="exportCurrentViewCsv()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span class="material-symbols-outlined text-base text-emerald-400">download</span>
+          <span>Exportar CSV</span>
+        </button>
+        <button type="button" id="btnSyncSap" onclick="syncFromSapLive()" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-950/50 transition">
+          <span id="syncIcon" class="material-symbols-outlined text-base">sync</span>
+          <span id="syncText">Sincronizar SAP RFC</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Navegación de las 5 Páginas del Story SAC (Sección 9) -->
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 pb-2.5 pt-1 flex items-center gap-2 overflow-x-auto">
+      <button type="button" onclick="switchSacPage(1)" id="tabBtn1" class="sac-tab-btn active px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/70 text-xs font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap">
+        <span class="material-symbols-outlined text-base text-amber-400">space_dashboard</span>
+        <span>1. Resumen Ejecutivo</span>
+      </button>
+      <button type="button" onclick="switchSacPage(2)" id="tabBtn2" class="sac-tab-btn px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/70 text-xs font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap">
+        <span class="material-symbols-outlined text-base text-blue-400">stacked_line_chart</span>
+        <span>2. Análisis Histórico y Comercial</span>
+      </button>
+      <button type="button" onclick="switchSacPage(3)" id="tabBtn3" class="sac-tab-btn px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/70 text-xs font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap">
+        <span class="material-symbols-outlined text-base text-emerald-400">groups</span>
+        <span>3. Inteligencia de Clientes (RFM)</span>
+      </button>
+      <button type="button" onclick="switchSacPage(4)" id="tabBtn4" class="sac-tab-btn px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/70 text-xs font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap">
+        <span class="material-symbols-outlined text-base text-purple-400">category</span>
+        <span>4. Productos y Demanda</span>
+      </button>
+      <button type="button" onclick="switchSacPage(5)" id="tabBtn5" class="sac-tab-btn px-3.5 py-2 rounded-xl border border-slate-800 bg-slate-900/70 text-xs font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap">
+        <span class="material-symbols-outlined text-base text-rose-400">auto_graph</span>
+        <span>5. Predicción de Ingresos y Demanda (ML)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- BARRA DE FILTROS INTERACTIVOS Y CONTROLES DE STORY SAC (SECCIÓN 10)    -->
+  <!-- ====================================================================== -->
+  <section class="bg-slate-900/60 border-b border-slate-800/80">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-2.5 items-end">
+        <div>
+          <label for="fYear" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Año (FKDAT)</label>
+          <select id="fYear" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos (2024-2026)</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fMonth" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mes</label>
+          <select id="fMonth" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos los meses</option>
+            <option value="01">01 - Enero</option>
+            <option value="02">02 - Febrero</option>
+            <option value="03">03 - Marzo</option>
+            <option value="04">04 - Abril</option>
+            <option value="05">05 - Mayo</option>
+            <option value="06">06 - Junio</option>
+            <option value="07">07 - Julio</option>
+            <option value="08">08 - Agosto</option>
+            <option value="09">09 - Septiembre</option>
+            <option value="10">10 - Octubre</option>
+            <option value="11">11 - Noviembre</option>
+            <option value="12">12 - Diciembre</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fVkorg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Org. Ventas (VKORG)</label>
+          <select id="fVkorg" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todas las Org.</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fVtweg" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Canal (VTWEG)</label>
+          <select id="fVtweg" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos los Canales</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fSpart" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sector (SPART)</label>
+          <select id="fSpart" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos los Sectores</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fRegio" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Región (REGIO)</label>
+          <select id="fRegio" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todas las Regiones</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fMatkl" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Familia (MATKL)</label>
+          <select id="fMatkl" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todas las Familias</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fKunnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Cliente (KUNAG)</label>
+          <select id="fKunnr" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos los Clientes</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="fMatnr" class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Producto (MATNR)</label>
+          <select id="fMatnr" onchange="applySacFilters()" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none">
+            <option value="ALL">Todos los Productos</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="resetSacFilters()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/80 rounded-lg px-2.5 py-1.5 text-xs font-semibold flex items-center justify-center gap-1 transition" title="Restablecer todos los filtros">
+            <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Restablecer</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sub-barra de Rango de Fechas Personalizado y Trazabilidad Contable -->
+      <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+        <div class="flex items-center flex-wrap gap-3">
+          <span class="font-semibold text-slate-300 flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm text-amber-400">date_range</span>
+            Rango Fechas:
+          </span>
+          <input type="date" id="fDateFrom" onchange="applySacFilters()" class="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-200" />
+          <span>a</span>
+          <input type="date" id="fDateTo" onchange="applySacFilters()" class="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-200" />
+          <span id="activeFiltersSummary" class="text-amber-300 font-mono text-[11px]">Mostrando: Histórico Completo (2024–2026)</span>
+        </div>
+        <div id="auditSummaryBanner" class="font-mono text-[11px] text-slate-400">
+          Verificando integridad documental VBRK / VBRP / VBAK...
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================== -->
+  <!-- CONTENEDOR PRINCIPAL DE LAS 5 PÁGINAS DEL DASHBOARD SAC                -->
+  <!-- ====================================================================== -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Estado de Carga Inicial -->
+    <div id="globalLoadingState" class="glass-panel rounded-2xl p-12 text-center my-8">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 text-amber-400">
+        <span class="material-symbols-outlined text-3xl animate-spin">sync</span>
+      </div>
+      <h2 class="text-lg font-bold text-white mb-1">Extrayendo y procesando modelo comercial SAP SD (`VBRK`, `VBRP`, `VBAK`, `KNA1`)</h2>
+      <p class="text-xs text-slate-400 max-w-xl mx-auto">
+        Aplicando reglas contables de conversión monetaria (`TCURX` / `KURRF`), excluyendo facturas proforma (`VBTYP='U'`), calculando segmentación RFM y ejecutando backtesting del motor predictivo Smart Predict...
+      </p>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- PÁGINA 1: RESUMEN EJECUTIVO DE VENTAS (SECCIÓN 3)                    -->
+    <!-- ==================================================================== -->
+    <div id="sacPage1" class="space-y-6 hidden">
+
+      <!-- Cinta de Conciliación Comercial: Pedidos vs. Facturación Bruta vs. Notas Crédito vs. Ingreso Neto Reconocido -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 border-l-4 border-l-amber-500">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
+              Gobernanza y Separación Estricta de Conceptos Comerciales SAP SD
+            </span>
+            <p class="text-xs text-slate-300 mt-0.5">
+              Los <strong>Pedidos de Venta (`VBAK` `VBTYP='C'`)</strong> representan demanda solicitada; los <strong>Ingresos Netos Reconocidos</strong> se calculan exclusivamente sobre facturas contabilizadas (`VBRK` `M`+`P`) menos Notas de Crédito (`O`), excluyendo Proformas (`VBTYP='U'`, `RFBSK='D'`) y Anulaciones (`FKSTO='X'`).
+            </p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-right shrink-0">
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
+              <span class="text-[10px] text-slate-400 uppercase block">1. Pedidos Venta (`VBAK`)</span>
+              <span id="reconcilOrdersCop" class="text-xs sm:text-sm font-mono font-bold text-blue-400 tabular-nums">$0</span>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
+              <span class="text-[10px] text-slate-400 uppercase block">2. Facturación Bruta (`M`+`P`)</span>
+              <span id="reconcilGrossCop" class="text-xs sm:text-sm font-mono font-bold text-slate-100 tabular-nums">$0</span>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
+              <span class="text-[10px] text-slate-400 uppercase block">3. Notas Crédito (`VBTYP='O'`)</span>
+              <span id="reconcilCreditCop" class="text-xs sm:text-sm font-mono font-bold text-rose-400 tabular-nums">-$0</span>
+            </div>
+            <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl px-3 py-2">
+              <span class="text-[10px] text-emerald-300 uppercase font-bold block">4. Ingreso Neto Reconocido</span>
+              <span id="reconcilNetCop" class="text-xs sm:text-sm font-mono font-extrabold text-emerald-400 tabular-nums">$0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8 Tarjetas KPI Principales (Sección 3) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="executiveKpiGrid"></div>
+
+      <!-- Fila Central: Evolución Mensual de Ingresos + Participación por Canal y Concentración de Clientes -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-panel rounded-2xl p-5 lg:col-span-2 flex flex-col justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-400 text-xl">monitoring</span>
+                Evolución de Ingresos Netos Reconocidos vs. Pedidos de Venta (COP)
+              </h2>
+              <p class="text-xs text-slate-400">Comparativa histórica mensual (`VBRK` neto vs. `VBAK` pedidos válidos · Mes parcial señalizado)</p>
+            </div>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300">
+              Moneda Homogeneizada: COP (`KURRF` / `TCURX`)
+            </span>
+          </div>
+          <div class="h-80 w-full relative">
+            <canvas id="execMainTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Participación por Canal + Concentración de Cartera Pareto + Nota de Margen Bruto -->
+        <div class="space-y-4 flex flex-col justify-between">
+          <div class="glass-panel rounded-2xl p-5">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-blue-400 text-lg">pie_chart</span>
+              Participación por Canal de Distribución (`VTWEG`)
+            </h3>
+            <p class="text-[11px] text-slate-400 mb-3">Contribución porcentual a los ingresos netos reconocidos</p>
+            <div class="h-44 w-full relative mb-3">
+              <canvas id="execChannelChart"></canvas>
+            </div>
+            <div id="execChannelList" class="space-y-1.5 text-xs"></div>
+          </div>
+
+          <div class="glass-panel rounded-2xl p-5 space-y-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-purple-400 text-lg">donut_large</span>
+              Concentración de Ingresos por Cliente (Riesgo Pareto)
+            </h3>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 uppercase block">Top 5 Clientes</span>
+                <span id="concTop5" class="text-base font-mono font-extrabold text-amber-400 tabular-nums">0%</span>
+              </div>
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 uppercase block">Top 10 Clientes</span>
+                <span id="concTop10" class="text-base font-mono font-extrabold text-blue-400 tabular-nums">0%</span>
+              </div>
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
+                <span class="text-[10px] text-slate-400 uppercase block">Top 20 Clientes</span>
+                <span id="concTop20" class="text-base font-mono font-extrabold text-emerald-400 tabular-nums">0%</span>
+              </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 leading-relaxed flex items-start gap-2">
+              <span class="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">info</span>
+              <span id="execCostLimitationText"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- PÁGINA 2: ANÁLISIS DE TENDENCIAS HISTÓRICAS DE VENTAS (SECCIÓN 4)    -->
+    <!-- ==================================================================== -->
+    <div id="sacPage2" class="space-y-6 hidden">
+
+      <!-- B. Tarjetas de Comparación de Períodos (MoM, YoY Mensual, QoQ, YoY Anual) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="periodComparisonsGrid"></div>
+
+      <!-- A. Evolución Temporal Interactiva (Mensual / Trimestral / Anual) + Índice Estacional -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-400 text-xl">timeline</span>
+                A. Evolución Histórica de Ingresos y Volumen Comercial
+              </h2>
+              <p class="text-xs text-slate-400">Análisis de tendencias de crecimiento, contracción y ciclos comerciales</p>
+            </div>
+            <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+              <button type="button" onclick="setHistoricalGranularity('monthly')" id="granBtnMonthly" class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white">Mensual</button>
+              <button type="button" onclick="setHistoricalGranularity('quarterly')" id="granBtnQuarterly" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">Trimestral</button>
+              <button type="button" onclick="setHistoricalGranularity('yearly')" id="granBtnYearly" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white">Anual</button>
+            </div>
+          </div>
+          <div class="h-80 w-full relative">
+            <canvas id="histEvolutionChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-amber-400 text-xl">calendar_month</span>
+              Perfil de Estacionalidad Mensual
+            </h3>
+            <p class="text-xs text-slate-400 mb-3">Índice estacional sobre meses cerrados (`1.00` = promedio anual)</p>
+            <div class="h-56 w-full relative">
+              <canvas id="histSeasonalityChart"></canvas>
+            </div>
+          </div>
+          <div id="seasonalityHighlights" class="mt-3 pt-3 border-t border-slate-800/80 text-xs text-slate-300 space-y-1"></div>
+        </div>
+      </div>
+
+      <!-- D. Análisis Geográfico y Comercial (VKORG, REGIO, VTWEG, SPART, VKGRP) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-emerald-400 text-xl">domain</span>
+            Ingresos por Organización de Ventas (`VKORG` / Sociedades Grupo Daabon)
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">Contribución comercial neta por organización en SAP SD</p>
+          <div class="h-72 w-full relative">
+            <canvas id="histVkorgChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-purple-400 text-xl">public</span>
+                Desglose Geográfico y Comercial Multidimensional
+              </h3>
+              <p class="text-xs text-slate-400">Seleccione la dimensión comercial de SAP SD a inspeccionar</p>
+            </div>
+            <select id="dimBreakdownSelector" onchange="renderCommercialDimensionTable()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold">
+              <option value="byRegion">Región / Departamento (`REGIO`)</option>
+              <option value="byCity">Ciudad (`KNA1-ORT01`)</option>
+              <option value="byDivision">Sector Comercial (`SPART`)</option>
+              <option value="bySalesGroup">Grupo de Vendedores / Ejecutivo (`VKGRP`)</option>
+              <option value="bySalesOffice">Oficina de Ventas (`VKBUR`)</option>
+            </select>
+          </div>
+
+          <div tabindex="0" role="region" aria-label="Desglose comercial y geográfico" class="table-region rounded-xl border border-slate-800">
+            <table class="text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th scope="col" class="py-2.5 px-3">Dimensión / Nombre</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Ingresos Netos (COP)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Facturas</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Clientes</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">% Part.</th>
+                </tr>
+              </thead>
+              <tbody id="commercialDimTableBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- PÁGINA 3: INTELIGENCIA DE CLIENTES — RFM, AFINIDAD Y ALERTAS (SEC 5) -->
+    <!-- ==================================================================== -->
+    <div id="sacPage3" class="space-y-6 hidden">
+
+      <!-- B. Configuración y Distribución de Segmentación RFM -->
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-emerald-400 text-xl">hub</span>
+              B. Modelo de Segmentación RFM Configurable (Recencia, Frecuencia y Valor Monetario)
+            </h2>
+            <p class="text-xs text-slate-400">
+              Clasificación automática de la cartera según días transcurridos desde la última factura (`VBRK-FKDAT`), frecuencia documental y volumen monetario neto en COP.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-end gap-2.5">
+            <div>
+              <label for="rfmActiveDays" class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Umbral Reciente (Días)</label>
+              <input type="number" id="rfmActiveDays" value="60" min="15" max="180" class="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white font-mono tabular-nums" />
+            </div>
+            <div>
+              <label for="rfmRiskDays" class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Alerta Inactividad (Días)</label>
+              <input type="number" id="rfmRiskDays" value="120" min="45" max="365" class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white font-mono tabular-nums" />
+            </div>
+            <div>
+              <label for="rfmMinFreq" class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Frecuencia Alta (Pedidos)</label>
+              <input type="number" id="rfmMinFreq" value="6" min="2" max="50" class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white font-mono tabular-nums" />
+            </div>
+            <button type="button" onclick="applySacFilters()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition">
+              Recalcular RFM
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mt-4" id="rfmSegmentsCards"></div>
+      </div>
+
+      <!-- A. Ranking Maestro de Clientes -->
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-400 text-xl">leaderboard</span>
+              A. Ranking de Clientes por Ingresos, Frecuencia y Evolución de Compra (`KNA1` / `VBRK`)
+            </h3>
+            <p class="text-xs text-slate-400">Detalle de comportamiento comercial, ticket promedio, recencia y segmento RFM asignado</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="search" id="customerSearchInput" oninput="filterCustomersTable()" placeholder="Buscar cliente, código SAP o ciudad..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div tabindex="0" role="region" aria-label="Ranking de clientes RFM" class="table-region rounded-xl border border-slate-800">
+          <table class="text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                <th scope="col" class="py-3 px-3">Cliente (`KUNNR` · Razón Social)</th>
+                <th scope="col" class="py-3 px-3">Ciudad / Región</th>
+                <th scope="col" class="py-3 px-3 text-right">Ingresos Netos (COP)</th>
+                <th scope="col" class="py-3 px-3 text-right">% Part.</th>
+                <th scope="col" class="py-3 px-3 text-right">Facturas</th>
+                <th scope="col" class="py-3 px-3 text-right">Ticket Promedio</th>
+                <th scope="col" class="py-3 px-3 text-right">Unidades</th>
+                <th scope="col" class="py-3 px-3 text-right">Var. YoY %</th>
+                <th scope="col" class="py-3 px-3 text-right">Recencia</th>
+                <th scope="col" class="py-3 px-3">Segmento RFM</th>
+              </tr>
+            </thead>
+            <tbody id="customersRankingTableBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- C. Afinidad de Productos (Market Basket) + D. Alertas Comerciales -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-blue-400 text-xl">shopping_basket</span>
+            C. Afinidad de Productos Comprados Conjuntamente (Market Basket `VBRP`)
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">Combinaciones de materiales con co-ocurrencia demostrada en las mismas facturas comerciales</p>
+          <div tabindex="0" role="region" aria-label="Afinidad de productos" class="table-region rounded-xl border border-slate-800">
+            <table class="text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th scope="col" class="py-2.5 px-3">Producto Base (A)</th>
+                  <th scope="col" class="py-2.5 px-3">Producto Asociado (B)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Facturas Conjuntas</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Confianza %</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Lift</th>
+                </tr>
+              </thead>
+              <tbody id="productAffinityTableBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-rose-400 text-xl">notification_important</span>
+            D. Alertas Comerciales y Seguimiento de Cartera
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">Detección fundamentada en criterios temporales y variaciones interanuales verificables</p>
+          <div id="commercialAlertsContainer" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- PÁGINA 4: ANÁLISIS DE PRODUCTOS Y DEMANDA (SECCIÓN 6)                -->
+    <!-- ==================================================================== -->
+    <div id="sacPage4" class="space-y-6 hidden">
+
+      <!-- Gráficos Superiores: Top por Ingresos vs. Top por Unidades Vendidas -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h2 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-amber-400 text-xl">paid</span>
+            Top 10 Productos que Generan Mayores Ingresos Netos (COP)
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Diferenciación por valor monetario aportado (`VBRP-NETWR` convertido a COP)</p>
+          <div class="h-72 w-full relative">
+            <canvas id="prodTopRevenueChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <h2 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-purple-400 text-xl">inventory</span>
+            Top 10 Productos por Volumen Físico Comercializado (`VBRP-FKIMG`)
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Diferenciación entre productos de alto volumen de unidades y productos de mayor facturación</p>
+          <div class="h-72 w-full relative">
+            <canvas id="prodTopUnitsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Participación por Familia de Producto (MATKL) + Crecimiento vs Caída -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-blue-400 text-lg">category</span>
+            Participación por Familia de Artículos (`MATKL` / `T023T`)
+          </h3>
+          <p class="text-xs text-slate-400 mb-3">Distribución porcentual del ingreso por línea de negocio</p>
+          <div class="h-56 w-full relative mb-3">
+            <canvas id="prodFamilyChart"></canvas>
+          </div>
+          <div id="prodFamilyList" class="space-y-1.5 text-xs max-h-44 overflow-y-auto"></div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-emerald-400 text-lg">trending_up</span>
+            Productos con Mayor Crecimiento Interanual (YTD)
+          </h3>
+          <p class="text-xs text-slate-400 mb-3">Expansión de demanda comprobada en el período comparable</p>
+          <div id="prodGrowingList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-rose-400 text-lg">trending_down</span>
+            Productos con Disminución de Ventas (YTD)
+          </h3>
+          <p class="text-xs text-slate-400 mb-3">Materiales que presentan contracción comercial respecto al año anterior</p>
+          <div id="prodDecliningList" class="space-y-2 text-xs max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Tabla Maestra de Productos y Clasificación de Demanda (CV%, Estacionalidad, Patrón) -->
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-purple-400 text-xl">analytics</span>
+              Matriz de Comportamiento de Demanda y Volatilidad por Producto (`MATNR`)
+            </h3>
+            <p class="text-xs text-slate-400">
+              Clasificación técnica según Coeficiente de Variación mensual (`CV%`), meses con actividad y tendencia interanual en unidades e ingresos
+            </p>
+          </div>
+          <input type="search" id="productSearchInput" oninput="filterProductsTable()" placeholder="Buscar material, código o familia..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white w-64 focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div tabindex="0" role="region" aria-label="Matriz de productos y demanda" class="table-region rounded-xl border border-slate-800">
+          <table class="text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                <th scope="col" class="py-3 px-3">Material (`MATNR` · Descripción `ARKTX`)</th>
+                <th scope="col" class="py-3 px-3">Familia (`MATKL`)</th>
+                <th scope="col" class="py-3 px-3 text-right">Unidades (`FKIMG`)</th>
+                <th scope="col" class="py-3 px-3 text-center">UM</th>
+                <th scope="col" class="py-3 px-3 text-right">Ingresos Netos (COP)</th>
+                <th scope="col" class="py-3 px-3 text-right">% Part.</th>
+                <th scope="col" class="py-3 px-3 text-right">Var. Unidades %</th>
+                <th scope="col" class="py-3 px-3 text-right">Volatilidad (`CV%`)</th>
+                <th scope="col" class="py-3 px-3">Patrón de Demanda</th>
+              </tr>
+            </thead>
+            <tbody id="productsDemandTableBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- PÁGINA 5: PREDICCIÓN DE INGRESOS Y DEMANDA — SMART PREDICT (SEC 7-8) -->
+    <!-- ==================================================================== -->
+    <div id="sacPage5" class="space-y-6 hidden">
+
+      <!-- Cabecera del Motor Predictivo y Selector de Horizonte (3, 6 y 12 Meses) -->
+      <div class="glass-panel rounded-2xl p-5 border-l-4 border-l-rose-500">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                SAP Analytics Cloud · Smart Predict Engine
+              </span>
+              <span id="mlModelBadge" class="text-[11px] font-mono text-emerald-400"></span>
+            </div>
+            <h2 class="text-base sm:text-lg font-extrabold text-white mt-1">
+              Pronóstico de Ingresos y Demanda con Intervalos de Confianza (95%) y Backtesting Cronológico
+            </h2>
+            <p class="text-xs text-slate-300 mt-0.5" id="mlSpecSubtitle"></p>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-bold text-slate-300">Horizonte Predictivo:</span>
+            <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+              <button type="button" onclick="changeForecastHorizon(3)" id="hBtn3" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white">3 Meses</button>
+              <button type="button" onclick="changeForecastHorizon(6)" id="hBtn6" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white">6 Meses</button>
+              <button type="button" onclick="changeForecastHorizon(12)" id="hBtn12" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white">12 Meses</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjetas Resumen de los 3 Horizontes (3, 6 y 12 Meses) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="forecastHorizonsCards"></div>
+
+      <!-- A. Gráfico Principal: Serie Histórica Real (Sólida) vs. Proyección Smart Predict (Punteada + Banda 95%) -->
+      <div class="glass-panel rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-400 text-xl">show_chart</span>
+              A. Proyección de Ingresos Netos Futuros con Banda de Confianza al 95%
+            </h3>
+            <p class="text-xs text-slate-400">
+              Diferenciación visual estricta: <strong>Línea sólida azul</strong> = Ingresos reales cerrados (`VBRK`) · <strong>Línea punteada ámbar</strong> = Pronóstico Smart Predict · <strong>Área sombreada</strong> = Intervalo de confianza 95%
+            </p>
+          </div>
+        </div>
+        <div class="h-80 w-full relative">
+          <canvas id="mlMainForecastChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Sección 8: Evaluación Rigurosa del Modelo Predictivo (MAE, RMSE, MAPE, WAPE vs Baseline Naive y Seasonal Naive) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-emerald-400 text-xl">verified</span>
+            Evaluación y Validación de Modelos Predictivos (Holdout Backtesting)
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">
+            Comparación cuantitativa sobre el conjunto de validación contra modelos de referencia (*Baseline Naive* $Y_{t-1}$ y *Seasonal Naive* $Y_{t-12}$)
+          </p>
+
+          <div tabindex="0" role="region" aria-label="Métricas de validación de modelos predictivos" class="table-region rounded-xl border border-slate-800 mb-4">
+            <table class="text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th scope="col" class="py-2.5 px-3">Modelo Evaluado</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">MAE (COP)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">RMSE (COP)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">MAPE %</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">WAPE %</th>
+                </tr>
+              </thead>
+              <tbody id="mlValidationMetricsBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+            </table>
+          </div>
+
+          <div class="h-52 w-full relative">
+            <canvas id="mlBacktestChart"></canvas>
+          </div>
+        </div>
+
+        <!-- D. Impulsores Clave de la Predicción (Key Drivers) + Proyección por Canal y Org -->
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-blue-400 text-xl">psychology</span>
+              D. Impulsores Clave del Modelo (Key Drivers de Ingresos)
+            </h3>
+            <p class="text-xs text-slate-400 mb-3">Factores explicativos e importancia relativa en la proyección de ingresos</p>
+            <div id="mlDriversList" class="space-y-2.5"></div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+              Distribución de Ingresos Proyectados por Canal (`VTWEG`) en el Horizonte Activo
+            </h4>
+            <div id="mlChannelForecastList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Predicción de Demanda por Producto + C. Predicción de Comportamiento y Recompra de Clientes -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-purple-400 text-xl">precision_manufacturing</span>
+            B. Predicción de Demanda por Producto (Unidades e Ingresos Esperados)
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">
+            Calculada exclusivamente para materiales con historia continua suficiente para evitar fragmentación estadística
+          </p>
+          <div tabindex="0" role="region" aria-label="Predicción de demanda por producto" class="table-region rounded-xl border border-slate-800">
+            <table class="text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th scope="col" class="py-2.5 px-3">Producto (`MATNR`)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Prom. Hist./Mes</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Demanda Proy. Horizonte</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Ingreso Proy. (COP)</th>
+                  <th scope="col" class="py-2.5 px-3">Confianza</th>
+                </tr>
+              </thead>
+              <tbody id="mlProductForecastBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-amber-400 text-xl">person_check</span>
+            C. Predicción de Comportamiento de Clientes (Ventana 90 Días)
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">
+            Variable objetivo explícita: Probabilidad de al menos una recompra facturada en los próximos 90 días vs. riesgo de disminución
+          </p>
+          <div tabindex="0" role="region" aria-label="Propensión de recompra de clientes" class="table-region rounded-xl border border-slate-800">
+            <table class="text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[11px] uppercase text-slate-400">
+                  <th scope="col" class="py-2.5 px-3">Cliente (`KUNNR`)</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Recencia</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Prob. Recompra 90d</th>
+                  <th scope="col" class="py-2.5 px-3 text-right">Riesgo Caída</th>
+                  <th scope="col" class="py-2.5 px-3">Estado Predicho</th>
+                </tr>
+              </thead>
+              <tbody id="mlCustomerPropensityBody" class="divide-y divide-slate-800/60 tabular-nums"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL DE DOCUMENTACIÓN DEL MODELO SAC Y DICCIONARIO DE INDICADORES     -->
+  <!-- ====================================================================== -->
+  <div id="sacDocModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-6" onclick="closeDocumentationModal(event)">
+    <div class="glass-panel max-w-5xl w-full max-h-[90vh] rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-amber-400 text-2xl">architecture</span>
+          <div>
+            <h2 class="text-base font-bold text-white">Documentación Técnica del Modelo SAC, Fuentes SAP y Diccionario de Indicadores</h2>
+            <p class="text-xs text-slate-400">Entregables de Gobernanza Analítica (Secciones 2, 8, 11 y 12)</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeDocumentationModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 text-xs text-slate-300" id="sacDocModalContent"></div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center text-[11px] text-slate-400">
+        <span>Modelo Analítico: <strong class="text-white font-mono">SAC_SD_SALES_REVENUE_PREDICT_M01</strong></span>
+        <button type="button" onclick="closeDocumentationModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie de Página -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/70 py-4 px-4 sm:px-6 text-xs text-slate-500 mt-8">
+    <div class="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span>Portal Corporativo SAP · Inteligencia Comercial y Predicción de Ingresos (SAC Architecture)</span>
+      <span id="footerAuditText" class="font-mono text-[11px] text-slate-400">SAP ECC 6.0 · Tablas VBRK / VBRP / VBAK / KNA1</span>
+    </div>
+  </footer>
+
+  <!-- ====================================================================== -->
+  <!-- LÓGICA DE INTERFAZ, GRÁFICOS CHART.JS Y GESTIÓN DE ESTADO              -->
+  <!-- ====================================================================== -->
+  <script>
+    let currentAnalytics = null;
+    let activePage = 1;
+    let currentGranularity = 'monthly';
+    let filtersPopulated = false;
+    const charts = {};
+
+    const copFormatter = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      maximumFractionDigits: 0
+    });
+    const numFormatter = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+
+    function formatCop(val) {
+      return copFormatter.format(Math.round(Number(val) || 0));
+    }
+
+    function formatCopCompact(val) {
+      const n = Number(val) || 0;
+      const abs = Math.abs(n);
+      const sign = n < 0 ? '-' : '';
+      if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)} B`;
+      if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)} MM`;
+      if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)} M`;
+      if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)} K`;
+      return formatCop(n);
+    }
+
+    function formatNum(val) {
+      return numFormatter.format(Math.round(Number(val) || 0));
+    }
+
+    function switchSacPage(pageNum) {
+      activePage = pageNum;
+      for (let i = 1; i <= 5; i++) {
+        const pageEl = document.getElementById(`sacPage${i}`);
+        const btnEl = document.getElementById(`tabBtn${i}`);
+        if (pageEl) pageEl.classList.toggle('hidden', i !== pageNum);
+        if (btnEl) btnEl.classList.toggle('active', i === pageNum);
+      }
+      if (currentAnalytics) {
+        renderActivePageCharts();
+      }
+    }
+
+    function destroyChart(key) {
+      if (charts[key]) {
+        charts[key].destroy();
+        delete charts[key];
+      }
+    }
+
+    async function loadSalesAnalytics(forceRefresh = false) {
+      const params = new URLSearchParams({
+        year: document.getElementById('fYear').value,
+        month: document.getElementById('fMonth').value,
+        vkorg: document.getElementById('fVkorg').value,
+        vtweg: document.getElementById('fVtweg').value,
+        spart: document.getElementById('fSpart').value,
+        regio: document.getElementById('fRegio').value,
+        matkl: document.getElementById('fMatkl').value,
+        kunnr: document.getElementById('fKunnr').value,
+        matnr: document.getElementById('fMatnr').value,
+        dateFrom: document.getElementById('fDateFrom').value || '',
+        dateTo: document.getElementById('fDateTo').value || '',
+        rfmRecencyActiveDays: document.getElementById('rfmActiveDays')?.value || 60,
+        rfmRecencyRiskDays: document.getElementById('rfmRiskDays')?.value || 120,
+        rfmMinFreq: document.getElementById('rfmMinFreq')?.value || 6,
+        horizon: window._selectedHorizon || 6
+      });
+      if (forceRefresh) params.set('refresh', 'true');
+
+      try {
+        const res = await fetch(`/api/ventas/overview?${params.toString()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Error obteniendo analítica de ventas');
+        }
+        currentAnalytics = data;
+
+        document.getElementById('globalLoadingState').classList.add('hidden');
+        document.getElementById(`sacPage${activePage}`).classList.remove('hidden');
+
+        if (!filtersPopulated) {
+          populateFilterDropdowns(data.filterOptions);
+          filtersPopulated = true;
+        }
+
+        updateHeaderAndAuditBar(data);
+        renderAllViews(data);
+      } catch (err) {
+        console.error('[SALES ANALYTICS ERROR]:', err);
+        document.getElementById('auditSummaryBanner').textContent = `Error: ${err.message}`;
+      }
+    }
+
+    function populateFilterDropdowns(opts) {
+      if (!opts) return;
+      const fillSelect = (id, list, defaultLabel) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const curVal = sel.value;
+        sel.innerHTML = `<option value="ALL">${defaultLabel}</option>` +
+          (list || []).map(item => `<option value="${item.code}">${item.label}</option>`).join('');
+        if ([...sel.options].some(o => o.value === curVal)) sel.value = curVal;
+      };
+
+      fillSelect('fVkorg', opts.vkorgs, 'Todas las Org. (VKORG)');
+      fillSelect('fVtweg', opts.vtwegs, 'Todos los Canales (VTWEG)');
+      fillSelect('fSpart', opts.sparts, 'Todos los Sectores (SPART)');
+      fillSelect('fRegio', opts.regios, 'Todas las Regiones (REGIO)');
+      fillSelect('fMatkl', opts.matkls, 'Todas las Familias (MATKL)');
+      fillSelect('fKunnr', opts.topCustomers, 'Todos los Clientes (Top 50)');
+      fillSelect('fMatnr', opts.topMaterials, 'Todos los Productos (Top 50)');
+    }
+
+    function applySacFilters() {
+      loadSalesAnalytics(false);
+    }
+
+    function resetSacFilters() {
+      ['fYear', 'fMonth', 'fVkorg', 'fVtweg', 'fSpart', 'fRegio', 'fMatkl', 'fKunnr', 'fMatnr'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = 'ALL';
+      });
+      document.getElementById('fDateFrom').value = '';
+      document.getElementById('fDateTo').value = '';
+      loadSalesAnalytics(false);
+    }
+
+    async function syncFromSapLive() {
+      const btn = document.getElementById('btnSyncSap');
+      const icon = document.getElementById('syncIcon');
+      const txt = document.getElementById('syncText');
+      btn.disabled = true;
+      icon.classList.add('animate-spin');
+      txt.textContent = 'Sincronizando SAP...';
+      try {
+        await loadSalesAnalytics(true);
+      } finally {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+        txt.textContent = 'Sincronizar SAP RFC';
+      }
+    }
+
+    function updateHeaderAndAuditBar(data) {
+      const meta = data.meta || {};
+      const st = meta.auditStats || {};
+      const badge = document.getElementById('connectionStatusBadge');
+      const text = document.getElementById('connectionStatusText');
+
+      if (meta.isLive) {
+        badge.className = 'text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 flex items-center gap-1';
+        text.textContent = `EN VIVO · ${meta.sourceSystem}`;
+      } else {
+        badge.className = 'text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30 flex items-center gap-1';
+        text.textContent = `MODO RESPALDO · ${meta.sourceSystem}`;
+      }
+
+      const f = data.appliedFilters || {};
+      const activeParts = [];
+      if (f.year && f.year !== 'ALL') activeParts.push(`Año: ${f.year}`);
+      if (f.month && f.month !== 'ALL') activeParts.push(`Mes: ${f.month}`);
+      if (f.vkorg && f.vkorg !== 'ALL') activeParts.push(`Org: ${f.vkorg}`);
+      if (f.vtweg && f.vtweg !== 'ALL') activeParts.push(`Canal: ${f.vtweg}`);
+      if (f.spart && f.spart !== 'ALL') activeParts.push(`Sector: ${f.spart}`);
+      if (f.regio && f.regio !== 'ALL') activeParts.push(`Región: ${f.regio}`);
+      if (f.matkl && f.matkl !== 'ALL') activeParts.push(`Familia: ${f.matkl}`);
+      if (f.kunnr && f.kunnr !== 'ALL') activeParts.push(`Cliente: ${f.kunnr}`);
+      if (f.matnr && f.matnr !== 'ALL') activeParts.push(`Material: ${f.matnr}`);
+
+      document.getElementById('activeFiltersSummary').textContent = activeParts.length > 0
+        ? `Filtros activos: ${activeParts.join(' · ')}`
+        : 'Mostrando: Histórico Completo (2024–2026)';
+
+      document.getElementById('auditSummaryBanner').innerHTML =
+        `Facturas válidas: <strong class="text-white">${formatNum(st.validInvoicesCount)}</strong> · ` +
+        `Notas Crédito: <strong class="text-rose-400">${formatNum(st.creditMemosCount)}</strong> · ` +
+        `Proformas excluidas (U): <strong class="text-amber-400">${formatNum(st.proformasExcludedCount)}</strong> · ` +
+        `Posiciones VBRP: <strong class="text-blue-400">${formatNum(st.totalVbrpItemsRead)}</strong>`;
+    }
+
+    function renderAllViews(data) {
+      renderPage1Executive(data.executiveSummary, data.historicalAnalysis);
+      renderPage2Historical(data.historicalAnalysis);
+      renderPage3Customers(data.customerIntelligence);
+      renderPage4Products(data.productDemandAnalysis);
+      renderPage5Predictive(data.predictiveAnalysis);
+      renderActivePageCharts();
+    }
+
+    function renderActivePageCharts() {
+      if (!currentAnalytics) return;
+      if (activePage === 1) renderPage1Charts(currentAnalytics.executiveSummary, currentAnalytics.historicalAnalysis);
+      if (activePage === 2) renderPage2Charts(currentAnalytics.historicalAnalysis);
+      if (activePage === 4) renderPage4Charts(currentAnalytics.productDemandAnalysis);
+      if (activePage === 5) renderPage5Charts(currentAnalytics.predictiveAnalysis);
+    }
+
+    // ========================================================================
+    // RENDER PÁGINA 1: RESUMEN EJECUTIVO
+    // ========================================================================
+    function renderPage1Executive(exec, hist) {
+      document.getElementById('reconcilOrdersCop').textContent = formatCopCompact(exec.totalOrdersValueCop);
+      document.getElementById('reconcilGrossCop').textContent = formatCopCompact(exec.grossInvoicedCop);
+      document.getElementById('reconcilCreditCop').textContent = '-' + formatCopCompact(exec.creditNotesCop);
+      document.getElementById('reconcilNetCop').textContent = formatCopCompact(exec.netRevenueCop);
+
+      const kpis = [
+        {
+          title: '1. Ingresos Netos Reconocidos',
+          value: formatCopCompact(exec.netRevenueCop),
+          subValue: formatCop(exec.netRevenueCop),
+          badge: `${exec.revenueVariationPct >= 0 ? '+' : ''}${exec.revenueVariationPct}% vs base`,
+          badgePositive: exec.revenueVariationPct >= 0,
+          icon: 'payments',
+          interpretation: 'Facturación comercial contabilizada (M+P) neta de notas de crédito (O).'
+        },
+        {
+          title: '2. Variación de Ingresos',
+          value: `${exec.revenueVariationPct >= 0 ? '+' : ''}${exec.revenueVariationPct}%`,
+          subValue: `Base: ${formatCopCompact(exec.prevPeriodRevenueCop)}`,
+          badge: exec.prevPeriodLabel,
+          badgePositive: exec.revenueVariationPct >= 0,
+          icon: 'trending_up',
+          interpretation: exec.revenueVariationPct >= 0
+            ? 'Expansión comercial frente al período de referencia comparable.'
+            : 'Contracción frente al período base; revisar alertas de cartera.'
+        },
+        {
+          title: '3. Ventas Acumuladas (YTD)',
+          value: formatCopCompact(exec.ytdCurrentYearCop),
+          subValue: `Año ant. YTD: ${formatCopCompact(exec.ytdPrevYearCop)}`,
+          badge: `${exec.ytdYoYPct >= 0 ? '+' : ''}${exec.ytdYoYPct}% YoY`,
+          badgePositive: exec.ytdYoYPct >= 0,
+          icon: 'calendar_today',
+          interpretation: 'Ingresos acumulados de enero a la fecha de corte equivalente del ejercicio.'
+        },
+        {
+          title: '4. Unidades Comercializadas',
+          value: formatNum(exec.totalUnitsSold),
+          subValue: 'Suma física VBRP-FKIMG',
+          badge: 'Multi-UM (TO/GL/CJ/KG)',
+          badgePositive: true,
+          icon: 'local_shipping',
+          interpretation: 'Volumen físico neto facturado (ver desglose por unidad VRKME en Pág. 4).'
+        },
+        {
+          title: '5. Número de Pedidos Válidos',
+          value: formatNum(exec.totalOrdersCount),
+          subValue: `${formatNum(exec.validInvoiceDocsCount)} facturas emitidas`,
+          badge: 'VBAK VBTYP = C',
+          badgePositive: true,
+          icon: 'receipt_long',
+          interpretation: 'Pedidos de venta en firme (excluye cotizaciones B y solicitudes de abono K).'
+        },
+        {
+          title: '6. Clientes Activos',
+          value: formatNum(exec.activeCustomersCount),
+          subValue: `Top 10 concentra ${exec.concentration.top10SharePct}%`,
+          badge: 'VBRK-KUNAG',
+          badgePositive: true,
+          icon: 'groups',
+          interpretation: 'Solicitantes únicos con facturación efectiva registrada en el período.'
+        },
+        {
+          title: '7. Valor Promedio por Pedido',
+          value: formatCopCompact(exec.avgOrderValueCop),
+          subValue: formatCop(exec.avgOrderValueCop),
+          badge: 'Ticket Promedio',
+          badgePositive: true,
+          icon: 'shopping_cart_checkout',
+          interpretation: 'Relación entre los ingresos netos reconocidos y los pedidos válidos.'
+        },
+        {
+          title: '8. Ingreso Promedio por Cliente',
+          value: formatCopCompact(exec.avgRevenuePerCustomerCop),
+          subValue: formatCop(exec.avgRevenuePerCustomerCop),
+          badge: 'ARPU Comercial',
+          badgePositive: true,
+          icon: 'person_pin',
+          interpretation: 'Valor monetario promedio generado por cada cliente activo de la cartera.'
+        }
+      ];
+
+      document.getElementById('executiveKpiGrid').innerHTML = kpis.map(k => `
+        <article class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">${k.title}</span>
+              <span class="material-symbols-outlined text-amber-400 text-lg">${k.icon}</span>
+            </div>
+            <div class="text-2xl font-extrabold text-white font-mono tabular-nums tracking-tight">${k.value}</div>
+            <div class="text-[11px] font-mono text-slate-400 tabular-nums mt-0.5">${k.subValue}</div>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80">
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${k.badgePositive ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30' : 'bg-rose-950/80 text-rose-300 border border-rose-500/30'}">${k.badge}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-snug">${k.interpretation}</p>
+          </div>
+        </article>
+      `).join('');
+
+      document.getElementById('execChannelList').innerHTML = (exec.channelBreakdown || []).slice(0, 5).map(c => `
+        <div class="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span class="text-slate-300 font-medium">${c.vtweg} · ${c.name}</span>
+          <div class="text-right font-mono tabular-nums">
+            <span class="text-white font-bold">${formatCopCompact(c.netCop)}</span>
+            <span class="text-amber-400 ml-1.5">(${c.sharePct}%)</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('concTop5').textContent = `${exec.concentration.top5SharePct}%`;
+      document.getElementById('concTop10').textContent = `${exec.concentration.top10SharePct}%`;
+      document.getElementById('concTop20').textContent = `${exec.concentration.top20SharePct}%`;
+      document.getElementById('execCostLimitationText').textContent = exec.costLimitationNote;
+    }
+
+    function renderPage1Charts(exec, hist) {
+      destroyChart('execMainTrendChart');
+      const series = hist.monthlySeries || [];
+      const ctx1 = document.getElementById('execMainTrendChart').getContext('2d');
+      charts.execMainTrendChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: series.map(s => s.isPartialMonth ? `${s.ym}*` : s.ym),
+          datasets: [
+            {
+              label: 'Ingresos Netos Reconocidos (VBRK)',
+              data: series.map(s => s.netCop),
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.14)',
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: 'Pedidos de Venta Comprometidos (VBAK)',
+              data: series.map(s => s.ordersCop),
+              borderColor: '#3b82f6',
+              borderDash: [5, 4],
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${formatCop(ctx.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: {
+              ticks: {
+                color: '#94a3b8',
+                font: { size: 10 },
+                callback: (v) => formatCopCompact(v)
+              },
+              grid: { color: 'rgba(148,163,184,0.08)' }
+            }
+          }
+        }
+      });
+
+      destroyChart('execChannelChart');
+      const channels = (exec.channelBreakdown || []).slice(0, 6);
+      const ctx2 = document.getElementById('execChannelChart').getContext('2d');
+      charts.execChannelChart = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: channels.map(c => `${c.vtweg} - ${c.name}`),
+          datasets: [{
+            data: channels.map(c => c.netCop),
+            backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#a855f7', '#ec4899', '#06b6d4'],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${formatCop(ctx.parsed)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ========================================================================
+    // RENDER PÁGINA 2: ANÁLISIS HISTÓRICO Y COMERCIAL
+    // ========================================================================
+    function setHistoricalGranularity(gran) {
+      currentGranularity = gran;
+      ['Monthly', 'Quarterly', 'Yearly'].forEach(g => {
+        const btn = document.getElementById(`granBtn${g}`);
+        const isMatch = g.toLowerCase() === gran;
+        if (btn) {
+          btn.className = isMatch
+            ? 'px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white'
+            : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
+        }
+      });
+      if (currentAnalytics) renderPage2Charts(currentAnalytics.historicalAnalysis);
+    }
+
+    function renderPage2Historical(hist) {
+      const comps = Object.values(hist.periodComparisons || {});
+      document.getElementById('periodComparisonsGrid').innerHTML = comps.map(c => {
+        const pos = c.variationPct >= 0;
+        return `
+          <div class="glass-panel rounded-2xl p-4">
+            <span class="text-[11px] font-bold uppercase text-slate-400 block">${c.label}</span>
+            <div class="flex items-baseline justify-between mt-2">
+              <span class="text-xl font-extrabold font-mono text-white tabular-nums">${formatCopCompact(c.currentValueCop)}</span>
+              <span class="text-xs font-mono font-bold px-2 py-0.5 rounded ${pos ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30' : 'bg-rose-950/80 text-rose-300 border border-rose-500/30'}">
+                ${pos ? '+' : ''}${c.variationPct}%
+              </span>
+            </div>
+            <div class="mt-2 text-[11px] text-slate-400 font-mono tabular-nums">
+              Actual (${c.currentPeriod}) vs. Base (${c.previousPeriod}: ${formatCopCompact(c.previousValueCop)})
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const seas = [...(hist.seasonalityByMonth || [])].sort((a, b) => b.seasonalIndex - a.seasonalIndex);
+      const peak = seas.slice(0, 2).map(s => `${s.monthName} (${s.seasonalIndex}x)`).join(', ');
+      const low = seas.slice(-2).map(s => `${s.monthName} (${s.seasonalIndex}x)`).join(', ');
+      document.getElementById('seasonalityHighlights').innerHTML = `
+        <div><strong class="text-emerald-400">Temporada Pico:</strong> ${peak}</div>
+        <div><strong class="text-rose-400">Temporada Valle:</strong> ${low}</div>
+      `;
+
+      renderCommercialDimensionTable();
+    }
+
+    function renderCommercialDimensionTable() {
+      if (!currentAnalytics) return;
+      const key = document.getElementById('dimBreakdownSelector').value;
+      const list = currentAnalytics.historicalAnalysis?.commercialBreakdowns?.[key] || [];
+      document.getElementById('commercialDimTableBody').innerHTML = list.map(row => `
+        <tr class="hover:bg-slate-800/40">
+          <th scope="row" class="py-2.5 px-3 font-semibold text-white">${row.name}</th>
+          <td class="py-2.5 px-3 text-right font-mono text-emerald-300">${formatCop(row.netCop)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatNum(row.docsCount)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatNum(row.customersCount)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">${row.sharePct}%</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPage2Charts(hist) {
+      destroyChart('histEvolutionChart');
+      let labels = [];
+      let revData = [];
+      let ordData = [];
+
+      if (currentGranularity === 'quarterly') {
+        labels = hist.quarterlySeries.map(q => q.quarter);
+        revData = hist.quarterlySeries.map(q => q.netCop);
+        ordData = hist.quarterlySeries.map(q => q.ordersCop);
+      } else if (currentGranularity === 'yearly') {
+        labels = hist.yearlySeries.map(y => y.year);
+        revData = hist.yearlySeries.map(y => y.netCop);
+        ordData = hist.yearlySeries.map(y => y.ordersCop);
+      } else {
+        labels = hist.monthlySeries.map(m => m.isPartialMonth ? `${m.ym}*` : m.ym);
+        revData = hist.monthlySeries.map(m => m.netCop);
+        ordData = hist.monthlySeries.map(m => m.ordersCop);
+      }
+
+      const ctxEvo = document.getElementById('histEvolutionChart').getContext('2d');
+      charts.histEvolutionChart = new Chart(ctxEvo, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Ingresos Netos Reconocidos (COP)',
+              data: revData,
+              backgroundColor: 'rgba(59, 130, 246, 0.78)',
+              borderColor: '#3b82f6',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Pedidos Registrados (COP)',
+              data: ordData,
+              type: 'line',
+              borderColor: '#f59e0b',
+              borderWidth: 2,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${formatCop(c.parsed.y)}` } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatCopCompact(v) }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      destroyChart('histSeasonalityChart');
+      const seas = hist.seasonalityByMonth || [];
+      const ctxSeas = document.getElementById('histSeasonalityChart').getContext('2d');
+      charts.histSeasonalityChart = new Chart(ctxSeas, {
+        type: 'bar',
+        data: {
+          labels: seas.map(s => s.monthName.slice(0, 3)),
+          datasets: [{
+            label: 'Índice Estacional',
+            data: seas.map(s => s.seasonalIndex),
+            backgroundColor: seas.map(s => s.seasonalIndex >= 1.05 ? '#10b981' : (s.seasonalIndex <= 0.95 ? '#f43f5e' : '#3b82f6')),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      destroyChart('histVkorgChart');
+      const orgs = (hist.commercialBreakdowns?.bySalesOrg || []).slice(0, 8);
+      const ctxOrg = document.getElementById('histVkorgChart').getContext('2d');
+      charts.histVkorgChart = new Chart(ctxOrg, {
+        type: 'bar',
+        data: {
+          labels: orgs.map(o => o.name),
+          datasets: [{
+            label: 'Ingresos Netos (COP)',
+            data: orgs.map(o => o.netCop),
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            borderColor: '#10b981',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => formatCop(c.parsed.x) } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatCopCompact(v) }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#e2e8f0', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ========================================================================
+    // RENDER PÁGINA 3: INTELIGENCIA DE CLIENTES (RFM, AFINIDAD, ALERTAS)
+    // ========================================================================
+    function renderPage3Customers(custInt) {
+      document.getElementById('rfmSegmentsCards').innerHTML = (custInt.rfmSegments || []).map(seg => `
+        <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold text-white block">${seg.segment}</span>
+            <span class="text-xl font-extrabold font-mono text-amber-400 tabular-nums mt-1 block">${seg.count} clientes</span>
+            <span class="text-[11px] font-mono text-emerald-400 tabular-nums block">${formatCopCompact(seg.netCop)} (${seg.sharePct}%)</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-2 leading-snug">${seg.description}</p>
+        </div>
+      `).join('');
+
+      renderCustomersTableRows(custInt.topCustomers || []);
+
+      document.getElementById('productAffinityTableBody').innerHTML = (custInt.productAffinity || []).map(pair => `
+        <tr class="hover:bg-slate-800/40">
+          <th scope="row" class="py-2.5 px-3 font-medium text-white">${pair.nameA} <span class="text-slate-500 font-mono">(${pair.matnrA})</span></th>
+          <td class="py-2.5 px-3 text-slate-200">${pair.nameB} <span class="text-slate-500 font-mono">(${pair.matnrB})</span></td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-300">${pair.coOccurrences}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-emerald-300">${pair.confidencePct}%</td>
+          <td class="py-2.5 px-3 text-right font-mono text-blue-300">${pair.lift}x</td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" class="py-6 text-center text-slate-500">Sin combinaciones multi-producto suficientes en el filtro actual.</td></tr>`;
+
+      document.getElementById('commercialAlertsContainer').innerHTML = (custInt.commercialAlerts || []).map(al => {
+        const badgeColor = al.severity === 'ALTA'
+          ? 'bg-rose-950/90 text-rose-300 border-rose-500/40'
+          : (al.severity === 'OPORTUNIDAD' ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40' : 'bg-amber-950/90 text-amber-300 border-amber-500/40');
+        return `
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-white">${al.customerName} <span class="font-mono text-slate-400">(${al.kunnr})</span></span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${badgeColor}">${al.type} · ${al.severity}</span>
+            </div>
+            <div class="text-xs font-mono text-amber-300">${al.metric}</div>
+            <div class="text-[11px] text-slate-400"><strong>Criterio:</strong> ${al.criterion}</div>
+            <div class="text-[11px] text-emerald-300/90"><strong>Acción sugerida:</strong> ${al.recommendation}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCustomersTableRows(list) {
+      document.getElementById('customersRankingTableBody').innerHTML = list.map(c => {
+        const pos = c.yoyGrowthPct >= 0;
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <th scope="row" class="py-2.5 px-3 font-semibold text-white">
+              <div>${c.name}</div>
+              <div class="text-[10px] font-mono text-slate-400">SAP KUNNR: ${c.kunnr} · Pref: ${c.favoriteFamily}</div>
+            </th>
+            <td class="py-2.5 px-3 text-slate-300">${c.city} <span class="text-slate-500">(${c.country})</span></td>
+            <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-300">${formatCop(c.netCop)}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-amber-300">${c.sharePct}%</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-200">${formatNum(c.ordersCount)}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatCopCompact(c.avgTicketCop)}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatNum(c.unitsBought)}</td>
+            <td class="py-2.5 px-3 text-right font-mono font-bold ${pos ? 'text-emerald-400' : 'text-rose-400'}">${pos ? '+' : ''}${c.yoyGrowthPct}%</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-300">${c.recencyDays}d <span class="text-[10px] text-slate-500">(${c.lastPurchaseDate})</span></td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-950/80 text-blue-300 border border-blue-500/30">${c.rfm?.segment || 'General'}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterCustomersTable() {
+      if (!currentAnalytics) return;
+      const q = (document.getElementById('customerSearchInput').value || '').toLowerCase().trim();
+      const all = currentAnalytics.customerIntelligence?.topCustomers || [];
+      const filtered = !q ? all : all.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.kunnr.toLowerCase().includes(q) ||
+        c.city.toLowerCase().includes(q) ||
+        (c.rfm?.segment || '').toLowerCase().includes(q)
+      );
+      renderCustomersTableRows(filtered);
+    }
+
+    // ========================================================================
+    // RENDER PÁGINA 4: PRODUCTOS Y DEMANDA
+    // ========================================================================
+    function renderPage4Products(prodData) {
+      document.getElementById('prodFamilyList').innerHTML = (prodData.familiesAnalysis || []).slice(0, 10).map(f => `
+        <div class="flex items-center justify-between py-1 border-b border-slate-800/50">
+          <span class="text-slate-200 font-medium">${f.matkl} · ${f.familyName}</span>
+          <span class="font-mono text-amber-300 font-bold tabular-nums">${formatCopCompact(f.netCop)} (${f.sharePct}%)</span>
+        </div>
+      `).join('');
+
+      document.getElementById('prodGrowingList').innerHTML = (prodData.fastestGrowingProducts || []).map(p => `
+        <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <div class="font-semibold text-white">${p.name}</div>
+            <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr} · ${p.familyName}</div>
+          </div>
+          <div class="text-right font-mono tabular-nums shrink-0">
+            <div class="text-emerald-400 font-bold">+${p.revenueGrowthPct}% YoY</div>
+            <div class="text-[11px] text-slate-300">${formatCopCompact(p.netCop)}</div>
+          </div>
+        </div>
+      `).join('') || `<div class="text-slate-500 py-4 text-center">Sin datos comparables en el filtro actual.</div>`;
+
+      document.getElementById('prodDecliningList').innerHTML = (prodData.decliningProducts || []).map(p => `
+        <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <div class="font-semibold text-white">${p.name}</div>
+            <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr} · ${p.familyName}</div>
+          </div>
+          <div class="text-right font-mono tabular-nums shrink-0">
+            <div class="text-rose-400 font-bold">${p.revenueGrowthPct}% YoY</div>
+            <div class="text-[11px] text-slate-300">${formatCopCompact(p.netCop)}</div>
+          </div>
+        </div>
+      `).join('') || `<div class="text-slate-500 py-4 text-center">No se detectaron productos en caída para el filtro actual.</div>`;
+
+      renderProductsTableRows(prodData.topProductsByRevenue || []);
+    }
+
+    function renderProductsTableRows(list) {
+      document.getElementById('productsDemandTableBody').innerHTML = list.map(p => {
+        const pos = p.unitGrowthPct >= 0;
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <th scope="row" class="py-2.5 px-3 font-semibold text-white">
+              <div>${p.name}</div>
+              <div class="text-[10px] font-mono text-slate-400">MATNR: ${p.matnr}</div>
+            </th>
+            <td class="py-2.5 px-3 text-slate-300">${p.familyName} <span class="font-mono text-slate-500">(${p.matkl})</span></td>
+            <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-300">${formatNum(p.unitsSold)}</td>
+            <td class="py-2.5 px-3 text-center font-mono text-slate-400">${p.uom}</td>
+            <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-300">${formatCop(p.netCop)}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-amber-300">${p.sharePct}%</td>
+            <td class="py-2.5 px-3 text-right font-mono ${pos ? 'text-emerald-400' : 'text-rose-400'}">${pos ? '+' : ''}${p.unitGrowthPct}%</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-300">${p.cvPct}%</td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-200 border border-slate-700">${p.demandPattern}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterProductsTable() {
+      if (!currentAnalytics) return;
+      const q = (document.getElementById('productSearchInput').value || '').toLowerCase().trim();
+      const all = currentAnalytics.productDemandAnalysis?.topProductsByRevenue || [];
+      const filtered = !q ? all : all.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.matnr.toLowerCase().includes(q) ||
+        p.familyName.toLowerCase().includes(q) ||
+        p.demandPattern.toLowerCase().includes(q)
+      );
+      renderProductsTableRows(filtered);
+    }
+
+    function renderPage4Charts(prodData) {
+      destroyChart('prodTopRevenueChart');
+      const topRev = (prodData.topProductsByRevenue || []).slice(0, 10);
+      charts.prodTopRevenueChart = new Chart(document.getElementById('prodTopRevenueChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: topRev.map(p => p.name.slice(0, 28)),
+          datasets: [{
+            label: 'Ingresos Netos (COP)',
+            data: topRev.map(p => p.netCop),
+            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => formatCop(c.parsed.x) } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatCopCompact(v) }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#e2e8f0', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+
+      destroyChart('prodTopUnitsChart');
+      const topUnits = (prodData.topProductsByUnits || []).slice(0, 10);
+      charts.prodTopUnitsChart = new Chart(document.getElementById('prodTopUnitsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: topUnits.map(p => `${p.name.slice(0, 24)} (${p.uom})`),
+          datasets: [{
+            label: 'Unidades Vendidas (FKIMG)',
+            data: topUnits.map(p => p.unitsSold),
+            backgroundColor: 'rgba(168, 85, 247, 0.8)',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => formatNum(c.parsed.x) + ' unidades' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#e2e8f0', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+
+      destroyChart('prodFamilyChart');
+      const fams = (prodData.familiesAnalysis || []).slice(0, 6);
+      charts.prodFamilyChart = new Chart(document.getElementById('prodFamilyChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: fams.map(f => f.familyName),
+          datasets: [{
+            data: fams.map(f => f.netCop),
+            backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', '#06b6d4'],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } } }
+        }
+      });
+    }
+
+    // ========================================================================
+    // RENDER PÁGINA 5: PREDICCIÓN DE INGRESOS Y DEMANDA (SMART PREDICT ML)
+    // ========================================================================
+    function changeForecastHorizon(h) {
+      window._selectedHorizon = h;
+      [3, 6, 12].forEach(val => {
+        const btn = document.getElementById(`hBtn${val}`);
+        if (btn) {
+          btn.className = val === h
+            ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white'
+            : 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white';
+        }
+      });
+      loadSalesAnalytics(false);
+    }
+
+    function renderPage5Predictive(pred) {
+      if (!pred || !pred.sufficientData) {
+        document.getElementById('mlSpecSubtitle').textContent = pred?.message || 'Datos insuficientes para predicción.';
+        return;
+      }
+
+      document.getElementById('mlModelBadge').textContent = `Modelo Ganador: ${pred.validationComparison.winnerModel}`;
+      document.getElementById('mlSpecSubtitle').textContent =
+        `Entrenamiento: ${pred.modelSpecification.trainingPeriod} · Validación Holdout: ${pred.modelSpecification.validationPeriod} · ${pred.modelSpecification.partialMonthHandling}`;
+
+      document.getElementById('forecastHorizonsCards').innerHTML = (pred.horizonsSummary || []).map(h => {
+        const isSelected = h.horizonMonths === pred.selectedHorizonMonths;
+        const pos = h.expectedVariationPct >= 0;
+        return `
+          <div class="glass-panel rounded-2xl p-4 border ${isSelected ? 'border-amber-500/80 bg-amber-950/15' : 'border-slate-800'}">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase text-amber-400">Proyección a ${h.horizonMonths} Meses</span>
+              <span class="text-xs font-mono font-bold px-2 py-0.5 rounded ${pos ? 'bg-emerald-950/80 text-emerald-300' : 'bg-rose-950/80 text-rose-300'}">
+                ${pos ? '+' : ''}${h.expectedVariationPct}% esperado
+              </span>
+            </div>
+            <div class="text-2xl font-extrabold font-mono text-white tabular-nums mt-2">${formatCopCompact(h.projectedTotalCop)}</div>
+            <div class="text-[11px] font-mono text-slate-400 tabular-nums mt-1">
+              Promedio mensual: ${formatCopCompact(h.monthlyAverageProjectedCop)} · Hist. comparable (${h.horizonMonths}m): ${formatCopCompact(h.historicalComparableCop)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('mlValidationMetricsBody').innerHTML = (pred.validationComparison?.models || []).map(m => `
+        <tr class="${m.isWinner ? 'bg-emerald-950/25 font-semibold' : ''}">
+          <th scope="row" class="py-2.5 px-3 text-white flex items-center gap-1.5">
+            ${m.isWinner ? '<span class="material-symbols-outlined text-emerald-400 text-sm">emoji_events</span>' : ''}
+            <span>${m.model}</span>
+          </th>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-200">${formatCopCompact(m.mae)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-200">${formatCopCompact(m.rmse)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-amber-300">${m.mape}%</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">${m.wape}%</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('mlDriversList').innerHTML = (pred.keyDrivers || []).map(d => `
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-white">${d.driver}</span>
+            <span class="text-xs font-mono font-bold text-amber-400">${d.impactWeightPct}% impacto</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1.5">
+            <div class="bg-gradient-to-r from-amber-500 to-blue-500 h-full" style="width: ${d.impactWeightPct}%"></div>
+          </div>
+          <p class="text-[11px] text-slate-400">${d.explanation}</p>
+        </div>
+      `).join('');
+
+      document.getElementById('mlChannelForecastList').innerHTML = (pred.channelForecasts || []).slice(0, 4).map(ch => `
+        <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+          <span class="text-slate-300 font-medium">${ch.vtweg} · ${ch.name}</span>
+          <span class="font-mono font-bold text-emerald-400 tabular-nums">${formatCopCompact(ch.projectedHorizonCop)}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('mlProductForecastBody').innerHTML = (pred.productForecasts || []).map(p => `
+        <tr class="hover:bg-slate-800/40">
+          <th scope="row" class="py-2.5 px-3 font-semibold text-white">
+            <div>${p.name}</div>
+            <div class="text-[10px] font-mono text-slate-400">${p.matnr} · ${p.uom}</div>
+          </th>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-300">${formatNum(p.historicalMonthlyAvgUnits)}</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-300">${formatNum(p.projectedHorizonUnits)} ${p.uom}</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-300">${formatCopCompact(p.projectedHorizonCop)}</td>
+          <td class="py-2.5 px-3 text-[11px] text-slate-300">${p.confidenceLevel}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('mlCustomerPropensityBody').innerHTML = (pred.customerPropensity || []).map(c => `
+        <tr class="hover:bg-slate-800/40">
+          <th scope="row" class="py-2.5 px-3 font-semibold text-white">
+            <div>${c.name}</div>
+            <div class="text-[10px] font-mono text-slate-400">${c.kunnr} · ${c.segment}</div>
+          </th>
+          <td class="py-2.5 px-3 text-right font-mono text-slate-300">${c.recencyDays}d</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">${c.repurchaseProb90dPct}%</td>
+          <td class="py-2.5 px-3 text-right font-mono text-rose-400">${c.declineRisk90dPct}%</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-200 border border-slate-700">${c.predictedState}</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPage5Charts(pred) {
+      if (!pred || !pred.sufficientData) return;
+
+      destroyChart('mlMainForecastChart');
+      const hist = pred.historicalActualsSeries || [];
+      const fut = pred.futureForecastSeries || [];
+      const allLabels = [...hist.map(h => h.ym), ...fut.map(f => `${f.ym} (Proy)`)];
+
+      const actualData = [...hist.map(h => h.actualCop), ...fut.map(() => null)];
+      const lastHistVal = hist.length > 0 ? hist[hist.length - 1].actualCop : null;
+      const forecastData = [
+        ...hist.slice(0, -1).map(() => null),
+        lastHistVal,
+        ...fut.map(f => f.predictedCop)
+      ];
+      const upperData = [
+        ...hist.slice(0, -1).map(() => null),
+        lastHistVal,
+        ...fut.map(f => f.upperBound95Cop)
+      ];
+      const lowerData = [
+        ...hist.slice(0, -1).map(() => null),
+        lastHistVal,
+        ...fut.map(f => f.lowerBound95Cop)
+      ];
+
+      charts.mlMainForecastChart = new Chart(document.getElementById('mlMainForecastChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: allLabels,
+          datasets: [
+            {
+              label: 'Ingreso Real Cerrado (VBRK)',
+              data: actualData,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.25
+            },
+            {
+              label: 'Pronóstico Smart Predict ML',
+              data: forecastData,
+              borderColor: '#f59e0b',
+              borderDash: [6, 4],
+              borderWidth: 2.8,
+              tension: 0.25
+            },
+            {
+              label: 'Límite Superior IC 95%',
+              data: upperData,
+              borderColor: 'rgba(245, 158, 11, 0.25)',
+              backgroundColor: 'rgba(245, 158, 11, 0.14)',
+              borderWidth: 1,
+              fill: '+1',
+              pointRadius: 0,
+              tension: 0.25
+            },
+            {
+              label: 'Límite Inferior IC 95%',
+              data: lowerData,
+              borderColor: 'rgba(245, 158, 11, 0.25)',
+              borderWidth: 1,
+              fill: false,
+              pointRadius: 0,
+              tension: 0.25
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${formatCop(c.parsed.y)}` } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatCopCompact(v) }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      destroyChart('mlBacktestChart');
+      const bt = pred.validationComparison?.backtestSeries || [];
+      charts.mlBacktestChart = new Chart(document.getElementById('mlBacktestChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: bt.map(b => b.ym),
+          datasets: [
+            { label: 'Real Observado (Holdout)', data: bt.map(b => b.actual), borderColor: '#3b82f6', borderWidth: 2.5 },
+            { label: 'Smart Predict ML', data: bt.map(b => b.smartPredict), borderColor: '#10b981', borderDash: [4, 3], borderWidth: 2 },
+            { label: 'Seasonal Naive (Y_t-12)', data: bt.map(b => b.seasonalNaive), borderColor: '#94a3b8', borderDash: [2, 2], borderWidth: 1.5 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatCopCompact(v) } }
+          }
+        }
+      });
+    }
+
+    // ========================================================================
+    // MODAL DE DOCUMENTACIÓN SAC Y EXPORTACIÓN CSV
+    // ========================================================================
+    function openDocumentationModal() {
+      if (!currentAnalytics?.documentation) return;
+      const doc = currentAnalytics.documentation;
+      const modal = document.getElementById('sacDocModal');
+      const content = document.getElementById('sacDocModalContent');
+
+      content.innerHTML = `
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <h3 class="text-sm font-bold text-amber-400">1. Arquitectura del Modelo Analítico y Fuentes SAP</h3>
+          <p><strong>Nombre Técnico del Modelo:</strong> <code class="text-blue-300">${doc.architectureOverview.sacModelName}</code></p>
+          <p><strong>Sistema de Origen:</strong> ${doc.architectureOverview.sourceSystem}</p>
+          <p><strong>Conectividad:</strong> ${doc.architectureOverview.connectionMethod}</p>
+          <p class="text-slate-400">${doc.architectureOverview.sisNote}</p>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-bold text-white mb-2">2. Tablas del Módulo Comercial SAP SD Consultadas</h3>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                <tr>
+                  <th class="py-2 px-3">Tabla SAP</th>
+                  <th class="py-2 px-3">Función en el Modelo</th>
+                  <th class="py-2 px-3">Campos Técnicos Extraídos</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                ${doc.sapTablesUsed.map(t => `
+                  <tr>
+                    <td class="py-2 px-3 font-mono font-bold text-amber-300">${t.table}</td>
+                    <td class="py-2 px-3 text-white">${t.description}</td>
+                    <td class="py-2 px-3 font-mono text-slate-400">${t.keyFields}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-bold text-white mb-2">3. Diccionario Oficial de Indicadores y Fórmulas</h3>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                <tr>
+                  <th class="py-2 px-3">Indicador (Español)</th>
+                  <th class="py-2 px-3">ID Técnico SAC</th>
+                  <th class="py-2 px-3">Fórmula de Cálculo y Regla de Negocio</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                ${doc.indicatorDictionary.map(ind => `
+                  <tr>
+                    <td class="py-2 px-3 font-bold text-white">${ind.nameEs}</td>
+                    <td class="py-2 px-3 font-mono text-emerald-400">${ind.technicalName}</td>
+                    <td class="py-2 px-3 font-mono text-slate-300">${ind.formula}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-1.5">
+          <h3 class="text-sm font-bold text-amber-300">4. Limitaciones Documentadas y Procedimiento de Mantenimiento</h3>
+          <ul class="list-disc list-inside space-y-1 text-slate-300">
+            ${doc.limitationsAndGovernance.map(l => `<li>${l}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDocumentationModal(e) {
+      const modal = document.getElementById('sacDocModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function exportCurrentViewCsv() {
+      if (!currentAnalytics) return;
+      const rows = [['Periodo_YM', 'Ingresos_Brutos_COP', 'Notas_Credito_COP', 'Ingresos_Netos_Reconocidos_COP', 'Pedidos_Venta_COP', 'Unidades_FKIMG', 'Clientes_Activos']];
+      (currentAnalytics.historicalAnalysis?.monthlySeries || []).forEach(m => {
+        rows.push([m.ym, m.grossCop, m.creditNotesCop, m.netCop, m.ordersCop, m.unitsSold, m.activeCustomersCount]);
+      });
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(r => r.join(',')).join('\n');
+      const link = document.createElement('a');
+      link.setAttribute('href', encodeURI(csvContent));
+      link.setAttribute('download', `SAC_Ventas_Ingresos_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSalesAnalytics(false);
+    });
+  </script>
+</body>
+</html>

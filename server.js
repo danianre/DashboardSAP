@@ -22,6 +22,11 @@ const {
   fetchHistoricoConsumo,
   analyzeInventoryWithAi
 } = require('./services/inventoryService');
+const {
+  getOrSyncDataset,
+  computeSalesAnalytics,
+  triggerBackgroundSync
+} = require('./services/salesAnalyticsService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -95,6 +100,10 @@ app.get(['/inventarios-sap', '/optimizador-inventarios', '/inventarios'], (req, 
   res.sendFile(path.join(__dirname, 'public', 'inventarios.html'));
 });
 
+app.get(['/ventas-sap', '/analisis-ventas', '/sac-ventas'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ventas.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
@@ -112,7 +121,8 @@ app.get('/api/health', (req, res) => {
       portal: '/',
       monitorSap: '/monitor-sap',
       notificacionesSap: '/notificaciones-sap',
-      inventariosSap: '/inventarios-sap'
+      inventariosSap: '/inventarios-sap',
+      ventasSap: '/ventas-sap'
     }
   });
 });
@@ -350,6 +360,47 @@ app.post('/api/inventarios/ai-analyze', async (req, res) => {
   }
 });
 
+// ============================================================================
+// MÓDULO 4: ANÁLISIS DE VENTAS Y PREDICCIÓN DE INGRESOS (SAP SD RFC + SAC ML)
+// Tablas: VBRK, VBRP, VBAK, KNA1, TVKOT, TVTWT, TSPAT, T023T, T005U
+// ============================================================================
+app.get('/api/ventas/overview', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    const dataset = await getOrSyncDataset(forceRefresh);
+    const analytics = computeSalesAnalytics(dataset, req.query || {});
+    res.json({
+      success: true,
+      ...analytics
+    });
+  } catch (error) {
+    console.error('[ERROR GET /api/ventas/overview]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al calcular analítica comercial y predicción de ingresos SAP SD.'
+    });
+  }
+});
+
+app.post('/api/ventas/overview', async (req, res) => {
+  try {
+    const filters = { ...(req.query || {}), ...(req.body || {}) };
+    const forceRefresh = Boolean(filters.refresh === true || filters.refresh === 'true');
+    const dataset = await getOrSyncDataset(forceRefresh);
+    const analytics = computeSalesAnalytics(dataset, filters);
+    res.json({
+      success: true,
+      ...analytics
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/ventas/overview]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al procesar filtros de analítica de ventas SAP SD.'
+    });
+  }
+});
+
 // Rutas del Monitor SAP (/api/auth/*, /api/dashboard, /api/user/lock, etc.)
 app.use('/api', apiRoutes);
 
@@ -361,9 +412,15 @@ app.listen(PORT, () => {
   console.log(` 📊 Monitor SAP ERP:      http://localhost:${PORT}/monitor-sap`);
   console.log(` 🔔 Notificaciones SAP:   http://localhost:${PORT}/notificaciones-sap`);
   console.log(` 🧠 Inventarios IA:       http://localhost:${PORT}/inventarios-sap`);
+  console.log(` 📈 Ventas & SAC ML:      http://localhost:${PORT}/ventas-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
 
   // Iniciar servicio demonio de recolección continua 24/7 en segundo plano (cada 15 segundos)
   startSnapshotDaemon(15000);
+
+  // Pre-calentar caché de Analítica de Ventas SAP SD en segundo plano tras el arranque
+  setTimeout(() => {
+    triggerBackgroundSync();
+  }, 3500);
 });
