@@ -249,13 +249,14 @@ async function syncSupplyChainDatasetFromSap() {
   const sapRoutesMap = new Map();
 
   try {
-    const [t001wRows, t024eRows, tvroRows, tvrotRows, ekkoRows, ebanRows, likpRows, vttkRows] = await Promise.all([
+    const [t001wRows, t024eRows, tvroRows, tvrotRows, ekkoRows, ebanRows, mardRows, likpRows, vttkRows] = await Promise.all([
       readSapTableSafe('T001W', ['WERKS', 'NAME1', 'ORT01', 'REGIO'], [], 120),
       readSapTableSafe('T024E', ['EKORG', 'EKOTX', 'BUKRS'], [], 40),
       readSapTableSafe('TVRO', ['ROUTE', 'DISTZ', 'MEDST', 'TRAZTD'], [], 120),
       readSapTableSafe('TVROT', ['SPRAS', 'ROUTE', 'BEZEI'], ["SPRAS = 'S'"], 120),
       readSapTableSafe('EKKO', ['EBELN', 'BUKRS', 'BSART', 'AEDAT', 'LIFNR', 'EKORG', 'WAERS'], ["AEDAT >= '20250101' AND LOEKZ = ''"], 250),
       readSapTableSafe('EBAN', ['BANFN', 'BNFPO', 'MATNR', 'WERKS', 'LGORT', 'MENGE', 'BADAT', 'LFDAT', 'FRGDT', 'EBELN'], ["BADAT >= '20250101'"], 200),
+      readSapTableSafe('MARD', ['MATNR', 'WERKS', 'LGORT', 'LABST', 'INSME', 'SPEME'], ["LABST > '0'"], 250),
       readSapTableSafe('LIKP', ['VBELN', 'VSTEL', 'VKORG', 'LFART', 'WADAT', 'WADAT_IST', 'LFDAT', 'ROUTE', 'KUNNR', 'BTGEW', 'NTGEW'], ["WADAT >= '20250101'"], 250),
       readSapTableSafe('VTTK', ['TKNUM', 'SHTYP', 'TDLNR', 'ROUTE', 'VSART', 'DISTZ', 'MEDST', 'ERDAT', 'DATEN', 'STTRG'], [], 150)
     ]);
@@ -269,11 +270,12 @@ async function syncSupplyChainDatasetFromSap() {
     sapStats.routesRead = tvroRows.length;
     sapStats.purchaseOrdersRead = ekkoRows.length;
     sapStats.requisitionsRead = ebanRows.length;
+    sapStats.stockRecordsRead = mardRows.length;
     sapStats.deliveriesRead = likpRows.length;
     sapStats.shipmentsRead = vttkRows.length;
 
     for (const r of t001wRows) {
-      if (r.WERKS && r.NAME1) {
+      if (r.WERKS && r.NAME1 && !r.NAME1.toUpperCase().includes('NO USAR')) {
         const existing = plantsMap[r.WERKS] || {};
         plantsMap[r.WERKS] = {
           name: existing.name || r.NAME1,
