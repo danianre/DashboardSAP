@@ -60,7 +60,9 @@ const requiredViews = [
       'Desempeño Financiero y Simulación SAC',
       '/finanzas-sap',
       'Cadena de Suministro y Logística SAC',
-      '/cadena-suministro-sap'
+      '/cadena-suministro-sap',
+      'Riesgos Financieros y Estrés SAC',
+      '/riesgos-financieros-sap'
     ]
   },
   {
@@ -119,6 +121,20 @@ const requiredViews = [
       '7. Simulador de Escenarios y Acciones',
       '/api/cadena-suministro/overview'
     ]
+  },
+  {
+    file: 'public/riesgos-financieros.html',
+    mustContain: [
+      'Dashboard de Inteligencia y Análisis de Riesgos Financieros',
+      '1. Resumen Ejecutivo de Riesgos',
+      '2. Cartera y Antigüedad (Aging)',
+      '3. Riesgo Crediticio por Cliente',
+      '4. Entorno Macro y Exposición FX',
+      '5. Sensibilidad Financiera',
+      '6. Predicción Smart Predict y Alertas',
+      '7. Simulación y Pruebas de Estrés',
+      '/api/riesgos-financieros/overview'
+    ]
   }
 ];
 
@@ -143,7 +159,7 @@ const forbiddenPatterns = [
   /(?:CPI_PASS|SAP_PASSWORD)\s*=\s*["'][^"']+["']/
 ];
 
-for (const relPath of [...jsFiles, 'public/index.html', 'public/monitor.html', 'public/notificaciones.html', 'public/inventarios.html', 'public/ventas.html']) {
+for (const relPath of [...jsFiles, 'public/index.html', 'public/monitor.html', 'public/notificaciones.html', 'public/inventarios.html', 'public/ventas.html', 'public/finanzas.html', 'public/cadena-suministro.html', 'public/riesgos-financieros.html']) {
   const fullPath = path.join(rootDir, relPath);
   if (!fs.existsSync(fullPath)) continue;
   const content = fs.readFileSync(fullPath, 'utf8');

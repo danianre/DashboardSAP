@@ -39,6 +39,10 @@ const {
   getSupplyChainOverview,
   simulateSupplyChainScenario
 } = require('./services/supplyChainAnalyticsService');
+const {
+  getFinancialRiskOverview,
+  simulateFinancialRiskScenario
+} = require('./services/financialRiskService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -124,6 +128,10 @@ app.get(['/cadena-suministro-sap', '/logistica-sap', '/sac-logistica'], (req, re
   res.sendFile(path.join(__dirname, 'public', 'cadena-suministro.html'));
 });
 
+app.get(['/riesgos-financieros-sap', '/riesgos-sap', '/sac-riesgos'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'riesgos-financieros.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
@@ -144,7 +152,8 @@ app.get('/api/health', (req, res) => {
       inventariosSap: '/inventarios-sap',
       ventasSap: '/ventas-sap',
       finanzasSap: '/finanzas-sap',
-      cadenaSuministroSap: '/cadena-suministro-sap'
+      cadenaSuministroSap: '/cadena-suministro-sap',
+      riesgosFinancierosSap: '/riesgos-financieros-sap'
     }
   });
 });
@@ -582,6 +591,55 @@ app.post('/api/cadena-suministro/simulate', async (req, res) => {
   }
 });
 
+// ============================================================================
+// MÓDULO 7: INTELIGENCIA Y ANÁLISIS DE RIESGOS FINANCIEROS (SAP FI-AR / CREDIT / SAC)
+// ============================================================================
+app.get('/api/riesgos-financieros/overview', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    const data = await getFinancialRiskOverview({ ...(req.query || {}), forceRefresh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR GET /api/riesgos-financieros/overview]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al calcular el análisis de riesgos financieros y crediticios.'
+    });
+  }
+});
+
+app.post('/api/riesgos-financieros/overview', async (req, res) => {
+  try {
+    const filters = { ...(req.query || {}), ...(req.body || {}) };
+    const forceRefresh = Boolean(filters.refresh === true || filters.refresh === 'true');
+    const data = await getFinancialRiskOverview({ ...filters, forceRefresh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR POST /api/riesgos-financieros/overview]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al procesar filtros del análisis de riesgos financieros.'
+    });
+  }
+});
+
+app.post('/api/riesgos-financieros/simulate', async (req, res) => {
+  try {
+    const { filters = {}, assumptions = {} } = req.body || {};
+    const overview = await getFinancialRiskOverview({ ...filters, customAssumptions: assumptions });
+    res.json({
+      ok: true,
+      simulation: overview.page7StressTestingAndActions.activeSimulation
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/riesgos-financieros/simulate]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al ejecutar la simulación y prueba de estrés financiero.'
+    });
+  }
+});
+
 // Rutas del Monitor SAP (/api/auth/*, /api/dashboard, /api/user/lock, etc.)
 app.use('/api', apiRoutes);
 
@@ -596,6 +654,7 @@ app.listen(PORT, () => {
   console.log(` 📈 Ventas & SAC ML:      http://localhost:${PORT}/ventas-sap`);
   console.log(` 💰 Finanzas & Escenarios:http://localhost:${PORT}/finanzas-sap`);
   console.log(` 🚚 Cadena de Suministro: http://localhost:${PORT}/cadena-suministro-sap`);
+  console.log(` 🛡️ Riesgos Financieros:  http://localhost:${PORT}/riesgos-financieros-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
 

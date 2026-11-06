@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inteligencia y Análisis de Riesgos Financieros — SAP Analytics Cloud</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #060913;
+      --bg-card: rgba(15, 23, 42, 0.84);
+      --border-subtle: rgba(148, 163, 184, 0.14);
+      --brand-rose: #f43f5e;
+      --brand-indigo: #6366f1;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 14% 0%, rgba(244, 63, 94, 0.10), transparent 38%),
+                  radial-gradient(circle at 86% 8%, rgba(99, 102, 241, 0.11), transparent 38%),
+                  #060913;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(12px);
+      border-radius: 0.875rem;
+    }
+
+    /* Modern Web Guidance: interactions-in-complex-layouts */
+    .risk-containment-section {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 320px auto 680px;
+    }
+    @supports not (content-visibility: auto) {
+      .risk-containment-section {
+        contain: layout style paint;
+      }
+    }
+
+    /* Modern Web Guidance: responsive-table */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(560px, 78vh);
+      container-type: inline-size;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .table-wrapper:focus-visible {
+      outline: 2px solid #f43f5e;
+      outline-offset: 2px;
+    }
+    .table-wrapper table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.8125rem;
+    }
+    .table-wrapper thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: #0f172a;
+    }
+    .table-wrapper th,
+    .table-wrapper td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      text-align: left;
+      vertical-align: middle;
+    }
+    .table-wrapper tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: #0b1324;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .table-wrapper tbody tr:hover td,
+    .table-wrapper tbody tr:hover th {
+      background: rgba(244, 63, 94, 0.06);
+    }
+
+    @container (width < 600px) {
+      .table-wrapper table,
+      .table-wrapper thead,
+      .table-wrapper tbody,
+      .table-wrapper tr,
+      .table-wrapper th,
+      .table-wrapper td {
+        display: block;
+      }
+      .table-wrapper thead {
+        display: none;
+      }
+      .table-wrapper tr {
+        margin-block-end: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 0.5rem;
+        overflow: hidden;
+      }
+      .table-wrapper tbody th {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        background: #1e293b;
+      }
+      .table-wrapper td:nth-child(2)::before { content: var(--label-2, "Col 2") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(3)::before { content: var(--label-3, "Col 3") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(4)::before { content: var(--label-4, "Col 4") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(5)::before { content: var(--label-5, "Col 5") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(6)::before { content: var(--label-6, "Col 6") ": "; font-weight: 600; color: #94a3b8; }
+    }
+
+    /* Modern Web Guidance: Brand-Consistent Range Slider */
+    input[type="range"].risk-slider {
+      --slider-track-size: 0.42rem;
+      --slider-thumb-size: 1.1rem;
+      --slider-track-radius: 999px;
+      --slider-thumb-radius: 50%;
+      --slider-track-color: #1e293b;
+      --slider-fill-color: #f43f5e;
+      --slider-thumb-color: #fb7185;
+      --slider-direction: to right;
+      --attr-min: attr(min type(<number>), 0);
+      --attr-max: attr(max type(<number>), 100);
+      --control-value: attr(value type(<number>), 50);
+      --slider-progress: calc(
+        progress(var(--control-value), var(--attr-min), var(--attr-max)) * 100%
+      );
+
+      appearance: none;
+      inline-size: 100%;
+      block-size: 2rem;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    @supports not (opacity: progress(1, 0, 100)) {
+      input[type="range"].risk-slider {
+        --slider-progress: calc(
+          (var(--control-value) - var(--attr-min)) /
+          (var(--attr-max) - var(--attr-min)) * 100%
+        );
+      }
+    }
+
+    input[type="range"].risk-slider::-webkit-slider-runnable-track {
+      block-size: var(--slider-track-size);
+      border: 0;
+      border-radius: var(--slider-track-radius);
+      background: linear-gradient(
+        var(--slider-direction),
+        var(--slider-fill-color) var(--slider-progress),
+        var(--slider-track-color) var(--slider-progress)
+      );
+    }
+
+    input[type="range"].risk-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      inline-size: var(--slider-thumb-size);
+      block-size: var(--slider-thumb-size);
+      margin-block-start: calc(
+        (var(--slider-track-size) - var(--slider-thumb-size)) / 2
+      );
+      border: 2px solid #060913;
+      border-radius: var(--slider-thumb-radius);
+      background: var(--slider-thumb-color);
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
+    }
+
+    input[type="range"].risk-slider::-moz-range-track {
+      block-size: var(--slider-track-size);
+      border: 0;
+      border-radius: var(--slider-track-radius);
+      background: var(--slider-track-color);
+    }
+
+    input[type="range"].risk-slider::-moz-range-progress {
+      block-size: var(--slider-track-size);
+      border-radius: var(--slider-track-radius);
+      background: var(--slider-fill-color);
+    }
+
+    input[type="range"].risk-slider::-moz-range-thumb {
+      inline-size: var(--slider-thumb-size);
+      block-size: var(--slider-thumb-size);
+      border: 2px solid #060913;
+      border-radius: var(--slider-thumb-radius);
+      background: var(--slider-thumb-color);
+    }
+
+    input[type="range"].risk-slider:focus-visible {
+      outline: 2px solid var(--slider-fill-color);
+      outline-offset: 4px;
+    }
+
+    .nav-tab {
+      transition: all 0.18s ease;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-tab.active {
+      color: #fb7185;
+      border-bottom-color: #f43f5e;
+      background: rgba(244, 63, 94, 0.1);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-rose-500/30 selection:text-rose-200">
+
+  <!-- BARRA SUPERIOR EJECUTIVA SAC -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="/" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white hover:border-rose-500/50 transition">
+          <span>←</span> Portal SAP
+        </a>
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-rose-500/25 to-indigo-500/20 border border-rose-500/40 flex items-center justify-center text-rose-300 font-bold text-sm">
+          RISK
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
+              SAP Analytics Cloud • Credit &amp; Macroeconomic Risk
+            </span>
+            <span id="sapRiskConnectionBadge" class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              ● Conectado a SAP en Vivo
+            </span>
+          </div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">
+            Dashboard de Inteligencia y Análisis de Riesgos Financieros
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnOpenGovernanceModal" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span>🛡️</span> Gobierno, Fuentes y Diccionario
+        </button>
+        <button id="btnExportRiskCsv" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span>⬇</span> Exportar CSV
+        </button>
+        <button id="btnRefreshRisk" type="button" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-lg shadow-rose-500/20">
+          <span>↻</span> Sincronizar SAP
+        </button>
+      </div>
+    </div>
+
+    <!-- BARRA DE FILTROS GLOBALES INTERACTIVOS (Sección 8) -->
+    <div class="border-t border-slate-800/60 bg-slate-900/60">
+      <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
+        <div>
+          <label for="filterCompany" class="block text-[11px] font-medium text-slate-400 mb-1">Sociedad Financiera</label>
+          <select id="filterCompany" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="ALL">Todas las Sociedades</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterSector" class="block text-[11px] font-medium text-slate-400 mb-1">Sector Económico del Cliente</label>
+          <select id="filterSector" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="ALL">Todos los Sectores</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterRegion" class="block text-[11px] font-medium text-slate-400 mb-1">Región / Mercado</label>
+          <select id="filterRegion" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="ALL">Todas las Regiones</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterCurrency" class="block text-[11px] font-medium text-slate-400 mb-1">Moneda de Transacción</label>
+          <select id="filterCurrency" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="ALL">Todas las Monedas (COP, USD, EUR)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterRiskLevel" class="block text-[11px] font-medium text-slate-400 mb-1">Nivel de Riesgo Predictivo</label>
+          <select id="filterRiskLevel" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="ALL">Todos los Niveles de Riesgo</option>
+          </select>
+        </div>
+        <div>
+          <button id="btnResetRiskFilters" type="button" class="w-full px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition">
+            Restablecer Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN DE LAS 7 PÁGINAS DE LA HISTORIA SAC (Sección 7) -->
+    <div class="border-t border-slate-800/70 bg-slate-950/90 overflow-x-auto">
+      <nav class="max-w-[1600px] mx-auto px-4 sm:px-6 flex items-center gap-1 min-w-max" aria-label="Páginas del Dashboard de Riesgos Financieros">
+        <button type="button" data-page="page1" class="nav-tab active px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          1. Resumen Ejecutivo de Riesgos
+        </button>
+        <button type="button" data-page="page2" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          2. Cartera y Antigüedad (Aging)
+        </button>
+        <button type="button" data-page="page3" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          3. Riesgo Crediticio por Cliente
+        </button>
+        <button type="button" data-page="page4" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          4. Entorno Macro y Exposición FX
+        </button>
+        <button type="button" data-page="page5" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          5. Sensibilidad Financiera
+        </button>
+        <button type="button" data-page="page6" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          6. Predicción Smart Predict y Alertas
+        </button>
+        <button type="button" data-page="page7" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          7. Simulación y Pruebas de Estrés
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 1: RESUMEN EJECUTIVO DE RIESGOS FINANCIEROS (Sección 3.1 y 7)  -->
+    <!-- ===================================================================== -->
+    <section id="page1" class="risk-page space-y-6">
+      <div class="risk-containment-section">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-rose-400">Panorama General de Exposición Crediticia, Cartera y Estabilidad Financiera (12 KPIs)</h2>
+            <p class="text-xs text-slate-400">Cada indicador incluye valor actual, variación, estado según política de crédito aprobada, significado e impacto potencial</p>
+          </div>
+          <span id="lastRiskSyncLabel" class="text-[11px] text-slate-400 mono">Sincronizando...</span>
+        </div>
+        <div id="primaryRiskKpisGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
+      </div>
+
+      <!-- Gráficos Ejecutivos de Tendencia 12 Meses -->
+      <div class="risk-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white">Evolución de Ingresos Mensuales vs Cartera Vencida Total</h3>
+              <p class="text-xs text-slate-400">Últimos 12 meses cerrados (Billones de Pesos Colombianos COP)</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">Monitoreo de Liquidez</span>
+          </div>
+          <div class="h-64">
+            <canvas id="chartExecRevenueOverdue"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white">Evolución Cambiaria (USD/COP) vs Diferencia en Cambio Contable</h3>
+              <p class="text-xs text-slate-400">Impacto de la volatilidad cambiaria sobre la posición monetaria activa</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Exposición Activa USD/EUR</span>
+          </div>
+          <div class="h-64">
+            <canvas id="chartExecFxTrend"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas Prioritarias en Resumen Ejecutivo -->
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Alertas Prioritarias de Riesgo Crediticio y Macroeconómico</h3>
+            <p class="text-xs text-slate-400">Basadas en políticas y límites aprobados por la organización (diferenciando hechos contables confirmados de predicciones estadísticas)</p>
+          </div>
+        </div>
+        <div id="execAlertsContainer" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 2: ANÁLISIS DE CARTERA Y CUENTAS POR COBRAR (AGING - Sec 3.2)  -->
+    <!-- ===================================================================== -->
+    <section id="page2" class="risk-page hidden space-y-6">
+      <!-- Tarjetas de los 5 Rangos de Antigüedad de Cartera (Aging Analysis) -->
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Antigüedad de Cuentas por Cobrar (Aging Analysis en 5 Rangos Configurados)</h2>
+            <p class="text-xs text-slate-400">Separa explícitamente la mora comercial efectiva de aquellos saldos con notas crédito o disputas administrativas en conciliación</p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs mono">
+            <span id="disputedBadge" class="px-3 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold">En Disputa / NC: $0</span>
+            <span id="netOverdueBadge" class="px-3 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 font-semibold">Mora Neta Exigible: $0</span>
+          </div>
+        </div>
+        <div id="agingBucketsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="h-64 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+            <canvas id="chartAgingDistribution"></canvas>
+          </div>
+          <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white mb-1">Proyección de Cobranza y Vencimientos de Corto Plazo</h3>
+              <p class="text-xs text-slate-400 mb-3">Flujo esperado de recaudo sobre cartera vigente según fechas contractuales de vencimiento</p>
+              <div id="collectionProjectionCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-3 pt-2 border-t border-slate-800">
+              Nota metodológica: Los documentos con reclamaciones comerciales o notas crédito pendientes se aislan de la mora exigible para evitar distorsiones en el cálculo de riesgo.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Clientes con Obligaciones Vencidas por Tramo -->
+      <div class="risk-containment-section glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-1">Desglose de Antigüedad de Deuda por Cliente</h3>
+        <p class="text-xs text-slate-400 mb-3">Concentración de saldos vigentes, tramos de mora de 1 a >90 días y disputas comerciales</p>
+        <div tabindex="0" role="region" aria-label="Tabla de antigüedad de cartera por cliente" class="table-wrapper">
+          <table style="--label-2:'Plazo'; --label-3:'Cartera Vigente'; --label-4:'1-30 Días'; --label-5:'31-90 Días'; --label-6:'> 90 Días';">
+            <thead>
+              <tr>
+                <th>Cliente y Sector</th>
+                <th>Moneda / Plazo</th>
+                <th>Saldo Total AR</th>
+                <th>Vigente</th>
+                <th>Vencido 1–30 d</th>
+                <th>Vencido 31–60 d</th>
+                <th>Vencido 61–90 d</th>
+                <th>Vencido > 90 d</th>
+                <th>En Disputa / NC</th>
+                <th>Retraso Promedio</th>
+              </tr>
+            </thead>
+            <tbody id="agingCustomersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 3: RIESGO CREDITICIO POR CLIENTE Y EXPOSICIÓN (Sec 3.3 a 3.7)  -->
+    <!-- ===================================================================== -->
+    <section id="page3" class="risk-page hidden space-y-6">
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Evaluación de Exposición Crediticia, Probabilidad de Incumplimiento (PD) y Pérdida Esperada (ECL)</h2>
+            <p class="text-xs text-slate-400">Distingue el Riesgo Actual (saldos y cupo vigentes) del Riesgo Predictivo (modelo de clasificación a 90 días). Sin doble conteo entre pedidos y facturas.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="customerSortSelect" class="text-xs text-slate-300 font-medium">Ordenar Ranking por:</label>
+            <select id="customerSortSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-rose-300 font-semibold">
+              <option value="exposure">Mayor Exposición Crediticia Total</option>
+              <option value="overdue">Mayor Cartera Vencida Acumulada</option>
+              <option value="pd">Mayor Probabilidad Predicha de Incumplimiento (PD %)</option>
+              <option value="ecl">Mayor Pérdida Crediticia Esperada (ECL)</option>
+              <option value="utilization">Mayor % de Utilización del Límite de Crédito</option>
+            </select>
+          </div>
+        </div>
+
+        <div tabindex="0" role="region" aria-label="Evaluación de riesgo crediticio por cliente" class="table-wrapper">
+          <table style="--label-2:'Límite Aprobado'; --label-3:'Exposición Total'; --label-4:'Utilización %'; --label-5:'PD / ECL'; --label-6:'Riesgo Actual vs Predictivo';">
+            <thead>
+              <tr>
+                <th>Cliente / País / Segmento</th>
+                <th>Límite Aprobado</th>
+                <th>Pedidos Abiertos + AR</th>
+                <th>Exposición Total</th>
+                <th>Utilización / Exceso</th>
+                <th>Riesgo Actual (Observado)</th>
+                <th>Riesgo Predictivo (90d)</th>
+                <th>PD × LGD = Pérdida (ECL)</th>
+                <th>Factores Asociados y Recomendación (Revisión Humana)</th>
+              </tr>
+            </thead>
+            <tbody id="customerCreditRiskTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+          <span>🔒 <strong>Política de Gobierno y Control Humano:</strong> Este dashboard no ejecuta bloqueos automáticos de clientes ni modifica límites de crédito en SAP. Toda modificación requiere autorización del Comité de Crédito.</span>
+          <span class="mono text-rose-300">ECL = PD × LGD × EAD (Horizonte 12M)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 4: ANÁLISIS MACROECONÓMICO Y EXPOSICIÓN CAMBIARIA (Sec 4.1,4.2)-->
+    <!-- ===================================================================== -->
+    <section id="page4" class="risk-page hidden space-y-6">
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Variables Macroeconómicas Relevantes y Fuentes Oficiales Autorizadas</h2>
+            <p id="macroSourcesSubtitle" class="text-xs text-slate-400"></p>
+          </div>
+          <span id="macroCutDateBadge" class="px-2.5 py-1 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs font-semibold mono"></span>
+        </div>
+        <div id="macroIndicatorsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
+      </div>
+
+      <!-- Balance de Exposición Cambiaria por Moneda (Sección 4.2) -->
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Balance de Exposición Cambiaria por Moneda (USD, EUR, COP)</h3>
+            <p class="text-xs text-slate-400">Exposición Cambiaria Neta = Activos Monetarios Expuestos (Cuentas por Cobrar + Liquidez) − Pasivos Monetarios Expuestos (Cuentas por Pagar + Deuda)</p>
+          </div>
+          <span id="netFxBanner" class="px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold mono"></span>
+        </div>
+        <div id="currencyExposureCardsGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 5: SENSIBILIDAD FINANCIERA (FX, INFLACIÓN, TASAS E INGRESOS)   -->
+    <!-- ===================================================================== -->
+    <section id="page5" class="risk-page hidden space-y-6">
+      <!-- Sensibilidad Cambiaria y Sensibilidad a Tasas de Interés -->
+      <div class="risk-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-1">A. Matriz de Sensibilidad Cambiaria (USD/COP y EUR/COP)</h2>
+          <p class="text-xs text-slate-400 mb-3">Impacto de variaciones de -10% a +15% sobre la posición monetaria neta, ingresos convertidos y EBITDA</p>
+          <div tabindex="0" role="region" aria-label="Matriz de sensibilidad cambiaria" class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Variación Tasa</th>
+                  <th>USD Simulado</th>
+                  <th>EUR Simulado</th>
+                  <th>Impacto Balance FX</th>
+                  <th>Ingresos Anuales</th>
+                  <th>EBITDA Proyectado</th>
+                </tr>
+              </thead>
+              <tbody id="fxSensitivityTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-1">B. Sensibilidad a Tasas de Interés (Deuda Fija 36.6% vs Variable 63.4%)</h2>
+          <p class="text-xs text-slate-400 mb-3">Simulación de choques de -200 a +300 pbs aplicada exclusivamente sobre las obligaciones a tasa variable</p>
+          <div tabindex="0" role="region" aria-label="Matriz de sensibilidad a tasas de interés" class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Choque de Tasa</th>
+                  <th>Deuda Variable Expuesta</th>
+                  <th>Deuda Tasa Fija (Inmune)</th>
+                  <th>Gasto Anual Intereses</th>
+                  <th>Variación Intereses</th>
+                  <th>Cobertura EBITDA/Int.</th>
+                </tr>
+              </thead>
+              <tbody id="interestSensitivityTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detalle de Obligaciones Financieras Contractuales -->
+      <div class="risk-containment-section glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-1">Portafolio de Obligaciones Financieras por Tipo de Tasa y Moneda</h3>
+        <p class="text-xs text-slate-400 mb-3">Desglose de saldos, indexación (IBR, SOFR, Euribor, Fija) y vencimientos contractuales</p>
+        <div tabindex="0" role="region" aria-label="Portafolio de obligaciones financieras" class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Línea / Obligación Financiera</th>
+                <th>Moneda</th>
+                <th>Condición de Tasa</th>
+                <th>Saldo Actual</th>
+                <th>Tasa Efectiva</th>
+                <th>Vencimiento</th>
+                <th>Exposición a Alza de Tasas</th>
+              </tr>
+            </thead>
+            <tbody id="debtFacilitiesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Impacto Inflacionario y Sensibilidad de Ingresos por Línea (Secciones 4.3 y 4.5) -->
+      <div class="risk-containment-section glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-1">C. Análisis de Impacto Inflacionario (Crecimiento Nominal vs Real) y Sensibilidad de Ingresos</h3>
+        <p class="text-xs text-slate-400 mb-3">Descomposición de Efecto Precio vs Efecto Volumen, capacidad de traslado de costos (Pass-Through %) y asociación estadística (sin confundir correlación con causalidad)</p>
+        <div tabindex="0" role="region" aria-label="Sensibilidad inflacionaria y de ingresos" class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Línea de Negocio / Segmento</th>
+                <th>Crecimiento Nominal</th>
+                <th>Crecimiento Real (Descontando IPC)</th>
+                <th>Efecto Precio vs Volumen</th>
+                <th>Capacidad Pass-Through</th>
+                <th>Impacto Margen (+1% IPC)</th>
+                <th>Correlación Cambiaria (r)</th>
+                <th>Vulnerabilidad y Lectura Estadística</th>
+              </tr>
+            </thead>
+            <tbody id="inflationSensitivityTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 6: PREDICCIÓN SMART PREDICT Y ALERTAS (Secciones 5 y 10)       -->
+    <!-- ===================================================================== -->
+    <section id="page6" class="risk-page hidden space-y-6">
+      <!-- Validación de Modelos de Clasificación y Regresión (Sección 5.1, 5.2, 5.4) -->
+      <div class="risk-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">Escenario 1 • Clasificación</span>
+            <span class="text-xs mono text-emerald-300 font-bold">Validación Out-of-Time Aprobada</span>
+          </div>
+          <h2 id="clsModelTitle" class="text-sm font-bold text-white"></h2>
+          <p id="clsModelTarget" class="text-xs text-slate-300"></p>
+          <div id="clsMetricsGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1"></div>
+          <div class="pt-2 border-t border-slate-800">
+            <div class="text-xs font-semibold text-slate-300 mb-2">Principales Variables Influyentes en la Predicción (Explicabilidad SHAP/SAC):</div>
+            <div id="clsFeatureImportanceList" class="space-y-1.5"></div>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Escenarios 2 y 3 • Regresión y Series Temporales</span>
+              <div class="flex items-center gap-1.5">
+                <label for="horizonSelect" class="text-xs text-slate-300">Horizonte:</label>
+                <select id="horizonSelect" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-indigo-300 font-bold">
+                  <option value="3">3 Meses</option>
+                  <option value="6" selected>6 Meses</option>
+                  <option value="12">12 Meses</option>
+                </select>
+              </div>
+            </div>
+            <h3 class="text-sm font-bold text-white">Proyección de Cartera Vencida (Banda 95%) y Tasa de Morosidad</h3>
+            <p class="text-xs text-slate-400 mb-3">Regresión validada: R² = 0.864 | MAPE = 3.12% | RMSE = $345M COP</p>
+            <div class="h-56">
+              <canvas id="chartPredictiveTimeSeries"></canvas>
+            </div>
+          </div>
+          <p id="clsLimitationsNote" class="text-[11px] text-slate-400 bg-slate-950/70 p-2.5 rounded border border-slate-800"></p>
+        </div>
+      </div>
+
+      <!-- Tabla de Serie Temporal Proyectada -->
+      <div class="risk-containment-section glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-2">Detalle Mensual Proyectado de Indicadores Financieros y de Riesgo</h3>
+        <div tabindex="0" role="region" aria-label="Proyección de series temporales financieras" class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Período Proyectado</th>
+                <th>Ingresos Estimados</th>
+                <th>Cuentas por Cobrar (AR)</th>
+                <th>Cartera Vencida Central</th>
+                <th>Intervalo Confianza (95%)</th>
+                <th>Tasa Morosidad (%)</th>
+                <th>Dif. en Cambio Neta</th>
+                <th>Gasto Financiero</th>
+              </tr>
+            </thead>
+            <tbody id="timeSeriesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 7: SIMULACIÓN DE ESCENARIOS Y PRUEBAS DE ESTRÉS (Sec 6 y 11)   -->
+    <!-- ===================================================================== -->
+    <section id="page7" class="risk-page hidden space-y-6">
+      <div class="risk-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Simulador de Escenarios Económicos y Pruebas de Estrés Financiero (Stress Testing)</h2>
+            <p class="text-xs text-slate-400">Evalúa escenarios Optimista, Base, Adverso y Estrés Severo, o personaliza los supuestos. No modifica registros contables reales de SAP.</p>
+          </div>
+        </div>
+
+        <!-- 4 Escenarios Preconfigurados -->
+        <div id="presetRiskScenariosGrid" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6"></div>
+
+        <!-- Controles Personalizados + Resultados Comparativos -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div class="lg:col-span-6 bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400">Variables de Simulación y Estrés (Supuestos Configurables)</h3>
+              <span id="activeRiskScenarioLabel" class="px-2 py-0.5 text-[11px] rounded bg-amber-500/20 text-amber-300 font-semibold">3. Escenario Económico Adverso</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simDelinquency" class="text-slate-300 font-medium">1. Variación de Morosidad (%)</label>
+                  <span id="simDelinquencyVal" class="mono text-rose-300 font-bold">+30%</span>
+                </div>
+                <input id="simDelinquency" type="range" min="-35" max="100" step="1" value="30" class="risk-slider risk-sim-slider" data-key="delinquencyShiftPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simRevenue" class="text-slate-300 font-medium">2. Variación de Ingresos (%)</label>
+                  <span id="simRevenueVal" class="mono text-rose-300 font-bold">-5.5%</span>
+                </div>
+                <input id="simRevenue" type="range" min="-25" max="20" step="0.5" value="-5.5" class="risk-slider risk-sim-slider" data-key="revenueChangePct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simFxRate" class="text-slate-300 font-medium">3. Variación Tasa Cambio (%)</label>
+                  <span id="simFxRateVal" class="mono text-rose-300 font-bold">-6.5%</span>
+                </div>
+                <input id="simFxRate" type="range" min="-20" max="25" step="0.5" value="-6.5" class="risk-slider risk-sim-slider" data-key="fxRateChangePct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simInflation" class="text-slate-300 font-medium">4. Choque de Inflación (pts)</label>
+                  <span id="simInflationVal" class="mono text-rose-300 font-bold">+1.8 pts</span>
+                </div>
+                <input id="simInflation" type="range" min="-3" max="8" step="0.2" value="1.8" class="risk-slider risk-sim-slider" data-key="inflationChangePts" data-unit=" pts" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simInterestBps" class="text-slate-300 font-medium">5. Tasas de Interés (pbs)</label>
+                  <span id="simInterestBpsVal" class="mono text-rose-300 font-bold">+175 pbs</span>
+                </div>
+                <input id="simInterestBps" type="range" min="-300" max="500" step="25" value="175" class="risk-slider risk-sim-slider" data-key="interestRateDeltaBps" data-unit=" pbs" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simDsoDays" class="text-slate-300 font-medium">6. Cambio en Pago Clientes (DSO)</label>
+                  <span id="simDsoDaysVal" class="mono text-rose-300 font-bold">+8 d</span>
+                </div>
+                <input id="simDsoDays" type="range" min="-12" max="25" step="1" value="8" class="risk-slider risk-sim-slider" data-key="dsoDeltaDays" data-unit=" d" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simExposureGrowth" class="text-slate-300 font-medium">7. Variación Exposición Crédito</label>
+                  <span id="simExposureGrowthVal" class="mono text-rose-300 font-bold">+6%</span>
+                </div>
+                <input id="simExposureGrowth" type="range" min="-15" max="25" step="0.5" value="6" class="risk-slider risk-sim-slider" data-key="creditExposureGrowthPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simCostChange" class="text-slate-300 font-medium">8. Variación Costos Operativos</label>
+                  <span id="simCostChangeVal" class="mono text-rose-300 font-bold">+3.8%</span>
+                </div>
+                <input id="simCostChange" type="range" min="-10" max="18" step="0.2" value="3.8" class="risk-slider risk-sim-slider" data-key="operatingCostChangePct" data-unit="%" />
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 bg-slate-950/80 p-4 rounded-xl border border-rose-500/30 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-rose-300">Comparación: Situación Actual vs Situación Simulada</h3>
+            <div tabindex="0" role="region" aria-label="Resultados de simulación de estrés financiero" class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Indicador Financiero / Riesgo</th>
+                    <th>Situación Actual</th>
+                    <th>Situación Simulada</th>
+                    <th>Diferencia Absoluta</th>
+                    <th>Variación %</th>
+                  </tr>
+                </thead>
+                <tbody id="stressComparisonTableBody"></tbody>
+              </table>
+            </div>
+            <div id="vulnerableSegmentsBox" class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recomendaciones Estratégicas para la Toma de Decisiones (Sección 11) -->
+      <div class="risk-containment-section glass-card p-5">
+        <h3 class="text-base font-bold text-white mb-1">Recomendaciones Estratégicas de Gestión Crediticia, Cobertura y Mitigación</h3>
+        <p class="text-xs text-slate-400 mb-4">Cada recomendación documenta el hallazgo, evidencia, indicadores afectados, impacto potencial, alternativa propuesta y limitaciones</p>
+        <div id="strategicRecommendationsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DE GOBIERNO, FUENTES Y DICCIONARIO DE FÓRMULAS (Secciones 2, 9, 12, 13) -->
+  <div id="governanceModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card max-w-4xl w-full max-h-[88vh] overflow-y-auto p-6 border border-rose-500/30 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Calidad de Datos, Gobierno y Seguridad</span>
+          <h2 class="text-lg font-bold text-white">Fuentes de Información, Metodología y Diccionario de Fórmulas</h2>
+        </div>
+        <button id="btnCloseGovernanceModal" type="button" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">
+          Cerrar ✕
+        </button>
+      </div>
+      <div id="governanceModalBody" class="space-y-5 text-xs text-slate-300"></div>
+    </div>
+  </div>
+
+  <script>
+    let riskState = {
+      data: null,
+      activePage: 'page1',
+      charts: {}
+    };
+
+    const fmtCop = (val) => {
+      const n = Number(val || 0);
+      const sign = n < 0 ? '-' : '';
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B COP`;
+      if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M COP`;
+      return `${sign}$${Math.round(abs).toLocaleString('es-CO')} COP`;
+    };
+
+    function syncRiskSlider(slider) {
+      if (!slider) return;
+      slider.style.setProperty('--attr-min', slider.min || 0);
+      slider.style.setProperty('--attr-max', slider.max || 100);
+      slider.style.setProperty('--control-value', slider.value);
+      const unit = slider.dataset.unit || '%';
+      slider.setAttribute('aria-valuetext', `${slider.value}${unit}`);
+    }
+
+    function initRiskSliders() {
+      document.querySelectorAll('input[type="range"].risk-slider').forEach(sl => {
+        syncRiskSlider(sl);
+        sl.addEventListener('input', () => syncRiskSlider(sl));
+      });
+    }
+
+    function getAssumptionsFromUi() {
+      const assumptions = {};
+      document.querySelectorAll('.risk-sim-slider').forEach(sl => {
+        const val = Number(sl.value);
+        assumptions[sl.dataset.key] = val;
+        const label = document.getElementById(`${sl.id}Val`);
+        if (label) {
+          const sign = val > 0 ? '+' : '';
+          label.textContent = `${sign}${val}${sl.dataset.unit || '%'}`;
+        }
+      });
+      return assumptions;
+    }
+
+    async function loadFinancialRiskData(forceRefresh = false) {
+      const payload = {
+        companyCode: document.getElementById('filterCompany').value,
+        sector: document.getElementById('filterSector').value,
+        region: document.getElementById('filterRegion').value,
+        currency: document.getElementById('filterCurrency').value,
+        riskLevel: document.getElementById('filterRiskLevel').value,
+        customerSort: document.getElementById('customerSortSelect').value,
+        horizon: document.getElementById('horizonSelect').value,
+        customAssumptions: getAssumptionsFromUi(),
+        refresh: forceRefresh
+      };
+
+      const res = await fetch('/api/riesgos-financieros/overview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Error cargando Riesgos Financieros');
+      riskState.data = json;
+      populateRiskCatalogs(json);
+      renderAllRiskPages();
+    }
+
+    function populateRiskCatalogs(data) {
+      const compSel = document.getElementById('filterCompany');
+      if (compSel.options.length <= 1) {
+        data.catalogs.companies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.code;
+          opt.textContent = `${c.code} — ${c.name}`;
+          compSel.appendChild(opt);
+        });
+      }
+
+      const secSel = document.getElementById('filterSector');
+      if (secSel.options.length <= 1) {
+        data.catalogs.sectors.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.code;
+          opt.textContent = s.name;
+          secSel.appendChild(opt);
+        });
+      }
+
+      const regSel = document.getElementById('filterRegion');
+      if (regSel.options.length <= 1) {
+        data.catalogs.regions.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r;
+          opt.textContent = r;
+          regSel.appendChild(opt);
+        });
+      }
+
+      const curSel = document.getElementById('filterCurrency');
+      if (curSel.options.length <= 1) {
+        data.catalogs.currencies.forEach(cur => {
+          const opt = document.createElement('option');
+          opt.value = cur;
+          opt.textContent = `Moneda ${cur}`;
+          curSel.appendChild(opt);
+        });
+      }
+
+      const riskSel = document.getElementById('filterRiskLevel');
+      if (riskSel.options.length <= 1) {
+        data.catalogs.riskLevels.forEach(rl => {
+          const opt = document.createElement('option');
+          opt.value = rl;
+          opt.textContent = rl;
+          riskSel.appendChild(opt);
+        });
+      }
+    }
+
+    function renderAllRiskPages() {
+      const d = riskState.data;
+      if (!d) return;
+
+      const syncTime = new Date(d.meta.syncedAt).toLocaleTimeString('es-CO');
+      document.getElementById('lastRiskSyncLabel').textContent = `Actualizado: ${syncTime} (${d.meta.syncDurationMs} ms)`;
+      const badge = document.getElementById('sapRiskConnectionBadge');
+      if (d.meta.sapConnected) {
+        badge.textContent = `● SAP Productivo Activo (${d.meta.sapHost})`;
+      } else {
+        badge.textContent = '● Caché Financiera Verificada';
+      }
+
+      renderPage1(d.page1Executive);
+      renderPage2(d.page2AgingAndAr);
+      renderPage3(d.page3CustomerCreditRisk);
+      renderPage4(d.page4MacroAndFx);
+      renderPage5(d.page5FinancialSensitivity);
+      renderPage6(d.page6PredictiveAndAlerts);
+      renderPage7(d.page7StressTestingAndActions);
+      renderGovernanceModal(d.governanceAndMethodology);
+    }
+
+    function renderPage1(p1) {
+      const grid = document.getElementById('primaryRiskKpisGrid');
+      grid.innerHTML = p1.kpis.map(k => {
+        const badgeStyle = k.status === 'healthy'
+          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          : k.status === 'critical'
+            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+            : k.status === 'warning'
+              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+        return `
+          <article class="glass-card p-4 flex flex-col justify-between hover:border-rose-500/40 transition">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="text-xs font-semibold text-slate-200">${k.title}</span>
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded border ${badgeStyle}">${k.delta}</span>
+              </div>
+              <div class="text-xl font-extrabold text-white mono my-1">${k.formatted}</div>
+              <p class="text-[11px] text-slate-400 leading-snug">${k.meaning}</p>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-800/80 text-[11px] text-slate-300">
+              <strong class="text-rose-300">Impacto:</strong> ${k.impact}
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      const alertsEl = document.getElementById('execAlertsContainer');
+      alertsEl.innerHTML = p1.alerts.map(a => {
+        const badgeTone = a.tone === 'rose'
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : a.tone === 'amber'
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return `
+          <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeTone}">${a.severity}</span>
+                <h4 class="text-sm font-bold text-white">${a.riskDetected}</h4>
+              </div>
+              <span class="text-xs mono text-rose-300 font-semibold">${a.priority}</span>
+            </div>
+            <div class="text-xs text-slate-300">
+              <strong>Observado:</strong> <span class="mono text-white">${a.observedValue}</span> |
+              <strong>Referencia:</strong> <span class="mono text-cyan-300">${a.referenceValue}</span> |
+              <strong>Segmento/Cliente:</strong> ${a.affectedEntity}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] bg-slate-900/75 p-2.5 rounded-lg border border-slate-800">
+              <div><strong class="text-cyan-300">Evidencia:</strong> ${a.evidence}</div>
+              <div><strong class="text-amber-300">Impacto y Causa:</strong> ${a.potentialImpact} (${a.probableCauses})</div>
+              <div><strong class="text-emerald-300">Acción Recomendada:</strong> ${a.recommendedAction}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const labels = p1.historical12M.map(h => h.period);
+      if (riskState.charts.execRevOverdue) riskState.charts.execRevOverdue.destroy();
+      riskState.charts.execRevOverdue = new Chart(document.getElementById('chartExecRevenueOverdue'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Ingresos Mensuales ($B COP)',
+              data: p1.historical12M.map(h => h.revenueBillionCop),
+              backgroundColor: 'rgba(99, 102, 241, 0.35)',
+              borderColor: '#6366f1',
+              borderWidth: 1,
+              yAxisID: 'y'
+            },
+            {
+              type: 'line',
+              label: 'Cartera Vencida Total ($B COP)',
+              data: p1.historical12M.map(h => h.overdueBillionCop),
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.18)',
+              fill: true,
+              borderWidth: 2.5,
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { position: 'left', ticks: { color: '#818cf8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y1: { position: 'right', ticks: { color: '#fb7185' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+
+      if (riskState.charts.execFx) riskState.charts.execFx.destroy();
+      riskState.charts.execFx = new Chart(document.getElementById('chartExecFxTrend'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Tasa USD / COP',
+              data: p1.historical12M.map(h => h.usdCop),
+              borderColor: '#10b981',
+              borderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y'
+            },
+            {
+              type: 'bar',
+              label: 'Diferencia en Cambio Neta ($M COP)',
+              data: p1.historical12M.map(h => h.fxDiffMillionCop),
+              backgroundColor: 'rgba(20, 184, 166, 0.35)',
+              borderColor: '#14b8a6',
+              borderWidth: 1,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { position: 'left', ticks: { color: '#10b981' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y1: { position: 'right', ticks: { color: '#2dd4bf' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+
+    function renderPage2(p2) {
+      document.getElementById('disputedBadge').textContent = `En Disputa / Notas Crédito: ${fmtCop(p2.summary.totalDisputedCop)}`;
+      document.getElementById('netOverdueBadge').textContent = `Mora Neta Exigible: ${fmtCop(p2.summary.netOverdueExcludingDisputesCop)}`;
+
+      const bGrid = document.getElementById('agingBucketsGrid');
+      bGrid.innerHTML = p2.agingBuckets.map(b => `
+        <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800">
+          <div class="text-xs font-semibold text-slate-300">${b.label}</div>
+          <div class="text-lg font-extrabold text-white mono my-1">${fmtCop(b.amountCop)}</div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mono">
+            <span>${b.sharePct}% del AR</span>
+            <span>${b.customersCount} clientes • ${b.documentsCount} docs</span>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('collectionProjectionCards').innerHTML = `
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-xs text-slate-400">Recaudo Esperado Próximos 15 Días</div>
+          <div class="text-lg font-extrabold text-emerald-300 mono mt-1">${fmtCop(p2.summary.dueNext15DaysCop)}</div>
+          <div class="text-[11px] text-slate-400">Facturas vigentes con vencimiento ≤ 15 días</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-xs text-slate-400">Recaudo Esperado Próximos 30 Días</div>
+          <div class="text-lg font-extrabold text-cyan-300 mono mt-1">${fmtCop(p2.summary.dueNext30DaysCop)}</div>
+          <div class="text-[11px] text-slate-400">DSO actual del portafolio: ${p2.summary.dsoDays} días</div>
+        </div>
+      `;
+
+      if (riskState.charts.agingDist) riskState.charts.agingDist.destroy();
+      riskState.charts.agingDist = new Chart(document.getElementById('chartAgingDistribution'), {
+        type: 'bar',
+        data: {
+          labels: p2.agingBuckets.map(b => b.label),
+          datasets: [{
+            label: 'Saldo por Rango de Antigüedad ($ Millones COP)',
+            data: p2.agingBuckets.map(b => +(b.amountCop / 1e6).toFixed(0)),
+            backgroundColor: ['#10b981', '#06b6d4', '#f59e0b', '#f43f5e', '#be123c']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      const tbody = document.getElementById('agingCustomersTableBody');
+      tbody.innerHTML = riskState.data.page3CustomerCreditRisk.customers.map(c => `
+        <tr>
+          <th>
+            <div class="font-semibold text-white">${c.name}</div>
+            <div class="text-[11px] text-slate-400 font-normal">${c.sectorName}</div>
+          </th>
+          <td class="mono text-xs">${c.currency} • ${c.paymentTermsDays}d</td>
+          <td class="mono font-bold text-white">${fmtCop(c.openReceivablesCop)}</td>
+          <td class="mono text-emerald-300">${fmtCop(c.currentReceivablesCop)}</td>
+          <td class="mono text-cyan-300">${fmtCop(c.overdue1to30Cop)}</td>
+          <td class="mono text-amber-300">${fmtCop(c.overdue31to60Cop)}</td>
+          <td class="mono text-rose-300">${fmtCop(c.overdue61to90Cop)}</td>
+          <td class="mono font-bold text-rose-400">${fmtCop(c.overdueOver90Cop)}</td>
+          <td class="mono text-slate-300">${fmtCop(c.disputedOrCreditNotePendingCop)}</td>
+          <td class="mono ${c.avgDaysPastDue > 25 ? 'text-rose-300 font-bold' : 'text-slate-300'}">${c.avgDaysPastDue} días</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPage3(p3) {
+      const tbody = document.getElementById('customerCreditRiskTableBody');
+      tbody.innerHTML = p3.customers.map(c => {
+        const predBadge = c.riskTone === 'rose'
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : c.riskTone === 'amber'
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return `
+          <tr>
+            <th>
+              <div class="font-semibold text-white">${c.name}</div>
+              <div class="text-[11px] text-slate-400 font-normal">${c.country} • ${c.creditSegment} (${c.currency})</div>
+            </th>
+            <td class="mono text-slate-200">${fmtCop(c.approvedCreditLimitCop)}</td>
+            <td class="mono text-xs">
+              <div>AR: <strong class="text-white">${fmtCop(c.openReceivablesCop)}</strong></div>
+              <div class="text-slate-400">Pedidos: ${fmtCop(c.openOrdersUnbilledCop)}</div>
+            </td>
+            <td class="mono font-extrabold text-white">${fmtCop(c.totalCreditExposureCop)}</td>
+            <td class="mono text-xs">
+              <strong class="${c.creditUtilizationPct > 100 ? 'text-rose-400' : c.creditUtilizationPct > 85 ? 'text-amber-300' : 'text-emerald-300'}">${c.creditUtilizationPct}%</strong>
+              <span class="block text-[10px] ${c.exceededCreditLimitCop > 0 ? 'text-rose-300' : 'text-slate-400'}">
+                ${c.exceededCreditLimitCop > 0 ? 'Exceso: ' + fmtCop(c.exceededCreditLimitCop) : 'Disp: ' + fmtCop(c.availableCreditCop)}
+              </span>
+            </td>
+            <td>
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-200">${c.currentRiskLevel}</span>
+              <span class="block text-[10px] text-slate-400 mt-0.5">${c.paymentTrendStatus}</span>
+            </td>
+            <td>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${predBadge}">${c.predictiveRiskLevel}</span>
+              <span class="block text-[11px] mono text-white mt-0.5">PD (90d): <strong>${c.predictedDefaultProbPct}%</strong></span>
+            </td>
+            <td class="mono text-xs">
+              <strong class="text-rose-300">${fmtCop(c.expectedCreditLossCop)}</strong>
+              <span class="block text-[10px] text-slate-400">LGD: ${c.lgdPct}% | Garantía: ${c.collateralCoveragePct}%</span>
+            </td>
+            <td class="text-xs max-w-sm">
+              <div class="text-slate-300 font-medium mb-1">• ${c.keyRiskFactors.join(' • ')}</div>
+              <div class="text-[11px] text-cyan-300">${c.creditRecommendation}</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderPage4(p4) {
+      document.getElementById('macroSourcesSubtitle').textContent = p4.macroeconomicContext.sourcesNote;
+      document.getElementById('macroCutDateBadge').textContent = `Corte Oficial: ${p4.macroeconomicContext.lastUpdatedDate}`;
+      document.getElementById('netFxBanner').textContent = `Posición Monetaria Activa Neta en Divisas: +${fmtCop(p4.netForeignCurrencyExposureCop)}`;
+
+      const mGrid = document.getElementById('macroIndicatorsGrid');
+      mGrid.innerHTML = p4.macroeconomicContext.indicators.map(ind => `
+        <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-xs font-semibold text-slate-300">${ind.name}</span>
+              <span class="px-2 py-0.5 text-[10px] rounded bg-indigo-500/20 text-indigo-300 mono font-bold">${ind.yoyChange}</span>
+            </div>
+            <div class="text-xl font-extrabold text-white mono my-1">${ind.currentValue}</div>
+            <div class="text-[10px] text-cyan-400 mb-2">Fuente: ${ind.source}</div>
+          </div>
+          <p class="text-[11px] text-slate-300 border-t border-slate-800 pt-2">${ind.impactType}</p>
+        </div>
+      `).join('');
+
+      const fxGrid = document.getElementById('currencyExposureCardsGrid');
+      fxGrid.innerHTML = p4.currencyExposure.map(fx => `
+        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-bold text-white">${fx.currencyName}</span>
+              <span class="px-2 py-0.5 rounded text-xs font-bold mono bg-teal-500/20 text-teal-300">${fx.shareOfTotalRevenuePct}% Ingresos</span>
+            </div>
+            <span class="text-[11px] text-indigo-300 font-semibold block mb-2">${fx.positionType}</span>
+            <div class="space-y-1.5 text-xs mono bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <div class="flex justify-between"><span class="text-slate-400">Ingresos Anuales:</span> <strong class="text-white">${fmtCop(fx.annualRevenueCop)}</strong></div>
+              <div class="flex justify-between"><span class="text-slate-400">Activos Monetarios (AR):</span> <strong class="text-emerald-300">${fmtCop(fx.monetaryAssetsArCop)}</strong></div>
+              <div class="flex justify-between"><span class="text-slate-400">Pasivos Monetarios (AP + Deuda):</span> <strong class="text-rose-300">${fmtCop(fx.totalMonetaryLiabilitiesCop)}</strong></div>
+              <div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-slate-200 font-semibold">Exposición Cambiaria Neta:</span> <strong class="text-cyan-300">${fmtCop(fx.netMonetaryExposureCop)}</strong></div>
+              <div class="flex justify-between"><span class="text-slate-400">Impacto +10% Tasa Cambio:</span> <strong class="text-teal-300">${fmtCop(fx.transactionalImpact10PctDepCop)}</strong></div>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">${fx.explanation}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderPage5(p5) {
+      document.getElementById('fxSensitivityTableBody').innerHTML = p5.fxSensitivityTable.map(r => `
+        <tr class="${r.fxChangePct === 0 ? 'bg-slate-900/90' : ''}">
+          <th class="mono ${r.fxChangePct > 0 ? 'text-emerald-300' : r.fxChangePct < 0 ? 'text-rose-300' : 'text-white'}">${r.fxChangePct > 0 ? '+' : ''}${r.fxChangePct}%</th>
+          <td class="mono">$${r.usdSpotSimulated.toLocaleString('es-CO')}</td>
+          <td class="mono">$${r.eurSpotSimulated.toLocaleString('es-CO')}</td>
+          <td class="mono font-semibold ${r.fxBalanceImpactCop >= 0 ? 'text-emerald-300' : 'text-rose-300'}">${fmtCop(r.fxBalanceImpactCop)}</td>
+          <td class="mono text-white">${fmtCop(r.revenueSimulatedCop)}</td>
+          <td class="mono font-bold text-cyan-300">${fmtCop(r.ebitdaSimulatedCop)}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('interestSensitivityTableBody').innerHTML = p5.interestRateSensitivityTable.map(r => `
+        <tr class="${r.deltaBps === 0 ? 'bg-slate-900/90' : ''}">
+          <th class="mono ${r.deltaBps > 0 ? 'text-rose-300' : r.deltaBps < 0 ? 'text-emerald-300' : 'text-white'}">${r.deltaBps > 0 ? '+' : ''}${r.deltaBps} pbs</th>
+          <td class="mono">${fmtCop(r.variableDebtCop)}</td>
+          <td class="mono text-slate-400">${fmtCop(r.fixedDebtCop)}</td>
+          <td class="mono font-bold text-white">${fmtCop(r.annualInterestExpenseCop)}</td>
+          <td class="mono ${r.interestDeltaCop > 0 ? 'text-rose-300' : 'text-emerald-300'}">${fmtCop(r.interestDeltaCop)}</td>
+          <td class="mono font-semibold text-teal-300">${r.ebitdaCoverageRatio}x</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('debtFacilitiesTableBody').innerHTML = p5.debtAndInterestStructure.facilities.map(f => `
+        <tr>
+          <th>${f.entity}</th>
+          <td class="mono">${f.currency}</td>
+          <td class="text-slate-300">${f.rateType}</td>
+          <td class="mono font-bold text-white">${fmtCop(f.balanceCop)}</td>
+          <td class="mono text-cyan-300">${f.currentRatePct}% E.A.</td>
+          <td class="mono">${f.maturity}</td>
+          <td>
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${f.exposedToRateHike ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}">
+              ${f.exposedToRateHike ? 'Expuesta (Tasa Variable)' : 'Protegida (Tasa Fija)'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('inflationSensitivityTableBody').innerHTML = p5.inflationAndRevenueSensitivity.map(s => `
+        <tr>
+          <th>${s.segmentName}</th>
+          <td class="mono text-white">+${s.nominalRevenueGrowthPct}%</td>
+          <td class="mono font-bold ${s.realRevenueGrowthPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}">${s.realRevenueGrowthPct >= 0 ? '+' : ''}${s.realRevenueGrowthPct}%</td>
+          <td class="mono text-xs">Precio: +${s.priceEffectPct}% | Vol: ${s.volumeEffectPct >= 0 ? '+' : ''}${s.volumeEffectPct}%</td>
+          <td class="mono font-semibold ${s.passThroughCapacityPct >= 75 ? 'text-emerald-300' : 'text-amber-300'}">${s.passThroughCapacityPct}%</td>
+          <td class="mono text-rose-300">${s.marginBpsImpactAt1PctInflation} pbs</td>
+          <td class="mono text-cyan-300">r = ${s.fxSensitivityCorrelationR}</td>
+          <td class="text-xs">
+            <span class="font-bold ${s.vulnerabilityLevel === 'Alta' ? 'text-rose-300' : s.vulnerabilityLevel === 'Moderada' ? 'text-amber-300' : 'text-emerald-300'}">Vulnerabilidad ${s.vulnerabilityLevel}:</span>
+            <span class="text-slate-300"> ${s.statisticalNote}</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPage6(p6) {
+      const cls = p6.classificationModel;
+      document.getElementById('clsModelTitle').textContent = cls.modelName;
+      document.getElementById('clsModelTarget').textContent = cls.targetVariable;
+      document.getElementById('clsLimitationsNote').textContent = `Gobierno de Modelos Predictivos: ${cls.limitations}`;
+
+      const vm = cls.validationMetrics;
+      document.getElementById('clsMetricsGrid').innerHTML = `
+        <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400">AUC-ROC</div>
+          <div class="text-sm font-extrabold text-emerald-300 mono">${vm.aucRoc}</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400">Poder Pred. (KI)</div>
+          <div class="text-sm font-extrabold text-teal-300 mono">${vm.predictivePowerKi}</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400">Confianza (KR)</div>
+          <div class="text-sm font-extrabold text-cyan-300 mono">${vm.predictionConfidenceKr}</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400">Precisión</div>
+          <div class="text-sm font-extrabold text-white mono">${vm.precisionPct}%</div>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-center">
+          <div class="text-[10px] text-slate-400">Recall / Exhaus.</div>
+          <div class="text-sm font-extrabold text-indigo-300 mono">${vm.recallPct}%</div>
+        </div>
+      `;
+
+      document.getElementById('clsFeatureImportanceList').innerHTML = cls.featureImportance.map(f => `
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">${f.feature}</span>
+            <span class="mono text-rose-300 font-bold">${f.weightPct}%</span>
+          </div>
+          <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-rose-500 to-indigo-500" style="width:${f.weightPct * 3}%"></div>
+          </div>
+        </div>
+      `).join('');
+
+      const series = p6.selectedHorizonForecast;
+      if (riskState.charts.predSeries) riskState.charts.predSeries.destroy();
+      riskState.charts.predSeries = new Chart(document.getElementById('chartPredictiveTimeSeries'), {
+        type: 'line',
+        data: {
+          labels: series.map(s => s.period),
+          datasets: [
+            {
+              label: 'Cartera Vencida Proyectada ($B COP)',
+              data: series.map(s => s.overdueBillionCop),
+              borderColor: '#f43f5e',
+              borderWidth: 2.5,
+              tension: 0.3
+            },
+            {
+              label: 'Banda Superior 95% ($B COP)',
+              data: series.map(s => s.upperOverdueBillionCop),
+              borderColor: 'rgba(244, 63, 94, 0.3)',
+              backgroundColor: 'rgba(244, 63, 94, 0.12)',
+              fill: '+1',
+              pointRadius: 0
+            },
+            {
+              label: 'Banda Inferior 95% ($B COP)',
+              data: series.map(s => s.lowerOverdueBillionCop),
+              borderColor: 'rgba(244, 63, 94, 0.3)',
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' } },
+            y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      document.getElementById('timeSeriesTableBody').innerHTML = series.map(s => `
+        <tr>
+          <th class="mono">${s.period}</th>
+          <td class="mono text-white">$${s.revenueBillionCop.toFixed(2)}B COP</td>
+          <td class="mono text-slate-300">$${s.arTotalBillionCop.toFixed(2)}B COP</td>
+          <td class="mono font-bold text-rose-300">$${s.overdueBillionCop.toFixed(2)}B COP</td>
+          <td class="mono text-xs text-slate-400">[$${s.lowerOverdueBillionCop.toFixed(2)}B — $${s.upperOverdueBillionCop.toFixed(2)}B]</td>
+          <td class="mono text-amber-300 font-semibold">${s.delinquencyRatePct}%</td>
+          <td class="mono text-emerald-300">$${s.fxDiffMillionCop}M COP</td>
+          <td class="mono text-cyan-300">$${s.interestExpenseMillionCop}M COP</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPage7(p7) {
+      const pGrid = document.getElementById('presetRiskScenariosGrid');
+      pGrid.innerHTML = p7.presetScenarios.map(sc => `
+        <button type="button" data-sc-id="${sc.id}" class="preset-risk-btn text-left p-4 rounded-xl bg-slate-950/75 border border-slate-800 hover:border-rose-500/60 transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300">${sc.badge}</span>
+              <span class="text-xs mono font-bold text-white">EBITDA ${fmtCop(sc.results.simulated.ebitdaCop)}</span>
+            </div>
+            <h4 class="text-xs font-bold text-white">${sc.name}</h4>
+            <p class="text-[11px] text-slate-400 mt-1">${sc.description}</p>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] mono flex justify-between">
+            <span class="text-slate-400">Cartera Vencida:</span>
+            <strong class="text-rose-300">${fmtCop(sc.results.simulated.overdueReceivablesCop)}</strong>
+          </div>
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.preset-risk-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sc = p7.presetScenarios.find(x => x.id === btn.dataset.scId);
+          if (!sc) return;
+          document.getElementById('activeRiskScenarioLabel').textContent = sc.name;
+          Object.entries(sc.assumptions).forEach(([key, val]) => {
+            const sl = document.querySelector(`.risk-sim-slider[data-key="${key}"]`);
+            if (sl) {
+              sl.value = val;
+              syncRiskSlider(sl);
+            }
+          });
+          getAssumptionsFromUi();
+          runLiveRiskSimulation();
+        });
+      });
+
+      renderStressSimulationTable(p7.activeSimulation);
+
+      document.getElementById('strategicRecommendationsGrid').innerHTML = p7.strategicRecommendations.map(r => `
+        <article class="p-4 rounded-xl bg-slate-950/75 border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">Prioridad ${r.priority}</span>
+            <span class="text-[11px] text-cyan-300 font-semibold">${r.affectedIndicators}</span>
+          </div>
+          <h4 class="text-sm font-bold text-white">${r.title}</h4>
+          <div class="text-xs space-y-1 text-slate-300">
+            <div><strong class="text-slate-200">Hallazgo:</strong> ${r.finding}</div>
+            <div><strong class="text-cyan-300">Evidencia:</strong> ${r.evidence}</div>
+            <div><strong class="text-emerald-300">Impacto Potencial:</strong> ${r.potentialImpact}</div>
+            <div><strong class="text-amber-300">Alternativa Propuesta:</strong> ${r.proposedAlternative}</div>
+            <div class="text-[11px] text-slate-400"><strong>Supuestos y Límites:</strong> ${r.assumptionsAndLimits}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderStressSimulationTable(sim) {
+      const rows = [
+        { label: 'Ingresos Anuales Proyectados', cur: fmtCop(sim.current.revenueCop), simVal: fmtCop(sim.simulated.revenueCop), diff: fmtCop(sim.deltas.revenueDeltaCop), pct: `${sim.deltas.revenueDeltaPct}%`, goodPositive: true },
+        { label: 'Exposición Crediticia Total', cur: fmtCop(sim.current.creditExposureCop), simVal: fmtCop(sim.simulated.creditExposureCop), diff: fmtCop(sim.deltas.creditExposureDeltaCop), pct: `${sim.deltas.creditExposureDeltaPct}%`, goodPositive: false },
+        { label: 'Cartera Vencida Total', cur: fmtCop(sim.current.overdueReceivablesCop), simVal: fmtCop(sim.simulated.overdueReceivablesCop), diff: fmtCop(sim.deltas.overdueDeltaCop), pct: `${sim.deltas.overdueDeltaPct}%`, goodPositive: false },
+        { label: 'Pérdida Crediticia Esperada (ECL)', cur: fmtCop(sim.current.expectedCreditLossCop), simVal: fmtCop(sim.simulated.expectedCreditLossCop), diff: fmtCop(sim.deltas.eclDeltaCop), pct: `${sim.deltas.eclDeltaPct}%`, goodPositive: false },
+        { label: 'Gasto Financiero por Intereses', cur: fmtCop(sim.current.interestExpenseCop), simVal: fmtCop(sim.simulated.interestExpenseCop), diff: fmtCop(sim.deltas.interestDeltaCop), pct: `${sim.deltas.interestDeltaPct}%`, goodPositive: false },
+        { label: 'EBITDA Ajustado por Riesgo', cur: fmtCop(sim.current.ebitdaCop), simVal: fmtCop(sim.simulated.ebitdaCop), diff: fmtCop(sim.deltas.ebitdaDeltaCop), pct: `${sim.deltas.ebitdaDeltaPct}%`, goodPositive: true },
+        { label: 'Resultado Financiero Después de Intereses', cur: fmtCop(sim.current.netFinancialResultCop), simVal: fmtCop(sim.simulated.netFinancialResultCop), diff: fmtCop(sim.deltas.netResultDeltaCop), pct: `${sim.deltas.netResultDeltaPct}%`, goodPositive: true },
+        { label: 'Días de Cartera (DSO)', cur: `${sim.current.dsoDays} días`, simVal: `${sim.simulated.dsoDays} días`, diff: `${sim.deltas.dsoDeltaDays >= 0 ? '+' : ''}${sim.deltas.dsoDeltaDays} d`, pct: `Mora: ${sim.simulated.overdueRatePct}%`, goodPositive: false }
+      ];
+
+      document.getElementById('stressComparisonTableBody').innerHTML = rows.map(r => `
+        <tr>
+          <th>${r.label}</th>
+          <td class="mono text-slate-300">${r.cur}</td>
+          <td class="mono font-bold text-white">${r.simVal}</td>
+          <td class="mono font-semibold text-amber-300">${r.diff}</td>
+          <td class="mono font-bold text-cyan-300">${r.pct}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('vulnerableSegmentsBox').innerHTML = sim.mostVulnerableSegments.map(v => `
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+          <strong class="text-rose-300 block">${v.segment}</strong>
+          <span class="text-slate-400">${v.reason}</span>
+        </div>
+      `).join('');
+    }
+
+    async function runLiveRiskSimulation() {
+      const assumptions = getAssumptionsFromUi();
+      const res = await fetch('/api/riesgos-financieros/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assumptions })
+      });
+      const json = await res.json();
+      if (json.ok && json.simulation) {
+        renderStressSimulationTable(json.simulation);
+      }
+    }
+
+    function renderGovernanceModal(gov) {
+      document.getElementById('governanceModalBody').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          ${gov.sapDataSources.map(s => `
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+              <div class="flex items-center justify-between mb-1">
+                <strong class="text-white">${s.domain}</strong>
+                <span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/15 text-emerald-300">${s.status}</span>
+              </div>
+              <p class="text-[11px] text-slate-400">${s.description}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <h3 class="text-sm font-bold text-white">Criterios de Gobierno, Transparencia y Seguridad</h3>
+          <ul class="space-y-1.5 list-disc pl-4 text-slate-300">
+            ${gov.architecturalNotes.map(n => `<li>${n}</li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-white mb-2">Diccionario Oficial de Fórmulas de Riesgo Financiero</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            ${gov.formulaDictionary.map(f => `
+              <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <div class="flex justify-between"><strong class="text-white">${f.name}</strong><span class="mono text-rose-300">${f.unit}</span></div>
+                <div class="mono text-[11px] text-cyan-200 mt-1">${f.formula}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function exportRiskCsv() {
+      if (!riskState.data) return;
+      const rows = [
+        ['Cliente', 'Sociedad', 'Moneda', 'Limite_Credito_COP', 'Cuentas_Por_Cobrar_COP', 'Pedidos_Abiertos_COP', 'Exposicion_Total_COP', 'Cartera_Vencida_COP', 'Utilizacion_Pct', 'Riesgo_Actual', 'Riesgo_Predictivo', 'PD_90d_Pct', 'Perdida_Esperada_ECL_COP']
+      ];
+      riskState.data.page3CustomerCreditRisk.customers.forEach(c => {
+        rows.push([
+          `"${c.name}"`,
+          c.companyCode,
+          c.currency,
+          c.approvedCreditLimitCop,
+          c.openReceivablesCop,
+          c.openOrdersUnbilledCop,
+          c.totalCreditExposureCop,
+          c.totalOverdueCop,
+          c.creditUtilizationPct,
+          `"${c.currentRiskLevel}"`,
+          `"${c.predictiveRiskLevel}"`,
+          c.predictedDefaultProbPct,
+          c.expectedCreditLossCop
+        ]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `riesgos_financieros_sac_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initRiskSliders();
+
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.page;
+          riskState.activePage = target;
+          document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b === btn));
+          document.querySelectorAll('.risk-page').forEach(sec => sec.classList.toggle('hidden', sec.id !== target));
+        });
+      });
+
+      ['filterCompany', 'filterSector', 'filterRegion', 'filterCurrency', 'filterRiskLevel', 'customerSortSelect', 'horizonSelect'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => loadFinancialRiskData(false));
+      });
+
+      document.getElementById('btnResetRiskFilters').addEventListener('click', () => {
+        document.getElementById('filterCompany').value = 'ALL';
+        document.getElementById('filterSector').value = 'ALL';
+        document.getElementById('filterRegion').value = 'ALL';
+        document.getElementById('filterCurrency').value = 'ALL';
+        document.getElementById('filterRiskLevel').value = 'ALL';
+        loadFinancialRiskData(false);
+      });
+
+      document.querySelectorAll('.risk-sim-slider').forEach(sl => {
+        sl.addEventListener('input', () => {
+          document.getElementById('activeRiskScenarioLabel').textContent = 'Simulación Personalizada (En Vivo)';
+          getAssumptionsFromUi();
+        });
+        sl.addEventListener('change', () => runLiveRiskSimulation());
+      });
+
+      document.getElementById('btnRefreshRisk').addEventListener('click', () => loadFinancialRiskData(true));
+      document.getElementById('btnExportRiskCsv').addEventListener('click', exportRiskCsv);
+
+      const modal = document.getElementById('governanceModal');
+      document.getElementById('btnOpenGovernanceModal').addEventListener('click', () => modal.classList.remove('hidden'));
+      document.getElementById('btnCloseGovernanceModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+      loadFinancialRiskData(false);
+    });
+  </script>
+</body>
+</html>
