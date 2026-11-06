@@ -58,7 +58,9 @@ const requiredViews = [
       'Ventas y Predicción SAC',
       '/ventas-sap',
       'Desempeño Financiero y Simulación SAC',
-      '/finanzas-sap'
+      '/finanzas-sap',
+      'Cadena de Suministro y Logística SAC',
+      '/cadena-suministro-sap'
     ]
   },
   {
@@ -102,6 +104,20 @@ const requiredViews = [
       '5. Simulación de Escenarios &amp; Monte Carlo',
       '6. Control Presupuestal y Recomendaciones',
       '/api/finanzas/overview'
+    ]
+  },
+  {
+    file: 'public/cadena-suministro.html',
+    mustContain: [
+      'Inteligencia y Optimización de la Cadena de Suministro',
+      '1. Resumen Ejecutivo y Alertas',
+      '2. Proveedores y Abastecimiento (TCO)',
+      '3. Control y Optimización de Inventarios',
+      '4. Transporte, Tiempos y Costos',
+      '5. Recomendador de Rutas y Flota',
+      '6. Análisis Predictivo (Smart Predict)',
+      '7. Simulador de Escenarios y Acciones',
+      '/api/cadena-suministro/overview'
     ]
   }
 ];

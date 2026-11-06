@@ -118,8 +118,8 @@
         </button>
       </div>
 
-      <!-- Grid de Selección de Aplicaciones (4 Tarjetas) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <!-- Grid de Selección de Aplicaciones (6 Tarjetas) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
         <!-- APLICACIÓN 1: MONITOR SAP -->
         <article class="glass-card rounded-2xl border border-slate-800 hover:border-blue-500/60 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-950/40 group relative overflow-hidden">
@@ -372,6 +372,57 @@
              class="w-full py-3.5 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-cyan-900/40 flex items-center justify-center space-x-2 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900">
             <span class="material-symbols-outlined text-xl">monitoring</span>
             <span>Ingresar a inteligencia financiera</span>
+            <span class="material-symbols-outlined text-lg ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </a>
+        </article>
+
+        <!-- APLICACIÓN 6: CADENA DE SUMINISTRO Y LOGÍSTICA SAC -->
+        <article class="glass-card rounded-2xl border border-slate-800 hover:border-teal-500/60 p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-teal-950/40 group relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none group-hover:bg-teal-500/20 transition-all"></div>
+
+          <div>
+            <!-- Cabecera de Tarjeta -->
+            <div class="flex items-start justify-between mb-6">
+              <div class="w-14 h-14 rounded-2xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 group-hover:scale-105 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300 shadow-inner">
+                <span class="material-symbols-outlined text-3xl">local_shipping</span>
+              </div>
+              <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-teal-950/80 text-teal-300 border border-teal-500/30">
+                <span class="material-symbols-outlined text-xs mr-1">route</span>
+                SAP SCM + Smart Predict
+              </span>
+            </div>
+
+            <!-- Título y Descripción -->
+            <h2 class="text-2xl font-bold text-white mb-2 group-hover:text-teal-300 transition-colors">
+              Cadena de Suministro y Logística SAC
+            </h2>
+            <p class="text-slate-300 text-sm leading-relaxed mb-5">
+              Inteligencia de abastecimiento, proveedores TCO, inventario ABC/XYZ, rutas y simulación operativa.
+            </p>
+
+            <!-- Características del Módulo -->
+            <ul class="space-y-2.5 text-xs text-slate-400 mb-8 border-t border-slate-800/80 pt-5">
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Ranking multicriterio de proveedores, OTIF, Lead Time y recomendador TCO
+              </li>
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Matriz ABC/XYZ (9 cuadrantes), Stock Seguridad, Punto Pedido (ROP) y EOQ
+              </li>
+              <li class="flex items-center">
+                <span class="material-symbols-outlined text-emerald-400 text-base mr-2">check_circle</span>
+                Optimizador de rutas/transportistas, riesgo de quiebre y 5 escenarios What-if
+              </li>
+            </ul>
+          </div>
+
+          <!-- Botón de Acción -->
+          <a href="/cadena-suministro-sap" id="btnEnterSupplyChain" onclick="navegarConEstado(event, '/cadena-suministro-sap', 'btnEnterSupplyChain', 'Abriendo Cadena de Suministro...')"
+             aria-label="Ingresar a cadena de suministro y logística"
+             class="w-full py-3.5 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-teal-900/40 flex items-center justify-center space-x-2 transition-all focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+            <span class="material-symbols-outlined text-xl">hub</span>
+            <span>Ingresar a cadena de suministro</span>
             <span class="material-symbols-outlined text-lg ml-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
           </a>
         </article>

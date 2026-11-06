@@ -22,6 +22,7 @@ Cada módulo cuenta con su propio **`README` técnico y funcional detallado**, c
 | **3. Optimizador Inventarios IA** | `/inventarios-sap` | Compras, Cadena de Suministro y Demand Planning | SAP RFC (`ZFMM_STOCK_BY_WERKS`, `ZFMM_HISTORICO_CONSUMO` / `MVER`) + Google Gemini IA | 📘 [README_INVENTARIOS.md](README_INVENTARIOS.md) |
 | **4. Ventas y Predicción SAC** | `/ventas-sap` | Dirección Comercial y Ventas Internacionales | SAP SD RFC (`VBRK`, `VBRP`, `VBAK`, `KNA1`) + Smart Predict Machine Learning | 📘 [README_VENTAS.md](README_VENTAS.md) |
 | **5. Desempeño Financiero SAC** | `/finanzas-sap` | Dirección General, Finanzas y Control de Gestión | SAP FI/CO RFC (`FAGLFLEXT`, `SKAT`, `CEPCT`, `CSKT`) + Value Driver Tree & Monte Carlo | 📘 [README_FINANZAS.md](README_FINANZAS.md) |
+| **6. Cadena de Suministro SAC** | `/cadena-suministro-sap` | Operaciones, Logística, Compras y Planificación | SAP MM/SD/LE-TRA RFC (`EKKO`, `MARD`, `MARC`, `LIKP`, `VTTK`, `TVRO`) + Optimización ABC/XYZ & EOQ | 📘 [README_CADENA_SUMINISTRO.md](README_CADENA_SUMINISTRO.md) |
 
 ---
 

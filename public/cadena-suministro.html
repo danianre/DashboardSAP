@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inteligencia y Optimización de la Cadena de Suministro — SAP Analytics Cloud</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #060b16;
+      --bg-card: rgba(15, 23, 42, 0.82);
+      --border-subtle: rgba(148, 163, 184, 0.14);
+      --brand-teal: #14b8a6;
+      --brand-cyan: #06b6d4;
+      --brand-indigo: #6366f1;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 12% 0%, rgba(20, 184, 166, 0.11), transparent 38%),
+                  radial-gradient(circle at 88% 8%, rgba(56, 189, 248, 0.09), transparent 36%),
+                  #060b16;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(12px);
+      border-radius: 0.875rem;
+    }
+
+    /* Modern Web Guidance: interactions-in-complex-layouts */
+    .scm-containment-section {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 320px auto 680px;
+    }
+    @supports not (content-visibility: auto) {
+      .scm-containment-section {
+        contain: layout style paint;
+      }
+    }
+
+    /* Modern Web Guidance: responsive-table */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(560px, 78vh);
+      container-type: inline-size;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .table-wrapper:focus-visible {
+      outline: 2px solid #14b8a6;
+      outline-offset: 2px;
+    }
+    .table-wrapper table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.8125rem;
+    }
+    .table-wrapper thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: #0f172a;
+    }
+    .table-wrapper th,
+    .table-wrapper td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      text-align: left;
+      vertical-align: middle;
+    }
+    .table-wrapper tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: #0b1324;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .table-wrapper tbody tr:hover td,
+    .table-wrapper tbody tr:hover th {
+      background: rgba(20, 184, 166, 0.07);
+    }
+
+    @container (width < 600px) {
+      .table-wrapper table,
+      .table-wrapper thead,
+      .table-wrapper tbody,
+      .table-wrapper tr,
+      .table-wrapper th,
+      .table-wrapper td {
+        display: block;
+      }
+      .table-wrapper thead {
+        display: none;
+      }
+      .table-wrapper tr {
+        margin-block-end: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 0.5rem;
+        overflow: hidden;
+      }
+      .table-wrapper tbody th {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        background: #1e293b;
+      }
+      .table-wrapper td:nth-child(2)::before { content: var(--label-2, "Dato 2") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(3)::before { content: var(--label-3, "Dato 3") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(4)::before { content: var(--label-4, "Dato 4") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(5)::before { content: var(--label-5, "Dato 5") ": "; font-weight: 600; color: #94a3b8; }
+      .table-wrapper td:nth-child(6)::before { content: var(--label-6, "Dato 6") ": "; font-weight: 600; color: #94a3b8; }
+    }
+
+    /* Modern Web Guidance: Brand-Consistent Range Slider */
+    input[type="range"].sac-slider {
+      --slider-track-size: 0.42rem;
+      --slider-thumb-size: 1.1rem;
+      --slider-track-radius: 999px;
+      --slider-thumb-radius: 50%;
+      --slider-track-color: #1e293b;
+      --slider-fill-color: #14b8a6;
+      --slider-thumb-color: #2dd4bf;
+      --slider-direction: to right;
+      --attr-min: attr(min type(<number>), 0);
+      --attr-max: attr(max type(<number>), 100);
+      --control-value: attr(value type(<number>), 50);
+      --slider-progress: calc(
+        progress(var(--control-value), var(--attr-min), var(--attr-max)) * 100%
+      );
+
+      appearance: none;
+      inline-size: 100%;
+      block-size: 2rem;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    @supports not (opacity: progress(1, 0, 100)) {
+      input[type="range"].sac-slider {
+        --slider-progress: calc(
+          (var(--control-value) - var(--attr-min)) /
+          (var(--attr-max) - var(--attr-min)) * 100%
+        );
+      }
+    }
+
+    input[type="range"].sac-slider::-webkit-slider-runnable-track {
+      block-size: var(--slider-track-size);
+      border: 0;
+      border-radius: var(--slider-track-radius);
+      background: linear-gradient(
+        var(--slider-direction),
+        var(--slider-fill-color) var(--slider-progress),
+        var(--slider-track-color) var(--slider-progress)
+      );
+    }
+
+    input[type="range"].sac-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      inline-size: var(--slider-thumb-size);
+      block-size: var(--slider-thumb-size);
+      margin-block-start: calc(
+        (var(--slider-track-size) - var(--slider-thumb-size)) / 2
+      );
+      border: 2px solid #060b16;
+      border-radius: var(--slider-thumb-radius);
+      background: var(--slider-thumb-color);
+      box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
+    }
+
+    input[type="range"].sac-slider::-moz-range-track {
+      block-size: var(--slider-track-size);
+      border: 0;
+      border-radius: var(--slider-track-radius);
+      background: var(--slider-track-color);
+    }
+
+    input[type="range"].sac-slider::-moz-range-progress {
+      block-size: var(--slider-track-size);
+      border-radius: var(--slider-track-radius);
+      background: var(--slider-fill-color);
+    }
+
+    input[type="range"].sac-slider::-moz-range-thumb {
+      inline-size: var(--slider-thumb-size);
+      block-size: var(--slider-thumb-size);
+      border: 2px solid #060b16;
+      border-radius: var(--slider-thumb-radius);
+      background: var(--slider-thumb-color);
+    }
+
+    input[type="range"].sac-slider:focus-visible {
+      outline: 2px solid var(--slider-fill-color);
+      outline-offset: 4px;
+    }
+
+    .nav-tab {
+      transition: all 0.18s ease;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-tab.active {
+      color: #2dd4bf;
+      border-bottom-color: #14b8a6;
+      background: rgba(20, 184, 166, 0.1);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-teal-500/30 selection:text-teal-200">
+
+  <!-- BARRA SUPERIOR EJECUTIVA SAC -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="/" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white hover:border-teal-500/50 transition">
+          <span>←</span> Portal SAP
+        </a>
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-500/25 to-cyan-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 font-bold text-sm">
+          SCM
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">
+              SAP Analytics Cloud • Supply Chain Intelligence
+            </span>
+            <span id="sapConnectionBadge" class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              ● Conectado a SAP en Vivo
+            </span>
+          </div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">
+            Inteligencia y Optimización de la Cadena de Suministro
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnOpenArchitectureModal" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span>📘</span> Modelo de Datos y Fórmulas
+        </button>
+        <button id="btnExportCsv" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span>⬇</span> Exportar CSV
+        </button>
+        <button id="btnRefreshData" type="button" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-slate-950 transition flex items-center gap-1.5 shadow-lg shadow-teal-500/15">
+          <span>↻</span> Sincronizar SAP
+        </button>
+      </div>
+    </div>
+
+    <!-- BARRA GLOBAL DE CONTROLES INTERACTIVOS (Sección 13) -->
+    <div class="border-t border-slate-800/60 bg-slate-900/60">
+      <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-end">
+        <div>
+          <label for="filterPlant" class="block text-[11px] font-medium text-slate-400 mb-1">Centro Logístico / Planta</label>
+          <select id="filterPlant" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500">
+            <option value="ALL">Todos los Centros y Terminales</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterFamily" class="block text-[11px] font-medium text-slate-400 mb-1">Familia de Materiales</label>
+          <select id="filterFamily" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500">
+            <option value="ALL">Todas las Familias Operativas</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterEkorg" class="block text-[11px] font-medium text-slate-400 mb-1">Organización de Compras</label>
+          <select id="filterEkorg" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500">
+            <option value="ALL">Todas las Organizaciones</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterRoute" class="block text-[11px] font-medium text-slate-400 mb-1">Corredor / Ruta de Transporte</label>
+          <select id="filterRoute" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500">
+            <option value="ALL">Todos los Corredores Logísticos</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnResetFilters" type="button" class="w-full px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition">
+            Restablecer Filtros Globales
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN DE LAS 7 PÁGINAS DE LA HISTORIA SAC (Sección 12) -->
+    <div class="border-t border-slate-800/70 bg-slate-950/90 overflow-x-auto">
+      <nav class="max-w-[1600px] mx-auto px-4 sm:px-6 flex items-center gap-1 min-w-max" aria-label="Páginas del Dashboard de Cadena de Suministro">
+        <button type="button" data-page="page1" class="nav-tab active px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          1. Resumen Ejecutivo y Alertas
+        </button>
+        <button type="button" data-page="page2" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          2. Proveedores y Abastecimiento (TCO)
+        </button>
+        <button type="button" data-page="page3" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          3. Control y Optimización de Inventarios
+        </button>
+        <button type="button" data-page="page4" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          4. Transporte, Tiempos y Costos
+        </button>
+        <button type="button" data-page="page5" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          5. Recomendador de Rutas y Flota
+        </button>
+        <button type="button" data-page="page6" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          6. Análisis Predictivo (Smart Predict)
+        </button>
+        <button type="button" data-page="page7" class="nav-tab px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-white rounded-t-lg">
+          7. Simulador de Escenarios y Acciones
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 1: RESUMEN EJECUTIVO DE LA CADENA DE SUMINISTRO (Sección 3)   -->
+    <!-- ===================================================================== -->
+    <section id="page1" class="scm-page space-y-6">
+      <!-- 12 KPIs Principales -->
+      <div class="scm-containment-section">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-teal-400">Indicadores Clave de Desempeño Logístico (12 KPIs Principales)</h2>
+            <p class="text-xs text-slate-400">Monitoreo integral de inventarios, abastecimiento, nivel de servicio OTIF, tiempos de entrega y costos de transporte</p>
+          </div>
+          <span id="lastSyncLabel" class="text-[11px] text-slate-400 mono">Sincronizando...</span>
+        </div>
+        <div id="primaryKpisGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
+      </div>
+
+      <!-- 6 Indicadores Complementarios -->
+      <div class="scm-containment-section">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Indicadores Complementarios de Nivel de Servicio y Eficiencia</h3>
+        <div id="secondaryKpisGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3"></div>
+      </div>
+
+      <!-- Gráficos Ejecutivos de Tendencia 12 Meses -->
+      <div class="scm-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white">Evolución de Inventario Valorizado vs Costo de Transporte</h3>
+              <p class="text-xs text-slate-400">Últimos 12 meses cerrados (Pesos Colombianos COP)</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">Histórico Verificado</span>
+          </div>
+          <div class="h-64">
+            <canvas id="chartExecInventoryTransport"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white">Desempeño de Entregas OTIF (%) vs Tiempo de Abastecimiento (Días)</h3>
+              <p class="text-xs text-slate-400">Correlación entre cumplimiento de proveedores y ciclo logístico</p>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Meta OTIF ≥ 93%</span>
+          </div>
+          <div class="h-64">
+            <canvas id="chartExecOtifLeadTime"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas Inteligentes y Detección de Cuellos de Botella (Sección 11) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Sistema de Alertas Inteligentes y Detección de Cuellos de Botella</h3>
+            <p class="text-xs text-slate-400">Diagnóstico automático con valor observado, umbral de referencia, impacto económico, causa confirmada y acción recomendada</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 font-semibold">Crítico</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold">Advertencia</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">Normal</span>
+          </div>
+        </div>
+        <div id="smartAlertsContainer" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 2: GESTIÓN DE PROVEEDORES Y ABASTECIMIENTO (Sección 4)        -->
+    <!-- ===================================================================== -->
+    <section id="page2" class="scm-page hidden space-y-6">
+      <!-- Configurador de Pesos Multicriterio de Proveedores (Sección 4.B) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Evaluación Integral Multicriterio de Proveedores (Pesos Configurables)</h2>
+            <p class="text-xs text-slate-400">Ajusta la importancia relativa de las 8 dimensiones para recalcular en vivo el puntaje y la clasificación estratégica de cada proveedor</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="supplierSortSelect" class="text-xs text-slate-300 font-medium">Ordenar Ranking por:</label>
+            <select id="supplierSortSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-teal-300 font-semibold">
+              <option value="score">Mayor Confiabilidad Integral (Score Multicriterio)</option>
+              <option value="compliance">Mejor Cumplimiento (OTIF %)</option>
+              <option value="leadTime">Menor Tiempo de Entrega (Lead Time)</option>
+              <option value="cost">Menor Costo / Mejor Competitividad de Precio</option>
+              <option value="quality">Mejor Calidad (% Recepciones Conformes)</option>
+              <option value="incidents">Mayor Número de Incumplimientos (Críticos Primero)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupCost" class="text-slate-300 font-medium">1. Competitividad Costo</label>
+              <span id="wSupCostVal" class="mono text-teal-300 font-bold">20%</span>
+            </div>
+            <input id="wSupCost" type="range" min="0" max="50" step="1" value="20" class="sac-slider supplier-weight-slider" data-key="cost" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupLeadTime" class="text-slate-300 font-medium">2. Tiempo de Entrega</label>
+              <span id="wSupLeadTimeVal" class="mono text-teal-300 font-bold">18%</span>
+            </div>
+            <input id="wSupLeadTime" type="range" min="0" max="50" step="1" value="18" class="sac-slider supplier-weight-slider" data-key="leadTime" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupQuality" class="text-slate-300 font-medium">3. Calidad / Conformidad</label>
+              <span id="wSupQualityVal" class="mono text-teal-300 font-bold">16%</span>
+            </div>
+            <input id="wSupQuality" type="range" min="0" max="50" step="1" value="16" class="sac-slider supplier-weight-slider" data-key="quality" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupOnTime" class="text-slate-300 font-medium">4. Puntualidad (Sin Atraso)</label>
+              <span id="wSupOnTimeVal" class="mono text-teal-300 font-bold">14%</span>
+            </div>
+            <input id="wSupOnTime" type="range" min="0" max="50" step="1" value="14" class="sac-slider supplier-weight-slider" data-key="onTime" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupQuantity" class="text-slate-300 font-medium">5. Cantidad Completa</label>
+              <span id="wSupQuantityVal" class="mono text-teal-300 font-bold">12%</span>
+            </div>
+            <input id="wSupQuantity" type="range" min="0" max="50" step="1" value="12" class="sac-slider supplier-weight-slider" data-key="quantity" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupCapacity" class="text-slate-300 font-medium">6. Capacidad de Respuesta</label>
+              <span id="wSupCapacityVal" class="mono text-teal-300 font-bold">8%</span>
+            </div>
+            <input id="wSupCapacity" type="range" min="0" max="50" step="1" value="8" class="sac-slider supplier-weight-slider" data-key="capacity" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupIncidents" class="text-slate-300 font-medium">7. Cero Devoluciones</label>
+              <span id="wSupIncidentsVal" class="mono text-teal-300 font-bold">6%</span>
+            </div>
+            <input id="wSupIncidents" type="range" min="0" max="50" step="1" value="6" class="sac-slider supplier-weight-slider" data-key="incidents" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wSupConsistency" class="text-slate-300 font-medium">8. Estabilidad Histórica</label>
+              <span id="wSupConsistencyVal" class="mono text-teal-300 font-bold">6%</span>
+            </div>
+            <input id="wSupConsistency" type="range" min="0" max="50" step="1" value="6" class="sac-slider supplier-weight-slider" data-key="consistency" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Ranking de Proveedores -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Ranking Maestro de Proveedores y Desempeño de Abastecimiento</h3>
+            <p class="text-xs text-slate-400">Clasificación automática: Estratégicos y confiables, Alto desempeño, Costos elevados, Incumplimientos frecuentes y Riesgo de abastecimiento</p>
+          </div>
+        </div>
+        <div tabindex="0" role="region" aria-label="Ranking maestro de proveedores" class="table-wrapper">
+          <table style="--label-2:'Categoría'; --label-3:'Compras Anuales'; --label-4:'Lead Time (Prometido vs Real)'; --label-5:'OTIF %'; --label-6:'Calidad %';">
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>Familia de Suministro</th>
+                <th>Compras Anuales</th>
+                <th>Pedidos / Retrasos</th>
+                <th>Lead Time (Prom. vs Real)</th>
+                <th>OTIF %</th>
+                <th>Calidad %</th>
+                <th>Índice Precio</th>
+                <th>Score Multicriterio</th>
+                <th>Clasificación Automática</th>
+              </tr>
+            </thead>
+            <tbody id="suppliersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Comparador y Recomendador Multiproveedor por Material (Sección 4.C - Evaluación TCO) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Comparador y Recomendador Inteligente de Proveedores por Material (Costo Total TCO)</h3>
+            <p class="text-xs text-slate-400">Evalúa Precio Nominal + Flete + Costo de No Calidad + Financiamiento de Stock de Seguridad. No elige automáticamente al más barato nominal.</p>
+          </div>
+          <div class="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs font-bold text-emerald-300">
+            Ahorro Potencial TCO Identificado: <span id="tcoSavingsBanner" class="mono">$0 COP/año</span>
+          </div>
+        </div>
+        <div id="multiSupplierComparatorGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 3: CONTROL Y OPTIMIZACIÓN DE INVENTARIOS (Sección 5)          -->
+    <!-- ===================================================================== -->
+    <section id="page3" class="scm-page hidden space-y-6">
+      <!-- Matriz ABC / XYZ de 9 Cuadrantes (Sección 5.D) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Matriz Combinada de Segmentación de Inventarios ABC / XYZ (9 Cuadrantes)</h2>
+            <p class="text-xs text-slate-400">Clasificación cruzada por impacto económico (ABC: 80% / 15% / 5%) y regularidad de demanda mediante Coeficiente de Variación (XYZ)</p>
+          </div>
+          <button id="btnClearAbcFilter" type="button" class="hidden px-3 py-1 rounded bg-teal-500/20 text-teal-300 border border-teal-500/40 text-xs font-semibold">
+            Mostrar Todos los Cuadrantes
+          </button>
+        </div>
+        <div id="abcXyzMatrixGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+      </div>
+
+      <!-- Tabla de Estado Actual y Parámetros Científicos EOQ / ROP / SS (Sección 5.A, 5.B, 5.E) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Control de Existencias por Material, Centro y Almacén + Optimización Científica (SS, ROP, EOQ)</h3>
+            <p class="text-xs text-slate-400">Comparación entre parámetros actuales y niveles óptimos calculados según variabilidad de demanda y tiempo de reposición</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="invStatusFilter" class="text-xs text-slate-300 font-medium">Filtrar Diagnóstico:</label>
+            <select id="invStatusFilter" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+              <option value="ALL">Todos los Estados de Inventario</option>
+              <option value="CRITICO">Inventario Crítico (Bajo Seguridad)</option>
+              <option value="RIESGO_QUIEBRE">Riesgo de Desabastecimiento (En Punto de Pedido)</option>
+              <option value="SOBRESTOCK">Inventario Elevado (Sobrestock)</option>
+              <option value="OBSOLESCENCIA">Posible Obsolescencia / Inmovilizado</option>
+              <option value="BAJA_ROTACION">Inventario de Baja Rotación</option>
+              <option value="SALUDABLE">Inventario Saludable</option>
+            </select>
+          </div>
+        </div>
+        <div tabindex="0" role="region" aria-label="Control y optimización científica de inventarios" class="table-wrapper">
+          <table style="--label-2:'Centro / Almacén'; --label-3:'Disponible / Tránsito'; --label-4:'Valor Total'; --label-5:'ABC/XYZ'; --label-6:'SS / ROP / EOQ Recomendados';">
+            <thead>
+              <tr>
+                <th>Material y Familia</th>
+                <th>Centro y Almacén</th>
+                <th>Libre / Reservado / Calidad / Bloq.</th>
+                <th>En Tránsito</th>
+                <th>Valor Económico</th>
+                <th>ABC / XYZ</th>
+                <th>Rotación y Cobertura</th>
+                <th>Stock Seguridad (Actual → Óptimo)</th>
+                <th>Punto Pedido ROP / Lote EOQ</th>
+                <th>Diagnóstico y Acción Recomendada</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Oportunidades de Redistribución Inter-Centros (Sección 5.E) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Recomendador de Redistribución Interna entre Centros Logísticos</h3>
+            <p class="text-xs text-slate-400">Traslados horizontales sugeridos desde centros con sobrestock hacia centros con déficit antes de emitir órdenes de compra a terceros</p>
+          </div>
+          <span id="interPlantSavingsBadge" class="px-3 py-1 rounded-lg bg-teal-500/15 border border-teal-500/30 text-xs font-bold text-teal-300 mono">
+            Ahorro Neto en Compras Evitadas: $0 COP
+          </span>
+        </div>
+        <div id="interPlantTransfersGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 4: TRANSPORTE, TIEMPOS LOGÍSTICOS Y COSTOS (Secciones 6 y 7)  -->
+    <!-- ===================================================================== -->
+    <section id="page4" class="scm-page hidden space-y-6">
+      <!-- Desglose End-to-End de Tiempos de Abastecimiento y Expedición (Sección 6) -->
+      <div class="scm-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-1">Desglose de Tiempos del Ciclo de Abastecimiento (Inbound)</h2>
+          <p class="text-xs text-slate-400 mb-4">Días planificados vs reales desde la solicitud interna hasta la liberación de calidad en almacén</p>
+          <div id="inboundStagesContainer" class="space-y-3"></div>
+        </div>
+
+        <div class="glass-card p-5">
+          <h2 class="text-sm font-bold text-white mb-1">Atribución de Causas de Retraso y Desglose de Costos de Transporte</h2>
+          <p class="text-xs text-slate-400 mb-3">Proporción de demoras por responsable e integración de componentes tarifarios</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <div class="h-56">
+              <canvas id="chartDelayAttribution"></canvas>
+            </div>
+            <div class="h-56">
+              <canvas id="chartTransportCostBreakdown"></canvas>
+            </div>
+          </div>
+          <div id="delayAttributionList" class="mt-4 space-y-2 text-xs"></div>
+        </div>
+      </div>
+
+      <!-- Tabla de Corredores Logísticos, Costos Unitarios y Ocupación Vehicular (Sección 7) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Análisis de Eficiencia y Costos por Corredor Logístico (Rutas Terrestres y Portuarias)</h3>
+            <p class="text-xs text-slate-400">Ratios normalizados: Costo por Viaje, Costo por Tonelada, Costo por Kilómetro, Demoras (Stand-by) y % Utilización de Capacidad Vehicular</p>
+          </div>
+        </div>
+        <div tabindex="0" role="region" aria-label="Costos y tiempos por corredor logístico" class="table-wrapper">
+          <table style="--label-2:'Origen / Destino'; --label-3:'Distancia KM'; --label-4:'Tiempo Tránsito'; --label-5:'Costo / Ton'; --label-6:'Ocupación Vehicular';">
+            <thead>
+              <tr>
+                <th>Ruta / Corredor</th>
+                <th>Origen → Destino</th>
+                <th>Distancia Real</th>
+                <th>Viajes / Toneladas</th>
+                <th>Tránsito (Prev. vs Real)</th>
+                <th>Entregas a Tiempo</th>
+                <th>Ocupación Flota</th>
+                <th>Costo Total Ruta</th>
+                <th>Demoras / Stand-by</th>
+                <th>Costo / Tonelada</th>
+                <th>Costo / KM</th>
+              </tr>
+            </thead>
+            <tbody id="routesCostTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 5: RECOMENDADOR INTELIGENTE DE RUTAS Y TRANSPORTISTAS (Sec 8) -->
+    <!-- ===================================================================== -->
+    <section id="page5" class="scm-page hidden space-y-6">
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Optimizador Multicriterio de Rutas y Transportistas (Pesos Configurables)</h2>
+            <p class="text-xs text-slate-400">Pondera Costo Total, Tiempo de Tránsito, Distancia, Confiabilidad, Capacidad Vehicular y Nivel de Servicio para identificar la mejor asignación por trayecto</p>
+          </div>
+          <span id="carrierSavingsBadge" class="px-3 py-1.5 rounded-lg bg-teal-500/15 border border-teal-500/30 text-xs font-bold text-teal-300 mono">
+            Ahorro Anual por Optimización de Flota: $0 COP
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteCost" class="text-slate-300 font-medium">1. Costo por Tonelada</label>
+              <span id="wRouteCostVal" class="mono text-teal-300 font-bold">28%</span>
+            </div>
+            <input id="wRouteCost" type="range" min="0" max="60" step="1" value="28" class="sac-slider route-weight-slider" data-key="cost" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteTime" class="text-slate-300 font-medium">2. Menor Tiempo Tránsito</label>
+              <span id="wRouteTimeVal" class="mono text-teal-300 font-bold">22%</span>
+            </div>
+            <input id="wRouteTime" type="range" min="0" max="60" step="1" value="22" class="sac-slider route-weight-slider" data-key="time" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteReliability" class="text-slate-300 font-medium">3. Confiabilidad / Puntualidad</label>
+              <span id="wRouteReliabilityVal" class="mono text-teal-300 font-bold">20%</span>
+            </div>
+            <input id="wRouteReliability" type="range" min="0" max="60" step="1" value="20" class="sac-slider route-weight-slider" data-key="reliability" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteCapacity" class="text-slate-300 font-medium">4. Capacidad y Ocupación</label>
+              <span id="wRouteCapacityVal" class="mono text-teal-300 font-bold">10%</span>
+            </div>
+            <input id="wRouteCapacity" type="range" min="0" max="60" step="1" value="10" class="sac-slider route-weight-slider" data-key="capacity" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteService" class="text-slate-300 font-medium">5. Nivel de Servicio</label>
+              <span id="wRouteServiceVal" class="mono text-teal-300 font-bold">10%</span>
+            </div>
+            <input id="wRouteService" type="range" min="0" max="60" step="1" value="10" class="sac-slider route-weight-slider" data-key="service" />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="wRouteDistance" class="text-slate-300 font-medium">6. Eficiencia de Ruta</label>
+              <span id="wRouteDistanceVal" class="mono text-teal-300 font-bold">10%</span>
+            </div>
+            <input id="wRouteDistance" type="range" min="0" max="60" step="1" value="10" class="sac-slider route-weight-slider" data-key="distance" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjetas Comparativas de Transportistas por Corredor -->
+      <div id="routeRecommenderCardsGrid" class="scm-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 6: ANÁLISIS PREDICTIVO DE LA CADENA DE SUMINISTRO (Sección 9) -->
+    <!-- ===================================================================== -->
+    <section id="page6" class="scm-page hidden space-y-6">
+      <!-- Métricas de Validación del Modelo Predictivo -->
+      <div class="scm-containment-section glass-card p-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            SAC Smart Predict • Horizonte 6 Meses
+          </span>
+          <h2 class="text-base font-bold text-white mt-1">Pronóstico Estadístico de Demanda, Inventario, Tiempos de Entrega y Riesgo de Quiebre</h2>
+          <p id="predictiveMethodologyText" class="text-xs text-slate-400"></p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Confianza Estadística</span>
+            <span id="predConfidenceVal" class="mono font-bold text-teal-300 text-sm">95.0%</span>
+          </div>
+          <div class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">Error WAPE</span>
+            <span id="predWapeVal" class="mono font-bold text-emerald-300 text-sm">2.48%</span>
+          </div>
+          <div class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+            <span class="text-slate-400 block text-[10px]">MAE / RMSE</span>
+            <span id="predMaeRmseVal" class="mono font-bold text-cyan-300 text-sm">312 / 389 Ton</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos Predictivos a 6 Meses -->
+      <div class="scm-containment-section grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="glass-card p-4">
+          <h3 class="text-sm font-bold text-white mb-1">A. Pronóstico de Demanda Física e Intervalo de Confianza (95%)</h3>
+          <p class="text-xs text-slate-400 mb-3">Histórico de 12 meses + Proyección de requerimientos a 6 meses (Toneladas)</p>
+          <div class="h-64">
+            <canvas id="chartPredictiveDemand"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-4">
+          <h3 class="text-sm font-bold text-white mb-1">B. Proyección de Inventario Valorizado: Inercial vs Optimizado SAC</h3>
+          <p class="text-xs text-slate-400 mb-3">Impacto proyectado de la calibración de Stock de Seguridad y lotes EOQ</p>
+          <div class="h-64">
+            <canvas id="chartPredictiveInventory"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radar de Riesgo Probabilístico de Desabastecimiento antes de la Próxima Recepción (Sección 9.C) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">C. Predicción Probabilística de Riesgo de Desabastecimiento (Stockout Risk Radar)</h3>
+            <p class="text-xs text-slate-400">Evalúa para cada material si el stock libre + tránsito confirmado cubrirá la demanda prevista durante el Lead Time real del proveedor</p>
+          </div>
+        </div>
+        <div tabindex="0" role="region" aria-label="Predicción de riesgo de desabastecimiento" class="table-wrapper">
+          <table style="--label-2:'Centro'; --label-3:'Cobertura Actual'; --label-4:'Lead Time Esperado'; --label-5:'Probabilidad Quiebre'; --label-6:'Acción Preventiva';">
+            <thead>
+              <tr>
+                <th>Material Crítico</th>
+                <th>Centro Logístico</th>
+                <th>Disponible + Tránsito</th>
+                <th>Demanda Diaria Prevista</th>
+                <th>Cobertura Efectiva</th>
+                <th>Lead Time Esperado</th>
+                <th>Probabilidad de Quiebre</th>
+                <th>Recomendación Preventiva</th>
+              </tr>
+            </thead>
+            <tbody id="predictiveStockoutTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- PÁGINA 7: SIMULADOR DE ESCENARIOS Y RECOMENDACIONES (Secciones 10,16) -->
+    <!-- ===================================================================== -->
+    <section id="page7" class="scm-page hidden space-y-6">
+      <!-- Selector de los 5 Escenarios Requeridos (Sección 10) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Simulador Interactivo de Decisiones Operativas y Logísticas (What-If)</h2>
+            <p class="text-xs text-slate-400">Selecciona uno de los 5 escenarios estratégicos o ajusta las palancas operativas para simular el impacto en costos, inventario y nivel de servicio</p>
+          </div>
+        </div>
+        <div id="presetScenariosCardsGrid" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6"></div>
+
+        <!-- Panel de Palancas + Resultados de Simulación -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- 8 Palancas Interactivas -->
+          <div class="lg:col-span-7 bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 space-y-3.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400">Palancas de Simulación Logística y de Abastecimiento</h3>
+              <span id="activeScenarioBadge" class="px-2 py-0.5 text-[11px] rounded bg-teal-500/20 text-teal-300 font-semibold">Escenario 5: Óptimo Integral</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simLoadConsolidation" class="text-slate-300 font-medium">1. Consolidación de Carga en Rutas</label>
+                  <span id="simLoadConsolidationVal" class="mono text-teal-300 font-bold">15%</span>
+                </div>
+                <input id="simLoadConsolidation" type="range" min="0" max="30" step="0.5" value="15" class="sac-slider sim-lever-slider" data-lever="loadConsolidationPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simFreightRate" class="text-slate-300 font-medium">2. Renegociación Tarifaria de Fletes</label>
+                  <span id="simFreightRateVal" class="mono text-teal-300 font-bold">7%</span>
+                </div>
+                <input id="simFreightRate" type="range" min="-10" max="15" step="0.5" value="7" class="sac-slider sim-lever-slider" data-lever="freightRateReductionPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simCarrierOpt" class="text-slate-300 font-medium">3. Reasignación a Transportista Óptimo</label>
+                  <span id="simCarrierOptVal" class="mono text-teal-300 font-bold">75%</span>
+                </div>
+                <input id="simCarrierOpt" type="range" min="0" max="100" step="5" value="75" class="sac-slider sim-lever-slider" data-lever="carrierOptimizationPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simVehicleUtil" class="text-slate-300 font-medium">4. Meta Ocupación Vehicular</label>
+                  <span id="simVehicleUtilVal" class="mono text-teal-300 font-bold">93%</span>
+                </div>
+                <input id="simVehicleUtil" type="range" min="75" max="98" step="0.5" value="93" class="sac-slider sim-lever-slider" data-lever="vehicleUtilizationTargetPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simOverstockRed" class="text-slate-300 font-medium">5. Reducción de Sobrestock (B/C)</label>
+                  <span id="simOverstockRedVal" class="mono text-teal-300 font-bold">32%</span>
+                </div>
+                <input id="simOverstockRed" type="range" min="0" max="60" step="1" value="32" class="sac-slider sim-lever-slider" data-lever="overstockReductionPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simSafetyStockOpt" class="text-slate-300 font-medium">6. Adopción Stock Seguridad / EOQ</label>
+                  <span id="simSafetyStockOptVal" class="mono text-teal-300 font-bold">85%</span>
+                </div>
+                <input id="simSafetyStockOpt" type="range" min="0" max="100" step="5" value="85" class="sac-slider sim-lever-slider" data-lever="safetyStockOptimizationPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simInterPlant" class="text-slate-300 font-medium">7. Redistribución Entre Centros</label>
+                  <span id="simInterPlantVal" class="mono text-teal-300 font-bold">85%</span>
+                </div>
+                <input id="simInterPlant" type="range" min="0" max="100" step="5" value="85" class="sac-slider sim-lever-slider" data-lever="interPlantRedistributionPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simSupplierSwitch" class="text-slate-300 font-medium">8. Sustitución Proveedor por TCO</label>
+                  <span id="simSupplierSwitchVal" class="mono text-teal-300 font-bold">65%</span>
+                </div>
+                <input id="simSupplierSwitch" type="range" min="0" max="100" step="5" value="65" class="sac-slider sim-lever-slider" data-lever="supplierSwitchPct" data-unit="%" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simLeadTimeRed" class="text-slate-300 font-medium">9. Reducción Tiempo Ciclo (Días)</label>
+                  <span id="simLeadTimeRedVal" class="mono text-teal-300 font-bold">3.2 d</span>
+                </div>
+                <input id="simLeadTimeRed" type="range" min="0" max="5" step="0.2" value="3.2" class="sac-slider sim-lever-slider" data-lever="leadTimeReductionDays" data-unit=" d" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label for="simDemandSurge" class="text-slate-300 font-medium">10. Variación / Choque de Demanda</label>
+                  <span id="simDemandSurgeVal" class="mono text-amber-300 font-bold">+4%</span>
+                </div>
+                <input id="simDemandSurge" type="range" min="-15" max="35" step="1" value="4" class="sac-slider sim-lever-slider" data-lever="demandSurgePct" data-unit="%" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Impacto Económico y Operativo Simulado -->
+          <div class="lg:col-span-5 bg-slate-950/80 p-4 rounded-xl border border-teal-500/30 flex flex-col justify-between space-y-4">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-teal-300 mb-3">Impacto Proyectado del Escenario Simulado</h3>
+              <div id="simulationImpactCards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+            </div>
+            <div class="h-48">
+              <canvas id="chartSimulationComparison"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor de Recomendaciones Operativas y Logísticas Priorizadas (Sección 16) -->
+      <div class="scm-containment-section glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Plan Maestro de Recomendaciones Operativas y Logísticas Priorizadas</h3>
+            <p class="text-xs text-slate-400">Acciones concretas ordenadas por impacto económico y viabilidad, con evidencia en datos, causa confirmada y riesgos</p>
+          </div>
+        </div>
+        <div id="operationalRecommendationsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: ARQUITECTURA DE DATOS, FUENTES Y DICCIONARIO DE INDICADORES (Secciones 2, 14, 15, 17) -->
+  <div id="architectureModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card max-w-4xl w-full max-h-[88vh] overflow-y-auto p-6 border border-teal-500/30 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-teal-400">Gobierno del Dato y Arquitectura SAP Analytics Cloud</span>
+          <h2 class="text-lg font-bold text-white">Fuentes de Información, Alcance Funcional y Diccionario de Fórmulas</h2>
+        </div>
+        <button id="btnCloseArchitectureModal" type="button" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">
+          Cerrar ✕
+        </button>
+      </div>
+
+      <div id="architectureModalContent" class="space-y-5 text-xs text-slate-300"></div>
+    </div>
+  </div>
+
+  <script>
+    // Estado global del dashboard
+    let scmState = {
+      data: null,
+      activePage: 'page1',
+      selectedAbcXyzQuadrant: 'ALL',
+      charts: {}
+    };
+
+    const formatCop = (val) => {
+      const n = Number(val || 0);
+      if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B COP`;
+      if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M COP`;
+      return `$${Math.round(n).toLocaleString('es-CO')} COP`;
+    };
+
+    // Modern Web Guidance: Sincronización de variables CSS para <input type="range">
+    function syncSliderElement(slider) {
+      if (!slider) return;
+      slider.style.setProperty('--attr-min', slider.min || 0);
+      slider.style.setProperty('--attr-max', slider.max || 100);
+      slider.style.setProperty('--control-value', slider.value);
+      const unit = slider.dataset.unit || '%';
+      slider.setAttribute('aria-valuetext', `${slider.value}${unit}`);
+    }
+
+    function initAllSliders() {
+      document.querySelectorAll('input[type="range"].sac-slider').forEach(slider => {
+        syncSliderElement(slider);
+        slider.addEventListener('input', () => syncSliderElement(slider));
+      });
+    }
+
+    function getSupplierWeightsFromUi() {
+      const weights = {};
+      document.querySelectorAll('.supplier-weight-slider').forEach(sl => {
+        weights[sl.dataset.key] = Number(sl.value);
+        const labelEl = document.getElementById(`${sl.id}Val`);
+        if (labelEl) labelEl.textContent = `${sl.value}%`;
+      });
+      return weights;
+    }
+
+    function getRouteWeightsFromUi() {
+      const weights = {};
+      document.querySelectorAll('.route-weight-slider').forEach(sl => {
+        weights[sl.dataset.key] = Number(sl.value);
+        const labelEl = document.getElementById(`${sl.id}Val`);
+        if (labelEl) labelEl.textContent = `${sl.value}%`;
+      });
+      return weights;
+    }
+
+    function getSimLeversFromUi() {
+      const levers = {};
+      document.querySelectorAll('.sim-lever-slider').forEach(sl => {
+        const val = Number(sl.value);
+        levers[sl.dataset.lever] = val;
+        const labelEl = document.getElementById(`${sl.id}Val`);
+        if (labelEl) {
+          const sign = sl.dataset.lever === 'demandSurgePct' && val > 0 ? '+' : '';
+          labelEl.textContent = `${sign}${val}${sl.dataset.unit || '%'}`;
+        }
+      });
+      return levers;
+    }
+
+    async function loadSupplyChainData(forceRefresh = false) {
+      const payload = {
+        plant: document.getElementById('filterPlant').value,
+        family: document.getElementById('filterFamily').value,
+        ekorg: document.getElementById('filterEkorg').value,
+        route: document.getElementById('filterRoute').value,
+        supplierSort: document.getElementById('supplierSortSelect').value,
+        supplierWeights: getSupplierWeightsFromUi(),
+        routeWeights: getRouteWeightsFromUi(),
+        customLevers: getSimLeversFromUi(),
+        refresh: forceRefresh
+      };
+
+      const res = await fetch('/api/cadena-suministro/overview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Error cargando datos de Cadena de Suministro');
+      scmState.data = json;
+      populateFilterCatalogs(json);
+      renderAllPages();
+    }
+
+    function populateFilterCatalogs(data) {
+      const plantSel = document.getElementById('filterPlant');
+      if (plantSel.options.length <= 1) {
+        data.catalogs.plants.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.code;
+          opt.textContent = `${p.code} — ${p.name}`;
+          plantSel.appendChild(opt);
+        });
+      }
+
+      const famSel = document.getElementById('filterFamily');
+      if (famSel.options.length <= 1) {
+        data.catalogs.families.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.code;
+          opt.textContent = f.name;
+          famSel.appendChild(opt);
+        });
+      }
+
+      const ekorgSel = document.getElementById('filterEkorg');
+      if (ekorgSel.options.length <= 1) {
+        data.catalogs.purchaseOrgs.forEach(e => {
+          const opt = document.createElement('option');
+          opt.value = e.code;
+          opt.textContent = `${e.code} — ${e.name}`;
+          ekorgSel.appendChild(opt);
+        });
+      }
+
+      const routeSel = document.getElementById('filterRoute');
+      if (routeSel.options.length <= 1) {
+        data.page4Transport.routes.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.routeCode;
+          opt.textContent = `Ruta ${r.routeCode} — ${r.routeName} (${r.distanceKm} km)`;
+          routeSel.appendChild(opt);
+        });
+      }
+    }
+
+    function renderAllPages() {
+      const d = scmState.data;
+      if (!d) return;
+
+      const syncDate = new Date(d.meta.syncedAt).toLocaleTimeString('es-CO');
+      document.getElementById('lastSyncLabel').textContent = `Actualizado: ${syncDate} (${d.meta.syncDurationMs} ms)`;
+      const badge = document.getElementById('sapConnectionBadge');
+      if (d.meta.sapConnected) {
+        badge.textContent = `● SAP Productivo Activo (${d.meta.sapHost})`;
+        badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      } else {
+        badge.textContent = '● Caché Analítica Verificada';
+        badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+      }
+
+      renderPage1Executive(d.page1Executive);
+      renderPage2Suppliers(d.page2Suppliers);
+      renderPage3Inventory(d.page3Inventory);
+      renderPage4Transport(d.page4Transport);
+      renderPage5RouteOptimizer(d.page5RouteOptimizer);
+      renderPage6Predictive(d.page6Predictive);
+      renderPage7Simulation(d.page7SimulationAndActions);
+      renderArchitectureModal(d.governanceAndArchitecture);
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 1: RESUMEN EJECUTIVO Y ALERTAS
+    // =========================================================================
+    function renderPage1Executive(p1) {
+      const kpiGrid = document.getElementById('primaryKpisGrid');
+      kpiGrid.innerHTML = p1.primaryKpis.map(k => {
+        const tone = k.status === 'healthy'
+          ? 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10'
+          : k.status === 'critical'
+            ? 'border-rose-500/30 text-rose-300 bg-rose-500/10'
+            : 'border-amber-500/30 text-amber-300 bg-amber-500/10';
+        const sign = k.deltaPct > 0 ? '+' : '';
+        return `
+          <article class="glass-card p-4 flex flex-col justify-between hover:border-teal-500/40 transition">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="text-xs font-semibold text-slate-300">${k.title}</span>
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded border ${tone}">${sign}${k.deltaPct}%</span>
+              </div>
+              <div class="text-xl font-extrabold text-white mono my-1">${k.formatted}</div>
+            </div>
+            <div class="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <span>${k.subtitle}</span>
+              <span class="mono text-slate-300">Meta: ${k.targetFormatted}</span>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      const secGrid = document.getElementById('secondaryKpisGrid');
+      secGrid.innerHTML = p1.secondaryKpis.map(s => `
+        <div class="glass-card p-3 border border-slate-800/80">
+          <div class="text-[11px] font-medium text-slate-400">${s.title}</div>
+          <div class="text-base font-bold text-white mono mt-1">${s.formatted}</div>
+          <div class="text-[10px] text-teal-400 mono mt-0.5">Referencia: ${s.target}</div>
+          <p class="text-[10px] text-slate-400 mt-1 leading-snug">${s.detail}</p>
+        </div>
+      `).join('');
+
+      // Alertas Inteligentes (Sección 11)
+      const alertsEl = document.getElementById('smartAlertsContainer');
+      alertsEl.innerHTML = p1.smartAlerts.map(a => {
+        const badgeStyle = a.tone === 'rose'
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : a.tone === 'amber'
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return `
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800/90 hover:border-slate-700 transition">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${badgeStyle}">${a.severity}</span>
+                <span class="text-xs font-semibold text-teal-400">${a.domain}</span>
+                <h4 class="text-sm font-bold text-white">${a.indicator}</h4>
+              </div>
+              <div class="text-xs mono">
+                <span class="text-slate-400">Observado:</span> <strong class="text-white">${a.observedValue}</strong>
+                <span class="mx-1.5 text-slate-600">|</span>
+                <span class="text-slate-400">Umbral:</span> <strong class="text-teal-300">${a.referenceValue}</strong>
+              </div>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">${a.explanation}</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] bg-slate-900/70 p-2.5 rounded-lg border border-slate-800/70">
+              <div><strong class="text-rose-300">Impacto Operativo / Económico:</strong> <span class="text-slate-300">${a.impact}</span></div>
+              <div><strong class="text-amber-300">Diagnóstico de Causa:</strong> <span class="text-slate-300">${a.probableCause}</span></div>
+              <div><strong class="text-emerald-300">Acción Recomendada:</strong> <span class="text-slate-200 font-medium">${a.recommendedAction}</span></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Gráficos Históricos
+      const labels = p1.historicalMonthly.map(m => m.label);
+      const invSeries = p1.historicalMonthly.map(m => +(m.inventoryValueCop / 1e9).toFixed(2));
+      const trSeries = p1.historicalMonthly.map(m => +(m.transportCostCop / 1e6).toFixed(1));
+      const otifSeries = p1.historicalMonthly.map(m => m.otifPct);
+      const ltSeries = p1.historicalMonthly.map(m => m.avgLeadTimeDays);
+
+      if (scmState.charts.execInvTr) scmState.charts.execInvTr.destroy();
+      scmState.charts.execInvTr = new Chart(document.getElementById('chartExecInventoryTransport'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Inventario Valorizado ($ Billones COP)',
+              data: invSeries,
+              backgroundColor: 'rgba(20, 184, 166, 0.35)',
+              borderColor: '#14b8a6',
+              borderWidth: 1,
+              yAxisID: 'y'
+            },
+            {
+              type: 'line',
+              label: 'Costo Mensual Transporte ($ Millones COP)',
+              data: trSeries,
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              borderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { position: 'left', ticks: { color: '#2dd4bf' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y1: { position: 'right', ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+
+      if (scmState.charts.execOtifLt) scmState.charts.execOtifLt.destroy();
+      scmState.charts.execOtifLt = new Chart(document.getElementById('chartExecOtifLeadTime'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Cumplimiento OTIF (%)',
+              data: otifSeries,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              fill: true,
+              borderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Lead Time Promedio (Días)',
+              data: ltSeries,
+              borderColor: '#f59e0b',
+              borderWidth: 2,
+              borderDash: [5, 4],
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { position: 'left', min: 75, max: 100, ticks: { color: '#10b981' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y1: { position: 'right', min: 5, max: 14, ticks: { color: '#f59e0b' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 2: PROVEEDORES Y ABASTECIMIENTO (TCO)
+    // =========================================================================
+    function renderPage2Suppliers(p2) {
+      document.getElementById('tcoSavingsBanner').textContent = `${formatCop(p2.potentialSupplierTcoSavingsCop)} / año`;
+
+      const tbody = document.getElementById('suppliersTableBody');
+      tbody.innerHTML = p2.suppliers.map(s => {
+        const badgeClass = s.badgeTone === 'indigo'
+          ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+          : s.badgeTone === 'emerald'
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+            : s.badgeTone === 'amber'
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+        const ltDiff = s.leadTimeVarianceDays > 0 ? `+${s.leadTimeVarianceDays} d` : `${s.leadTimeVarianceDays} d`;
+        return `
+          <tr>
+            <th>
+              <div class="font-semibold text-white">${s.name}</div>
+              <div class="text-[11px] text-slate-400 font-normal">Región: ${s.region} • Centro ${s.plantCode}</div>
+            </th>
+            <td class="text-slate-300">${s.categoryName}</td>
+            <td class="mono font-semibold text-white">${formatCop(s.annualSpendCop)}</td>
+            <td class="mono">
+              <span class="text-white">${s.ordersCount}</span> ped.
+              <span class="text-rose-400 text-[11px] block">${s.delayedOrdersCount} con retraso</span>
+            </td>
+            <td class="mono">
+              <span class="text-slate-300">${s.promisedLeadTimeDays}d → </span>
+              <strong class="${s.leadTimeVarianceDays > 2 ? 'text-rose-300' : 'text-teal-300'}">${s.actualLeadTimeDays}d</strong>
+              <span class="text-[11px] text-slate-400 block">(${ltDiff} | ±${s.leadTimeStdDevDays}d)</span>
+            </td>
+            <td class="mono font-bold ${s.otifPct >= 90 ? 'text-emerald-300' : s.otifPct < 75 ? 'text-rose-300' : 'text-amber-300'}">${s.otifPct}%</td>
+            <td class="mono ${s.qualityAcceptancePct >= 97 ? 'text-emerald-300' : 'text-amber-300'}">
+              ${s.qualityAcceptancePct}%
+              <span class="block text-[10px] text-slate-400">Dev: ${s.returnRatePct}%</span>
+            </td>
+            <td class="mono ${s.priceCompetitivenessIdx <= 100 ? 'text-emerald-300' : 'text-amber-300'}">${s.priceCompetitivenessIdx}</td>
+            <td>
+              <div class="flex items-center gap-2">
+                <span class="mono font-extrabold text-sm text-white">${s.weightedScore}</span>
+                <div class="w-16 h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div class="h-full bg-teal-400" style="width:${Math.min(100, s.weightedScore)}%"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${badgeClass}">${s.classification}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      const compGrid = document.getElementById('multiSupplierComparatorGrid');
+      compGrid.innerHTML = p2.multiSupplierComparisons.map(mc => `
+        <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div>
+              <span class="text-[10px] font-bold uppercase text-teal-400">${mc.familyName} • ${mc.plantName}</span>
+              <h4 class="text-sm font-bold text-white">${mc.materialName}</h4>
+            </div>
+            <span class="text-xs mono text-slate-300">Demanda Anual: <strong>${mc.annualDemandUnits.toLocaleString('es-CO')} ${mc.unit}</strong></span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${mc.candidates.map(c => `
+              <div class="p-3 rounded-lg border ${c.isRecommendedTco ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-900/70 border-slate-800'} flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between gap-1 mb-1">
+                    <span class="text-xs font-bold text-white">${c.supplierName}</span>
+                    ${c.isRecommendedTco
+                      ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">★ Recomendado TCO</span>'
+                      : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">Mayor Costo Total</span>'}
+                  </div>
+                  <div class="grid grid-cols-2 gap-1.5 text-[11px] my-2 mono">
+                    <div class="text-slate-400">Precio Unitario: <span class="text-slate-200 font-semibold">$${c.unitPriceCop.toLocaleString('es-CO')}</span></div>
+                    <div class="text-slate-400">Flete + Calidad: <span class="text-slate-200">$${(c.freightPerUnitCop + c.nonQualityCostPerUnitCop).toLocaleString('es-CO')}</span></div>
+                    <div class="text-slate-400">Costo TCO Real: <strong class="${c.isRecommendedTco ? 'text-teal-300' : 'text-rose-300'}">$${c.tcoPerUnitCop.toLocaleString('es-CO')}</strong></div>
+                    <div class="text-slate-400">Lead Time: <strong class="text-white">${c.leadTimeDays} ± ${c.leadTimeVariabilityDays}d</strong></div>
+                    <div class="text-slate-400">OTIF / Calidad: <strong class="text-white">${c.otifPct}% / ${c.qualityPct}%</strong></div>
+                    <div class="text-slate-400">Asignación: <strong class="text-cyan-300">${c.currentSharePct}% → ${c.recommendedSharePct}%</strong></div>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-300 bg-slate-950/70 p-2 rounded border border-slate-800/80">${c.rationale}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 3: CONTROL Y OPTIMIZACIÓN DE INVENTARIOS
+    // =========================================================================
+    function renderPage3Inventory(p3) {
+      const matrixGrid = document.getElementById('abcXyzMatrixGrid');
+      matrixGrid.innerHTML = p3.abcXyzMatrix.map(q => {
+        const isSelected = scmState.selectedAbcXyzQuadrant === q.quadrant;
+        const borderTone = q.abc === 'A'
+          ? 'border-teal-500/40'
+          : q.abc === 'B'
+            ? 'border-cyan-500/30'
+            : 'border-slate-700/80';
+        return `
+          <button type="button" data-quadrant="${q.quadrant}" class="abc-xyz-card text-left p-3.5 rounded-xl bg-slate-950/75 border ${isSelected ? 'ring-2 ring-teal-400 border-teal-400' : borderTone} hover:border-teal-400/60 transition">
+            <div class="flex items-center justify-between mb-1">
+              <span class="px-2 py-0.5 rounded text-xs font-extrabold mono bg-teal-500/20 text-teal-300 border border-teal-500/30">${q.quadrant}</span>
+              <span class="text-xs mono font-bold text-white">${formatCop(q.valueCop)} (${q.shareOfValuePct}%)</span>
+            </div>
+            <div class="text-xs font-semibold text-slate-200">${q.title}</div>
+            <p class="text-[11px] text-slate-400 mt-1">${q.policy}</p>
+            <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+              <span class="text-teal-300 font-semibold">${q.itemsCount} posiciones</span>
+              <span class="text-slate-400 truncate max-w-[190px]">${q.sampleMaterials[0] || 'Sin posiciones en filtro'}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.abc-xyz-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const q = btn.dataset.quadrant;
+          scmState.selectedAbcXyzQuadrant = scmState.selectedAbcXyzQuadrant === q ? 'ALL' : q;
+          document.getElementById('btnClearAbcFilter').classList.toggle('hidden', scmState.selectedAbcXyzQuadrant === 'ALL');
+          renderPage3Inventory(scmState.data.page3Inventory);
+        });
+      });
+
+      const statusFilter = document.getElementById('invStatusFilter').value;
+      const items = p3.items.filter(it => {
+        if (scmState.selectedAbcXyzQuadrant !== 'ALL' && it.abcXyzClass !== scmState.selectedAbcXyzQuadrant) return false;
+        if (statusFilter !== 'ALL' && it.statusCode !== statusFilter) return false;
+        return true;
+      });
+
+      const invBody = document.getElementById('inventoryTableBody');
+      invBody.innerHTML = items.map(it => {
+        const badgeStyle = it.severity === 'critical'
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : it.severity === 'warning'
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : it.severity === 'healthy'
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+        return `
+          <tr>
+            <th>
+              <div class="font-semibold text-white">${it.materialName}</div>
+              <div class="text-[11px] text-slate-400 font-normal">${it.familyName} ${it.isFragmented ? '• ⚠ Fragmentado en ' + it.storageLocationsCount + ' bodegas' : ''}</div>
+            </th>
+            <td>
+              <div class="text-slate-200 font-medium">${it.plantName}</div>
+              <div class="text-[11px] text-slate-400">${it.storageLocation}</div>
+            </td>
+            <td class="mono text-xs">
+              <strong class="text-emerald-300">${it.unrestrictedQty.toLocaleString('es-CO')} ${it.unit}</strong> libre
+              <span class="block text-[11px] text-slate-400">Res: ${it.reservedQty} | Cal: ${it.qualityInspectionQty} | Bloq: ${it.blockedQty}</span>
+            </td>
+            <td class="mono text-cyan-300 font-semibold">${it.inTransitQty.toLocaleString('es-CO')} ${it.unit}</td>
+            <td class="mono font-bold text-white">${formatCop(it.totalEconomicValueCop)}</td>
+            <td>
+              <span class="px-2 py-0.5 rounded font-bold mono text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${it.abcXyzClass}</span>
+              <span class="block text-[10px] text-slate-400 mono mt-0.5">CV: ${it.cv}</span>
+            </td>
+            <td class="mono text-xs">
+              <strong class="text-white">${it.annualTurnover}x/año</strong>
+              <span class="block text-[11px] text-slate-400">${it.daysOfInventory} días DOH</span>
+            </td>
+            <td class="mono text-xs">
+              <span class="text-slate-400">${it.sapSafetyStock} →</span>
+              <strong class="text-teal-300">${it.recommendedSafetyStock} ${it.unit}</strong>
+            </td>
+            <td class="mono text-xs">
+              <div>ROP: <strong class="text-white">${it.recommendedReorderPoint} ${it.unit}</strong></div>
+              <div class="text-[11px] text-cyan-300">EOQ: ${it.recommendedEoq} ${it.unit}</div>
+            </td>
+            <td>
+              <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle} mb-1">${it.statusCategory}</span>
+              <p class="text-[11px] text-slate-300 max-w-xs">${it.actionRecommendation}</p>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('interPlantSavingsBadge').textContent = `Ahorro Neto en Compras Evitadas: ${formatCop(p3.summary.potentialInterPlantSavingsCop)}`;
+      const trGrid = document.getElementById('interPlantTransfersGrid');
+      trGrid.innerHTML = p3.interPlantTransfers.map(t => `
+        <div class="p-4 rounded-xl bg-slate-950/75 border border-teal-500/30 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-500/20 text-teal-300">Prioridad ${t.priority}</span>
+              <span class="text-xs mono text-slate-400">${t.transferDistanceKm} km • ${t.transitTimeHours} h</span>
+            </div>
+            <h4 class="text-sm font-bold text-white">${t.materialName}</h4>
+            <div class="mt-2 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-1">
+              <div class="flex justify-between"><span class="text-slate-400">Origen (Exceso):</span> <strong class="text-amber-300">${t.sourcePlantName} (${t.sourceAvailableQty} ${t.unit})</strong></div>
+              <div class="flex justify-between"><span class="text-slate-400">Destino (Déficit):</span> <strong class="text-rose-300">${t.targetPlantName} (${t.targetAvailableQty} ${t.unit})</strong></div>
+              <div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-slate-300">Cantidad a Trasladar:</span> <strong class="text-teal-300 mono">${t.recommendedTransferQty} ${t.unit}</strong></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+            <span class="text-slate-400">Flete Interno: <strong class="text-slate-200 mono">${formatCop(t.transferCostCop)}</strong></span>
+            <span class="text-emerald-300 font-bold mono">Ahorro Neto: ${formatCop(t.netSavingsCop)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 4: TRANSPORTE, TIEMPOS LOGÍSTICOS Y COSTOS
+    // =========================================================================
+    function renderPage4Transport(p4) {
+      const stagesEl = document.getElementById('inboundStagesContainer');
+      stagesEl.innerHTML = p4.leadTimeBreakdown.inboundStages.map(st => {
+        const pctWidth = Math.min(100, (st.actualDays / 7.0) * 100);
+        return `
+          <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-semibold text-white">${st.stage}</span>
+              <span class="mono text-amber-300 font-bold">${st.plannedDays}d → ${st.actualDays}d (+${st.varianceDays}d)</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-1.5">
+              <div class="h-full bg-gradient-to-r from-teal-500 to-amber-500" style="width:${pctWidth}%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-400">
+              <span>Responsable: <strong class="text-slate-300">${st.owner}</strong></span>
+              <span class="mono">Peso en retraso total: ${st.shareOfDelayPct}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const attrList = document.getElementById('delayAttributionList');
+      attrList.innerHTML = p4.leadTimeBreakdown.delayAttribution.map(d => `
+        <div class="flex items-center justify-between p-2 rounded bg-slate-950/60 border border-slate-800/80">
+          <div>
+            <span class="font-semibold text-slate-200">${d.cause}</span>
+            <span class="block text-[10px] text-teal-400">${d.nature} (${d.confirmedOrders} órdenes afectadas)</span>
+          </div>
+          <div class="text-right mono">
+            <strong class="text-rose-300">${d.sharePct}%</strong>
+            <span class="block text-[10px] text-slate-400">+${d.avgImpactDays} días prom.</span>
+          </div>
+        </div>
+      `).join('');
+
+      if (scmState.charts.delayAttr) scmState.charts.delayAttr.destroy();
+      scmState.charts.delayAttr = new Chart(document.getElementById('chartDelayAttribution'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Proveedor', 'Transporte y Ruta', 'Proceso Interno', 'Almacén / Calidad'],
+          datasets: [{
+            data: p4.leadTimeBreakdown.delayAttribution.map(x => x.sharePct),
+            backgroundColor: ['#f43f5e', '#f59e0b', '#38bdf8', '#14b8a6'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 10 } } } }
+        }
+      });
+
+      const cs = p4.costSummary;
+      if (scmState.charts.trCostBreak) scmState.charts.trCostBreak.destroy();
+      scmState.charts.trCostBreak = new Chart(document.getElementById('chartTransportCostBreakdown'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Flete Base', 'Combustible', 'Peajes y Básculas', 'Demoras / Stand-by'],
+          datasets: [{
+            data: [cs.freightBaseCop, cs.fuelSurchargeCop, cs.tollsAndScalesCop, cs.standbyDemurrageCop],
+            backgroundColor: ['#14b8a6', '#06b6d4', '#6366f1', '#f43f5e'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 10 } } } }
+        }
+      });
+
+      const rBody = document.getElementById('routesCostTableBody');
+      rBody.innerHTML = p4.routes.map(r => `
+        <tr>
+          <th>
+            <div class="font-bold text-white">Ruta ${r.routeCode} — ${r.routeName}</div>
+            <div class="text-[11px] text-slate-400 font-normal">${r.mode}</div>
+          </th>
+          <td class="text-slate-300 text-xs">${r.origin} → ${r.destination}</td>
+          <td class="mono text-teal-300 font-semibold">${r.distanceKm} km</td>
+          <td class="mono text-xs">${r.tripsCount} viajes <span class="block text-slate-400">${r.tonsMoved.toLocaleString('es-CO')} Ton</span></td>
+          <td class="mono text-xs">${r.plannedTransitHours}h → <strong class="${r.transitDelayHours > 0.5 ? 'text-amber-300' : 'text-emerald-300'}">${r.actualTransitHours}h</strong></td>
+          <td class="mono font-semibold ${r.onTimePct >= 90 ? 'text-emerald-300' : 'text-amber-300'}">${r.onTimePct}%</td>
+          <td class="mono ${r.vehicleUtilizationPct >= 86 ? 'text-emerald-300' : 'text-rose-300'}">${r.vehicleUtilizationPct}%</td>
+          <td class="mono font-bold text-white">${formatCop(r.totalRouteCostCop)}</td>
+          <td class="mono text-rose-300">${formatCop(r.standbyDemurrageCop)}</td>
+          <td class="mono font-semibold text-cyan-300">$${r.costPerTonAvg.toLocaleString('es-CO')}/Ton</td>
+          <td class="mono text-slate-300">$${r.costPerKmAvg.toLocaleString('es-CO')}/km</td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 5: RECOMENDADOR INTELIGENTE DE RUTAS Y TRANSPORTISTAS
+    // =========================================================================
+    function renderPage5RouteOptimizer(p5) {
+      document.getElementById('carrierSavingsBadge').textContent = `Ahorro Anual por Optimización de Flota: ${formatCop(p5.potentialCarrierSavingsCop)}`;
+      const grid = document.getElementById('routeRecommenderCardsGrid');
+      grid.innerHTML = p5.routes.map(r => `
+        <div class="glass-card p-5 space-y-3 border border-slate-800">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div>
+              <span class="text-[10px] font-bold uppercase text-teal-400">Corredor ${r.routeCode} • Distancia Real: ${r.distanceKm} KM</span>
+              <h3 class="text-sm font-bold text-white">${r.routeName} (${r.origin} → ${r.destination})</h3>
+            </div>
+            <span class="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold mono">
+              Ahorro Potencial: ${formatCop(r.potentialRouteSavingsCop)}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${r.carriers.map((c, idx) => `
+              <div class="p-3.5 rounded-xl border ${idx === 0 ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-950/70 border-slate-800'} flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between gap-1 mb-1.5">
+                    <span class="text-xs font-bold text-white">${c.carrierName}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold mono ${idx === 0 ? 'bg-teal-500/25 text-teal-200 border border-teal-400/40' : 'bg-slate-800 text-slate-300'}">
+                      Score: ${c.multiCriteriaScore}/100
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5 mb-2">
+                    ${idx === 0 ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-300 font-semibold">★ Recomendado Desempeño Integral</span>' : ''}
+                    ${c.isLowestTariff ? '<span class="px-2 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-300 font-semibold">Menor Tarifa por Viaje</span>' : ''}
+                  </div>
+                  <div class="grid grid-cols-2 gap-1.5 text-[11px] mono my-2">
+                    <div class="text-slate-400">Tarifa/Viaje: <span class="text-white">$${c.tariffPerTripCop.toLocaleString('es-CO')}</span></div>
+                    <div class="text-slate-400">Costo/Ton: <strong class="${idx === 0 ? 'text-teal-300' : 'text-amber-300'}">$${c.costPerTonCop.toLocaleString('es-CO')}</strong></div>
+                    <div class="text-slate-400">Tránsito: <strong class="text-white">${c.avgTransitHours} h</strong></div>
+                    <div class="text-slate-400">Puntualidad: <strong class="text-emerald-300">${c.onTimePct}%</strong></div>
+                    <div class="text-slate-400">Ocupación: <strong class="text-white">${c.capacityUtilizationPct}%</strong></div>
+                    <div class="text-slate-400">Incidencias: <strong class="text-rose-300">${c.incidentRatePct}%</strong></div>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-300 bg-slate-950/80 p-2 rounded border border-slate-800/80">${c.recommendationNote}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 6: ANÁLISIS PREDICTIVO SAC SMART PREDICT
+    // =========================================================================
+    function renderPage6Predictive(p6) {
+      document.getElementById('predictiveMethodologyText').textContent = `${p6.validation.methodology} (${p6.validation.trainingWindow})`;
+      document.getElementById('predConfidenceVal').textContent = p6.validation.confidenceLevel;
+      document.getElementById('predWapeVal').textContent = `${p6.validation.wapePct}%`;
+      document.getElementById('predMaeRmseVal').textContent = `${p6.validation.maeTons} / ${p6.validation.rmseTons} Ton`;
+
+      const histLabels = p6.historicalMonthly.slice(-6).map(m => m.label);
+      const futLabels = p6.forecast6M.map(f => f.label);
+      const allLabels = [...histLabels, ...futLabels];
+
+      const histDemand = p6.historicalMonthly.slice(-6).map(m => m.demandTons);
+      const futDemand = p6.forecast6M.map(f => f.demandTons);
+      const futUpper = p6.forecast6M.map(f => f.upperBoundTons);
+      const futLower = p6.forecast6M.map(f => f.lowerBoundTons);
+
+      if (scmState.charts.predDemand) scmState.charts.predDemand.destroy();
+      scmState.charts.predDemand = new Chart(document.getElementById('chartPredictiveDemand'), {
+        type: 'line',
+        data: {
+          labels: allLabels,
+          datasets: [
+            {
+              label: 'Demanda Real Histórica (Ton)',
+              data: [...histDemand, null, null, null, null, null, null],
+              borderColor: '#38bdf8',
+              borderWidth: 2.5,
+              tension: 0.3
+            },
+            {
+              label: 'Pronóstico Central SAC (Ton)',
+              data: [...Array(5).fill(null), histDemand[histDemand.length - 1], ...futDemand],
+              borderColor: '#14b8a6',
+              borderWidth: 2.5,
+              borderDash: [6, 4],
+              tension: 0.3
+            },
+            {
+              label: 'Banda Superior Confianza (95%)',
+              data: [...Array(6).fill(null), ...futUpper],
+              borderColor: 'rgba(20, 184, 166, 0.35)',
+              backgroundColor: 'rgba(20, 184, 166, 0.12)',
+              fill: '+1',
+              borderWidth: 1,
+              pointRadius: 0
+            },
+            {
+              label: 'Banda Inferior Confianza (95%)',
+              data: [...Array(6).fill(null), ...futLower],
+              borderColor: 'rgba(20, 184, 166, 0.35)',
+              borderWidth: 1,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      if (scmState.charts.predInv) scmState.charts.predInv.destroy();
+      scmState.charts.predInv = new Chart(document.getElementById('chartPredictiveInventory'), {
+        type: 'line',
+        data: {
+          labels: futLabels,
+          datasets: [
+            {
+              label: 'Proyección Inercial Sin Optimizar ($ Billones COP)',
+              data: p6.forecast6M.map(f => +(f.projectedInventoryCop / 1e9).toFixed(2)),
+              borderColor: '#f59e0b',
+              borderWidth: 2,
+              borderDash: [5, 4],
+              tension: 0.3
+            },
+            {
+              label: 'Trayectoria Optimizada SAC (EOQ + SS + Traslados)',
+              data: p6.forecast6M.map(f => +(f.optimizedInventoryCop / 1e9).toFixed(2)),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              fill: true,
+              borderWidth: 2.5,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#10b981' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      const watchBody = document.getElementById('predictiveStockoutTableBody');
+      watchBody.innerHTML = p6.stockoutWatchlist.map(w => {
+        const riskColor = w.stockoutRiskPct >= 50
+          ? 'text-rose-300 bg-rose-500/20 border-rose-500/40'
+          : w.stockoutRiskPct >= 25
+            ? 'text-amber-300 bg-amber-500/20 border-amber-500/40'
+            : 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40';
+        return `
+          <tr>
+            <th>
+              <div class="font-semibold text-white">${w.materialName}</div>
+              <div class="text-[11px] text-slate-400 font-normal">Clase ${w.abcXyzClass}</div>
+            </th>
+            <td class="text-slate-300">${w.plantName}</td>
+            <td class="mono">${w.netAvailableQty} + ${w.inTransitQty} ${w.unit}</td>
+            <td class="mono">${w.dailyDemandAvg} ± ${w.dailyDemandStdDev} ${w.unit}/día</td>
+            <td class="mono font-semibold text-cyan-300">${w.totalCoverageDays} días</td>
+            <td class="mono text-amber-300">${w.leadTimeDays} ± ${w.leadTimeStdDevDays} días</td>
+            <td>
+              <span class="px-2.5 py-1 rounded-full text-xs font-extrabold mono border ${riskColor}">${w.stockoutRiskPct}%</span>
+            </td>
+            <td class="text-xs text-slate-300">${w.actionRecommendation}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // RENDER PÁGINA 7: SIMULADOR DE ESCENARIOS Y RECOMENDACIONES
+    // =========================================================================
+    function renderPage7Simulation(p7) {
+      const presetsGrid = document.getElementById('presetScenariosCardsGrid');
+      presetsGrid.innerHTML = p7.presetScenarios.map(sc => `
+        <button type="button" data-scenario-id="${sc.id}" class="preset-scenario-btn text-left p-3.5 rounded-xl bg-slate-950/75 border border-slate-800 hover:border-teal-500/60 transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300">${sc.badge}</span>
+              <span class="text-[11px] mono text-emerald-300 font-bold">OTIF ${sc.results.simulated.otifPct}%</span>
+            </div>
+            <h4 class="text-xs font-bold text-white">${sc.name}</h4>
+            <p class="text-[11px] text-slate-400 mt-1 line-clamp-3">${sc.description}</p>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-800/80 text-[11px] mono flex justify-between">
+            <span class="text-slate-400">Impacto Caja:</span>
+            <strong class="text-teal-300">${formatCop(sc.results.deltas.totalCashFlowImpactCop)}</strong>
+          </div>
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.preset-scenario-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sc = p7.presetScenarios.find(x => x.id === btn.dataset.scenarioId);
+          if (!sc) return;
+          document.getElementById('activeScenarioBadge').textContent = sc.name;
+          Object.entries(sc.levers).forEach(([key, val]) => {
+            const slider = document.querySelector(`.sim-lever-slider[data-lever="${key}"]`);
+            if (slider) {
+              slider.value = val;
+              syncSliderElement(slider);
+            }
+          });
+          getSimLeversFromUi();
+          runLiveScenarioSimulation();
+        });
+      });
+
+      renderActiveSimulationResults(p7.activeSimulation);
+
+      const recGrid = document.getElementById('operationalRecommendationsGrid');
+      recGrid.innerHTML = p7.operationalRecommendations.map(r => `
+        <article class="p-4 rounded-xl bg-slate-950/75 border border-slate-800 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40">Prioridad ${r.priority}</span>
+              <span class="text-xs font-semibold text-cyan-300">${r.domain}</span>
+            </div>
+            <span class="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold mono">
+              Beneficio: ${formatCop(r.estimatedSavingsCop)}/año
+            </span>
+          </div>
+          <h4 class="text-sm font-bold text-white">${r.problem}</h4>
+          <div class="text-xs space-y-1.5 text-slate-300">
+            <div><strong class="text-slate-200">Evidencia en Datos:</strong> ${r.evidence}</div>
+            <div><strong class="text-amber-300">Causa Confirmada:</strong> ${r.causeAnalysis}</div>
+            <div><strong class="text-teal-300">Alternativa Recomendada:</strong> ${r.recommendedAlternative}</div>
+            <div><strong class="text-emerald-300">Impacto en Servicio e Inventario:</strong> ${r.operationalImpact}</div>
+            <div class="text-[11px] text-slate-400"><strong>Restricciones / Riesgos:</strong> ${r.implementationRisks} • <strong>Plazo:</strong> ${r.viability}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderActiveSimulationResults(sim) {
+      const cardsEl = document.getElementById('simulationImpactCards');
+      cardsEl.innerHTML = `
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Flujo de Caja Total Liberado</div>
+          <div class="text-base font-extrabold text-teal-300 mono mt-0.5">${formatCop(sim.deltas.totalCashFlowImpactCop)}</div>
+          <div class="text-[10px] text-slate-400">Capital Trabajo + Ahorro OPEX Anual</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Capital Liberado en Inventario</div>
+          <div class="text-base font-extrabold text-cyan-300 mono mt-0.5">${formatCop(sim.deltas.workingCapitalReleasedCop)}</div>
+          <div class="text-[10px] text-slate-400">Nuevo Stock: ${formatCop(sim.simulated.inventoryValueCop)}</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Ahorro en Transporte y Fletes</div>
+          <div class="text-base font-extrabold text-emerald-300 mono mt-0.5">${formatCop(sim.deltas.totalTransportSavingsCop)}</div>
+          <div class="text-[10px] text-slate-400">Nuevo Flete: ${formatCop(sim.simulated.transportCostCop)}</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Ahorro TCO Proveedores + Traslados</div>
+          <div class="text-base font-extrabold text-indigo-300 mono mt-0.5">${formatCop(sim.deltas.tcoProcurementSavingsCop + sim.deltas.interPlantSavingsCop)}</div>
+          <div class="text-[10px] text-slate-400">Sustitución TCO + Redistribución</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Nivel de Servicio OTIF Proyectado</div>
+          <div class="text-base font-extrabold text-emerald-300 mono mt-0.5">${sim.simulated.otifPct}% (${sim.deltas.otifDeltaPts >= 0 ? '+' : ''}${sim.deltas.otifDeltaPts} pts)</div>
+          <div class="text-[10px] text-slate-400">Base actual: ${sim.baseline.otifPct}%</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+          <div class="text-[11px] text-slate-400">Nuevo Lead Time y Riesgo Quiebre</div>
+          <div class="text-base font-extrabold text-white mono mt-0.5">${sim.simulated.leadTimeDays} d | ${sim.simulated.stockoutRiskPct}%</div>
+          <div class="text-[10px] text-slate-400">Base: ${sim.baseline.leadTimeDays} d | Riesgo: ${sim.baseline.stockoutRiskPct}%</div>
+        </div>
+      `;
+
+      if (scmState.charts.simComp) scmState.charts.simComp.destroy();
+      scmState.charts.simComp = new Chart(document.getElementById('chartSimulationComparison'), {
+        type: 'bar',
+        data: {
+          labels: ['Inventario ($B)', 'Costo Almacenamiento ($B)', 'Costo Transporte ($B)'],
+          datasets: [
+            {
+              label: 'Estado Base Actual',
+              data: [
+                +(sim.baseline.inventoryValueCop / 1e9).toFixed(2),
+                +(sim.baseline.holdingCostCop / 1e9).toFixed(2),
+                +(sim.baseline.transportCostCop / 1e9).toFixed(2)
+              ],
+              backgroundColor: 'rgba(148, 163, 184, 0.45)'
+            },
+            {
+              label: 'Escenario Simulado',
+              data: [
+                +(sim.simulated.inventoryValueCop / 1e9).toFixed(2),
+                +(sim.simulated.holdingCostCop / 1e9).toFixed(2),
+                +(sim.simulated.transportCostCop / 1e9).toFixed(2)
+              ],
+              backgroundColor: 'rgba(20, 184, 166, 0.75)'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+    }
+
+    async function runLiveScenarioSimulation() {
+      const levers = getSimLeversFromUi();
+      const res = await fetch('/api/cadena-suministro/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ levers })
+      });
+      const json = await res.json();
+      if (json.ok && json.simulation) {
+        renderActiveSimulationResults(json.simulation);
+      }
+    }
+
+    function renderArchitectureModal(gov) {
+      const el = document.getElementById('architectureModalContent');
+      el.innerHTML = `
+        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="font-bold text-white text-sm">Sistema Productivo: ${gov.sapLandscape.sourceSystem}</div>
+          <div class="text-slate-400">${gov.sapLandscape.connectionMode}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+            ${gov.sapLandscape.connectedModules.map(m => `
+              <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+                <div class="flex items-center justify-between">
+                  <strong class="text-teal-300">${m.module}</strong>
+                  <span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/15 text-emerald-300">${m.status}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">${m.scope}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-sm font-bold text-white">Alcance Funcional y Transparencia Metodológica</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            ${gov.sapLandscape.complementaryScope.map(c => `
+              <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <strong class="text-cyan-300 block">${c.module}</strong>
+                <span class="text-[10px] text-amber-300">${c.status}</span>
+                <p class="text-[11px] text-slate-400 mt-1">${c.note}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-sm font-bold text-white">Diccionario Maestro de Fórmulas e Indicadores</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            ${gov.kpiDictionary.map(k => `
+              <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <div class="flex justify-between">
+                  <strong class="text-white">${k.name}</strong>
+                  <span class="mono text-teal-300 text-[11px]">${k.unit}</span>
+                </div>
+                <div class="mono text-[11px] text-cyan-200 my-1">${k.formula}</div>
+                <div class="text-[10px] text-slate-400">Fuente: ${k.source} • Frecuencia: ${k.periodicity}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function exportCurrentViewCsv() {
+      if (!scmState.data) return;
+      const rows = [
+        ['Material', 'Centro', 'Almacen', 'Familia', 'Disponible', 'En_Transito', 'Valor_COP', 'Clase_ABC_XYZ', 'Stock_Seguridad_Optimo', 'Punto_Pedido_ROP', 'Lote_EOQ', 'Estado']
+      ];
+      scmState.data.page3Inventory.items.forEach(it => {
+        rows.push([
+          `"${it.materialName}"`,
+          `"${it.plantName}"`,
+          `"${it.storageLocation}"`,
+          `"${it.familyName}"`,
+          it.unrestrictedQty,
+          it.inTransitQty,
+          it.totalEconomicValueCop,
+          it.abcXyzClass,
+          it.recommendedSafetyStock,
+          it.recommendedReorderPoint,
+          it.recommendedEoq,
+          `"${it.statusCategory}"`
+        ]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cadena_suministro_sac_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Inicialización de eventos
+    document.addEventListener('DOMContentLoaded', () => {
+      initAllSliders();
+
+      // Navegación por pestañas
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.page;
+          scmState.activePage = target;
+          document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b === btn));
+          document.querySelectorAll('.scm-page').forEach(sec => sec.classList.toggle('hidden', sec.id !== target));
+        });
+      });
+
+      // Filtros globales
+      ['filterPlant', 'filterFamily', 'filterEkorg', 'filterRoute', 'supplierSortSelect'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => loadSupplyChainData(false));
+      });
+
+      document.getElementById('invStatusFilter').addEventListener('change', () => {
+        if (scmState.data) renderPage3Inventory(scmState.data.page3Inventory);
+      });
+
+      document.getElementById('btnClearAbcFilter').addEventListener('click', () => {
+        scmState.selectedAbcXyzQuadrant = 'ALL';
+        document.getElementById('btnClearAbcFilter').classList.add('hidden');
+        if (scmState.data) renderPage3Inventory(scmState.data.page3Inventory);
+      });
+
+      document.getElementById('btnResetFilters').addEventListener('click', () => {
+        document.getElementById('filterPlant').value = 'ALL';
+        document.getElementById('filterFamily').value = 'ALL';
+        document.getElementById('filterEkorg').value = 'ALL';
+        document.getElementById('filterRoute').value = 'ALL';
+        scmState.selectedAbcXyzQuadrant = 'ALL';
+        loadSupplyChainData(false);
+      });
+
+      // Sliders de pesos de proveedores y rutas
+      document.querySelectorAll('.supplier-weight-slider, .route-weight-slider').forEach(sl => {
+        sl.addEventListener('input', () => {
+          getSupplierWeightsFromUi();
+          getRouteWeightsFromUi();
+        });
+        sl.addEventListener('change', () => loadSupplyChainData(false));
+      });
+
+      // Sliders del simulador
+      document.querySelectorAll('.sim-lever-slider').forEach(sl => {
+        sl.addEventListener('input', () => {
+          document.getElementById('activeScenarioBadge').textContent = 'Escenario Personalizado (En Vivo)';
+          getSimLeversFromUi();
+        });
+        sl.addEventListener('change', () => runLiveScenarioSimulation());
+      });
+
+      document.getElementById('btnRefreshData').addEventListener('click', () => loadSupplyChainData(true));
+      document.getElementById('btnExportCsv').addEventListener('click', exportCurrentViewCsv);
+
+      const modal = document.getElementById('architectureModal');
+      document.getElementById('btnOpenArchitectureModal').addEventListener('click', () => modal.classList.remove('hidden'));
+      document.getElementById('btnCloseArchitectureModal').addEventListener('click', () => modal.classList.add('hidden'));
+
+      loadSupplyChainData(false);
+    });
+  </script>
+</body>
+</html>

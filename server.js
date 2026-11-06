@@ -35,6 +35,10 @@ const {
   saveCustomScenario,
   deleteCustomScenario
 } = require('./services/financialAnalyticsService');
+const {
+  getSupplyChainOverview,
+  simulateSupplyChainScenario
+} = require('./services/supplyChainAnalyticsService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -116,6 +120,10 @@ app.get(['/finanzas-sap', '/desempeno-financiero', '/sac-finanzas'], (req, res) 
   res.sendFile(path.join(__dirname, 'public', 'finanzas.html'));
 });
 
+app.get(['/cadena-suministro-sap', '/logistica-sap', '/sac-logistica'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cadena-suministro.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
@@ -135,7 +143,8 @@ app.get('/api/health', (req, res) => {
       notificacionesSap: '/notificaciones-sap',
       inventariosSap: '/inventarios-sap',
       ventasSap: '/ventas-sap',
-      finanzasSap: '/finanzas-sap'
+      finanzasSap: '/finanzas-sap',
+      cadenaSuministroSap: '/cadena-suministro-sap'
     }
   });
 });
@@ -524,6 +533,55 @@ app.delete('/api/finanzas/scenarios/:id', async (req, res) => {
   }
 });
 
+// ============================================================================
+// MÓDULO 6: INTELIGENCIA Y OPTIMIZACIÓN DE LA CADENA DE SUMINISTRO (SAP SCM + SAC)
+// ============================================================================
+app.get('/api/cadena-suministro/overview', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    const data = await getSupplyChainOverview({ ...(req.query || {}), forceRefresh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR GET /api/cadena-suministro/overview]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al calcular la inteligencia y optimización de la cadena de suministro.'
+    });
+  }
+});
+
+app.post('/api/cadena-suministro/overview', async (req, res) => {
+  try {
+    const filters = { ...(req.query || {}), ...(req.body || {}) };
+    const forceRefresh = Boolean(filters.refresh === true || filters.refresh === 'true');
+    const data = await getSupplyChainOverview({ ...filters, forceRefresh });
+    res.json(data);
+  } catch (error) {
+    console.error('[ERROR POST /api/cadena-suministro/overview]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al procesar filtros y pesos de la cadena de suministro.'
+    });
+  }
+});
+
+app.post('/api/cadena-suministro/simulate', async (req, res) => {
+  try {
+    const { filters = {}, levers = {} } = req.body || {};
+    const overview = await getSupplyChainOverview({ ...filters, customLevers: levers });
+    res.json({
+      ok: true,
+      simulation: overview.page7SimulationAndActions.activeSimulation
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/cadena-suministro/simulate]:', error.message);
+    res.status(500).json({
+      ok: false,
+      error: error.message || 'Error al simular el escenario operativo de la cadena de suministro.'
+    });
+  }
+});
+
 // Rutas del Monitor SAP (/api/auth/*, /api/dashboard, /api/user/lock, etc.)
 app.use('/api', apiRoutes);
 
@@ -537,6 +595,7 @@ app.listen(PORT, () => {
   console.log(` 🧠 Inventarios IA:       http://localhost:${PORT}/inventarios-sap`);
   console.log(` 📈 Ventas & SAC ML:      http://localhost:${PORT}/ventas-sap`);
   console.log(` 💰 Finanzas & Escenarios:http://localhost:${PORT}/finanzas-sap`);
+  console.log(` 🚚 Cadena de Suministro: http://localhost:${PORT}/cadena-suministro-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
 
