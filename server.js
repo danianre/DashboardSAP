@@ -27,6 +27,14 @@ const {
   computeSalesAnalytics,
   triggerBackgroundSync
 } = require('./services/salesAnalyticsService');
+const {
+  getOrSyncFinancialDataset,
+  computeFinancialAnalytics,
+  runScenarioSimulation,
+  loadSavedScenarios,
+  saveCustomScenario,
+  deleteCustomScenario
+} = require('./services/financialAnalyticsService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -104,6 +112,10 @@ app.get(['/ventas-sap', '/analisis-ventas', '/sac-ventas'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ventas.html'));
 });
 
+app.get(['/finanzas-sap', '/desempeno-financiero', '/sac-finanzas'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'finanzas.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
@@ -122,7 +134,8 @@ app.get('/api/health', (req, res) => {
       monitorSap: '/monitor-sap',
       notificacionesSap: '/notificaciones-sap',
       inventariosSap: '/inventarios-sap',
-      ventasSap: '/ventas-sap'
+      ventasSap: '/ventas-sap',
+      finanzasSap: '/finanzas-sap'
     }
   });
 });
@@ -401,6 +414,116 @@ app.post('/api/ventas/overview', async (req, res) => {
   }
 });
 
+// ============================================================================
+// MÓDULO 5: DESEMPEÑO FINANCIERO Y SIMULACIÓN DE ESCENARIOS (SAP FI/CO + SAC)
+// ============================================================================
+app.get('/api/finanzas/overview', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    const finDataset = await getOrSyncFinancialDataset(forceRefresh);
+    const analytics = await computeFinancialAnalytics(finDataset, req.query || {});
+    res.json({
+      success: true,
+      ...analytics
+    });
+  } catch (error) {
+    console.error('[ERROR GET /api/finanzas/overview]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al calcular el desempeño financiero y estado de resultados.'
+    });
+  }
+});
+
+app.post('/api/finanzas/overview', async (req, res) => {
+  try {
+    const filters = { ...(req.query || {}), ...(req.body || {}) };
+    const forceRefresh = Boolean(filters.refresh === true || filters.refresh === 'true');
+    const finDataset = await getOrSyncFinancialDataset(forceRefresh);
+    const analytics = await computeFinancialAnalytics(finDataset, filters);
+    res.json({
+      success: true,
+      ...analytics
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/finanzas/overview]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al procesar filtros del análisis de desempeño financiero.'
+    });
+  }
+});
+
+app.post('/api/finanzas/simulate', async (req, res) => {
+  try {
+    const { filters = {}, drivers = {} } = req.body || {};
+    const finDataset = await getOrSyncFinancialDataset(false);
+    const analytics = await computeFinancialAnalytics(finDataset, { ...filters, drivers });
+    res.json({
+      success: true,
+      simulation: analytics.scenarios.activeSimulation,
+      scenariosList: analytics.scenarios.list
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/finanzas/simulate]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al ejecutar la simulación de escenarios y Monte Carlo.'
+    });
+  }
+});
+
+app.get('/api/finanzas/scenarios', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      scenarios: loadSavedScenarios()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al listar escenarios financieros.'
+    });
+  }
+});
+
+app.post('/api/finanzas/scenarios', async (req, res) => {
+  try {
+    const saved = saveCustomScenario(req.body || {});
+    const finDataset = await getOrSyncFinancialDataset(false);
+    const analytics = await computeFinancialAnalytics(finDataset, req.body?.filters || {});
+    res.json({
+      success: true,
+      scenario: saved,
+      scenariosList: analytics.scenarios.list
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/finanzas/scenarios]:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al guardar el escenario financiero personalizado.'
+    });
+  }
+});
+
+app.delete('/api/finanzas/scenarios/:id', async (req, res) => {
+  try {
+    const deleted = deleteCustomScenario(req.params.id);
+    const finDataset = await getOrSyncFinancialDataset(false);
+    const analytics = await computeFinancialAnalytics(finDataset, {});
+    res.json({
+      success: true,
+      deleted,
+      scenariosList: analytics.scenarios.list
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al eliminar el escenario financiero.'
+    });
+  }
+});
+
 // Rutas del Monitor SAP (/api/auth/*, /api/dashboard, /api/user/lock, etc.)
 app.use('/api', apiRoutes);
 
@@ -413,6 +536,7 @@ app.listen(PORT, () => {
   console.log(` 🔔 Notificaciones SAP:   http://localhost:${PORT}/notificaciones-sap`);
   console.log(` 🧠 Inventarios IA:       http://localhost:${PORT}/inventarios-sap`);
   console.log(` 📈 Ventas & SAC ML:      http://localhost:${PORT}/ventas-sap`);
+  console.log(` 💰 Finanzas & Escenarios:http://localhost:${PORT}/finanzas-sap`);
   console.log(` 🔖 Commit Activo:        ${releaseMeta.commit}`);
   console.log(`========================================================`);
 

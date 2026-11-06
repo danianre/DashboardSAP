@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desempeño Financiero y Simulación de Escenarios — SAP Analytics Cloud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-base: #070b14;
+      --bg-surface: #0f172a;
+      --bg-elevated: #1e293b;
+      --border-subtle: rgba(148, 163, 184, 0.14);
+      --accent-emerald: #10b981;
+      --accent-cyan: #06b6d4;
+      --accent-indigo: #6366f1;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.09) 0px, transparent 45%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.09) 0px, transparent 45%),
+        radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.06) 0px, transparent 50%);
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Modern Web Guidance: interactions-in-complex-layouts (content-visibility + fallback) */
+    .sac-defer-section {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 480px;
+    }
+    @supports not (content-visibility: auto) {
+      .sac-defer-section {
+        contain: layout paint;
+      }
+    }
+
+    /* Modern Web Guidance: responsive-table (@container + sticky header + tabular-nums) */
+    .table-container {
+      container-type: inline-size;
+      container-name: fin-table;
+      overflow-x: auto;
+      max-height: 580px;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(15, 23, 42, 0.72);
+    }
+
+    .sac-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    .sac-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #0f172a;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.6875rem;
+      padding: 0.75rem 0.875rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      white-space: nowrap;
+    }
+
+    .sac-table tbody td {
+      padding: 0.65rem 0.875rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sac-table tbody tr:hover {
+      background: rgba(30, 41, 59, 0.55);
+    }
+
+    .sac-table tr.row-subtotal {
+      background: rgba(16, 185, 129, 0.07);
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .sac-table tr.row-total {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.16), rgba(6, 182, 212, 0.14));
+      font-weight: 800;
+      color: #ffffff;
+      border-top: 2px solid rgba(16, 185, 129, 0.45);
+    }
+
+    @container fin-table (width < 44rem) {
+      .sac-table [data-priority="low"] {
+        display: none;
+      }
+    }
+
+    /* Modern Web Guidance: slider (--control-value + @supports not progress() fallback) */
+    .driver-slider-group {
+      --control-min: -25;
+      --control-max: 25;
+      --control-value: 0;
+    }
+    .driver-slider-group input[type="range"] {
+      width: 100%;
+      accent-color: #10b981;
+      cursor: pointer;
+      height: 0.45rem;
+      border-radius: 999px;
+      background: rgba(30, 41, 59, 0.9);
+    }
+    @supports not (opacity: progress(1, 0, 100)) {
+      .driver-slider-group {
+        --driver-pct: calc(
+          (var(--control-value) - var(--control-min)) /
+          (var(--control-max) - var(--control-min)) * 100%
+        );
+      }
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 0.875rem;
+    }
+
+    .page-tab-btn.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.18));
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+
+  <!-- BARRA SUPERIOR EJECUTIVA -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="/" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/70 text-xs font-medium text-slate-300 transition">
+          <span>←</span>
+          <span>Portal SAP</span>
+        </a>
+        <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              SAP Analytics Cloud • Finanzas &amp; Controlling
+            </span>
+            <span id="liveConnectionBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Conectado a Contabilidad Corporativa
+            </span>
+          </div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight mt-0.5">
+            Dashboard de Desempeño Financiero, Rentabilidad y Simulación de Escenarios
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btnOpenDocModal" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition">
+          <span>📘</span>
+          <span>Modelo Financiero y Diccionario</span>
+        </button>
+        <button id="btnExportCsv" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-emerald-300 transition">
+          <span>⬇</span>
+          <span>Exportar P&amp;L (CSV)</span>
+        </button>
+        <button id="btnRefreshSap" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-900/30 transition">
+          <span id="refreshIcon">↻</span>
+          <span>Sincronizar SAP</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BARRA GLOBAL DE FILTROS FINANCIEROS -->
+    <div class="bg-slate-900/75 border-t border-slate-800/70">
+      <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 items-end">
+        <div>
+          <label for="filterYear" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Ejercicio Fiscal</label>
+          <select id="filterYear" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            <option value="2025" selected>2025 (Año Completo)</option>
+            <option value="2026">2026 (Ejercicio en Curso)</option>
+            <option value="2024">2024 (Histórico Comparativo)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterQuarter" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Trimestre</label>
+          <select id="filterQuarter" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            <option value="ALL">Todo el Ejercicio</option>
+            <option value="Q1">Trimestre 1 (Ene - Mar)</option>
+            <option value="Q2">Trimestre 2 (Abr - Jun)</option>
+            <option value="Q3">Trimestre 3 (Jul - Sep)</option>
+            <option value="Q4">Trimestre 4 (Oct - Dic)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterMonth" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Período Contable</label>
+          <select id="filterMonth" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            <option value="ALL">Todos los Meses (01 - 12)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterBukrs" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Sociedad / Empresa</label>
+          <select id="filterBukrs" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            <option value="ALL">Todas las Sociedades (Consolidado)</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterPrctr" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Centro de Beneficio</label>
+          <select id="filterPrctr" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            <option value="ALL">Todos los Centros de Beneficio</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <label for="filterKostl" class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Centro de Costo</label>
+            <select id="filterKostl" class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+              <option value="ALL">Todos los Centros de Costo</option>
+            </select>
+          </div>
+          <button id="btnResetFilters" type="button" title="Restablecer filtros" class="mt-4 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition">
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN DE LAS 6 PÁGINAS DE LA HISTORIA SAC (SECCIÓN 10) -->
+    <div class="bg-slate-950/95 border-t border-slate-800/80">
+      <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <button type="button" data-page="page-1" class="page-tab-btn active px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          1. Resumen Financiero Ejecutivo
+        </button>
+        <button type="button" data-page="page-2" class="page-tab-btn px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          2. Estado de Resultados (P&amp;L)
+        </button>
+        <button type="button" data-page="page-3" class="page-tab-btn px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          3. Rentabilidad por Segmento
+        </button>
+        <button type="button" data-page="page-4" class="page-tab-btn px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          4. Análisis de Costos y Gastos
+        </button>
+        <button type="button" data-page="page-5" class="page-tab-btn px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          5. Simulación de Escenarios &amp; Monte Carlo
+        </button>
+        <button type="button" data-page="page-6" class="page-tab-btn px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-300 whitespace-nowrap transition">
+          6. Control Presupuestal y Recomendaciones
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- BANNER DE ESTADO DE CARGA -->
+    <div id="loadingBanner" class="hidden glass-card p-4 border-emerald-500/40 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin"></div>
+        <span class="text-xs font-medium text-emerald-200">Procesando saldos contables, centros de beneficio y simulaciones financieras en tiempo real...</span>
+      </div>
+      <span class="text-[11px] text-slate-400 font-mono">SAP Analytics Cloud Engine</span>
+    </div>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 1: RESUMEN FINANCIERO EJECUTIVO (16 KPIS + EVOLUCIÓN + CASCADA P&L) -->
+    <!-- ========================================================================== -->
+    <section id="page-1" class="sac-page space-y-6">
+      <!-- Bloque 1: Indicadores de Ingresos (5 KPIs) -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">I. Indicadores Ejecutivos de Ingresos</h2>
+            <p class="text-xs text-slate-400">Facturación bruta, ingresos netos reconocidos, crecimiento interanual y ejecución presupuestal</p>
+          </div>
+          <span id="contextSubtitlePage1" class="text-xs text-slate-400 font-mono">Moneda consolidada: COP</span>
+        </div>
+        <div id="kpiGridIngresos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5"></div>
+      </div>
+
+      <!-- Bloque 2: Indicadores de Costos y Gastos (5 KPIs) -->
+      <div>
+        <div class="mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">II. Indicadores de Costos y Estructura de Gastos</h2>
+          <p class="text-xs text-slate-400">Costo directo de ventas, gastos operacionales, administrativos y comerciales frente al presupuesto</p>
+        </div>
+        <div id="kpiGridCostos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5"></div>
+      </div>
+
+      <!-- Bloque 3: Indicadores de Rentabilidad y Generación de Valor (6 KPIs) -->
+      <div>
+        <div class="mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400">III. Indicadores de Rentabilidad y Generación de Caja (EBITDA / EBIT / Neto)</h2>
+          <p class="text-xs text-slate-400">Utilidad bruta, utilidad operacional, generación de caja EBITDA y resultado final del ejercicio</p>
+        </div>
+        <div id="kpiGridRentabilidad" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5"></div>
+      </div>
+
+      <!-- Gráficos Ejecutivos de Página 1 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sac-defer-section">
+        <div class="glass-card p-5 lg:col-span-7">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white">Evolución Mensual de Ingresos Netos, Costo de Ventas y Utilidad Neta</h3>
+              <p class="text-xs text-slate-400">Comparativo mensual entre Ejecución Real, Meta Presupuestal y Pronóstico de Cierre</p>
+            </div>
+            <span class="px-2.5 py-1 rounded text-[11px] bg-slate-800 text-slate-300 font-mono">Cifras en Miles de Millones COP</span>
+          </div>
+          <div class="h-80">
+            <canvas id="chartExecTrend"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 lg:col-span-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white">Puente de Resultados (De Ingresos Brutos a Utilidad Neta)</h3>
+              <p class="text-xs text-slate-400">Absorción de descuentos, costo de ventas, gastos operacionales, financieros e impuestos</p>
+            </div>
+          </div>
+          <div class="h-80">
+            <canvas id="chartExecBridge"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 2: ESTADO DE RESULTADOS (P&L INTERACTIVO DE 13 LÍNEAS)             -->
+    <!-- ========================================================================== -->
+    <section id="page-2" class="sac-page hidden space-y-6">
+      <div class="glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Estado de Resultados Consolidado (P&amp;L) — Comparativo Multi-Versión</h2>
+            <p class="text-xs text-slate-400">
+              Estructura financiera de 13 niveles comparando Ejecución Real, Presupuesto Oficial, Pronóstico Rolling y Año Anterior.
+              Las desviaciones se evalúan automáticamente según la naturaleza contable de cada línea.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">● Favorable</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">● Atención</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">● Desfavorable</span>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="sac-table">
+            <thead>
+              <tr>
+                <th class="text-left">Línea del Estado de Resultados</th>
+                <th class="text-right">Real (Actual)</th>
+                <th class="text-right">Presupuesto</th>
+                <th class="text-right" data-priority="low">Pronóstico</th>
+                <th class="text-right" data-priority="low">Año Anterior</th>
+                <th class="text-right">Var. vs Presupuesto ($)</th>
+                <th class="text-right">Var. vs Ppto (%)</th>
+                <th class="text-right" data-priority="low">Var. Interanual (%)</th>
+                <th class="text-right">% Vertical</th>
+                <th class="text-center">Evaluación</th>
+              </tr>
+            </thead>
+            <tbody id="pnlTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sac-defer-section">
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">Evolución Mensual de Márgenes de Rentabilidad (%)</h3>
+          <p class="text-xs text-slate-400 mb-4">Comportamiento del Margen Bruto, Margen EBITDA, Margen Operacional y Margen Neto</p>
+          <div class="h-72">
+            <canvas id="chartPnlMargins"></canvas>
+          </div>
+        </div>
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">Comparativo Mensual de Utilidad Neta: Real vs. Presupuesto vs. Pronóstico</h3>
+          <p class="text-xs text-slate-400 mb-4">Seguimiento mensual de la generación de utilidad neta frente a la meta financiera</p>
+          <div class="h-72">
+            <canvas id="chartPnlNetComparison"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 3: RENTABILIDAD POR SEGMENTO Y REGLAS DE ASIGNACIÓN DE COSTOS       -->
+    <!-- ========================================================================== -->
+    <section id="page-3" class="sac-page hidden space-y-6">
+      <!-- Panel de Control de Reglas de Asignación de Costos (Sección 5.D) -->
+      <div class="glass-card p-5 border-cyan-500/30">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="max-w-3xl">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                Gobernanza de Costos y Rentabilidad
+              </span>
+              <h2 class="text-sm sm:text-base font-bold text-white">Metodología de Imputación y Distribución de Costos</h2>
+            </div>
+            <p class="text-xs text-slate-300 mt-1">
+              Los costos de ventas directos se registran por línea de negocio y facturación comercial. Los gastos administrativos, comerciales, financieros e impuestos se contabilizan por Sociedad y Centro de Costo; selecciona cómo deseas visualizar la rentabilidad por segmento:
+            </p>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+            <button type="button" id="btnAllocFull" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition">
+              Rentabilidad Completa (Con Asignación Indirecta)
+            </button>
+            <button type="button" id="btnAllocDirect" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+              Contribución Directa (Solo Costo Directo)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos de Rentabilidad por Línea de Producto y Sociedad -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">A. Rentabilidad por Línea de Producto y Negocio</h3>
+          <p class="text-xs text-slate-400 mb-4">Ingresos netos, utilidad bruta y margen por familia comercial</p>
+          <div class="h-72">
+            <canvas id="chartSegmentProducts"></canvas>
+          </div>
+        </div>
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">C. Desempeño Financiero por Sociedad y Unidad de Negocio</h3>
+          <p class="text-xs text-slate-400 mb-4">Comparativo de ingresos netos, utilidad operacional (EBIT) y utilidad neta por empresa</p>
+          <div class="h-72">
+            <canvas id="chartSegmentSocieties"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla 3.A: Rentabilidad por Producto y Clasificación en Cuadrantes -->
+      <div class="glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Matriz de Rentabilidad por Producto / Línea de Negocio</h3>
+            <p class="text-xs text-slate-400">Clasificación automática según volumen de ingresos y margen de contribución</p>
+          </div>
+          <span id="allocModeBadge" class="px-2.5 py-1 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            Vista activa: Rentabilidad Completa (Costos Directos + Gastos Asignados)
+          </span>
+        </div>
+        <div class="table-container">
+          <table class="sac-table">
+            <thead>
+              <tr>
+                <th class="text-left">Línea de Producto / Material</th>
+                <th class="text-right">Ingresos Brutos</th>
+                <th class="text-right" data-priority="low">Descuentos</th>
+                <th class="text-right">Ingresos Netos</th>
+                <th class="text-right">Costo Directo</th>
+                <th class="text-right">Utilidad Bruta</th>
+                <th class="text-right">Margen Bruto</th>
+                <th class="text-right" data-priority="low">Gastos Asignados</th>
+                <th class="text-right">Resultado Operacional</th>
+                <th class="text-right">Margen Neto Est.</th>
+                <th class="text-left">Cuadrante Estratégico</th>
+              </tr>
+            </thead>
+            <tbody id="tableSegmentProductsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tablas 3.B y 3.C: Clientes/Regiones y Sociedades/Centros de Beneficio -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sac-defer-section">
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">B. Rentabilidad por Cliente Corporativo y Mercado</h3>
+          <p class="text-xs text-slate-400 mb-3">Principales clientes ordenados por ingresos netos, descuentos otorgados y contribución</p>
+          <div class="table-container">
+            <table class="sac-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Cliente / Mercado</th>
+                  <th class="text-right">Ingresos Netos</th>
+                  <th class="text-right" data-priority="low">Descuentos</th>
+                  <th class="text-right">Utilidad Bruta</th>
+                  <th class="text-right">Margen %</th>
+                  <th class="text-right">Resultado Neto Est.</th>
+                </tr>
+              </thead>
+              <tbody id="tableSegmentCustomersBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="glass-card p-5">
+          <h3 class="text-sm font-bold text-white mb-1">C. Rentabilidad Contable por Sociedad y Centro de Beneficio</h3>
+          <p class="text-xs text-slate-400 mb-3">Resultados contables directos registrados en el Libro Mayor General por sociedad</p>
+          <div class="table-container">
+            <table class="sac-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Sociedad / Unidad de Negocio</th>
+                  <th class="text-right">Ingresos Netos</th>
+                  <th class="text-right">Utilidad Bruta</th>
+                  <th class="text-right" data-priority="low">Gastos Op.</th>
+                  <th class="text-right">Utilidad Op. (EBIT)</th>
+                  <th class="text-right">Margen Op.</th>
+                </tr>
+              </thead>
+              <tbody id="tableSegmentSocietiesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 4: ANÁLISIS DE COSTOS Y GASTOS, PARETO Y RATIOS DE EFICIENCIA       -->
+    <!-- ========================================================================== -->
+    <section id="page-4" class="sac-page hidden space-y-6">
+      <!-- 4 Tarjetas de Eficiencia de Costos (Sección 6.B) -->
+      <div>
+        <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400 mb-3">Indicadores de Eficiencia Operativa y Estructura de Costos</h2>
+        <div id="costEfficiencyCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      </div>
+
+      <!-- Gráficos de Composición de Costos y Pareto 80/20 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="glass-card p-5 lg:col-span-5">
+          <h3 class="text-sm font-bold text-white mb-1">Composición de Costos y Gastos por Naturaleza</h3>
+          <p class="text-xs text-slate-400 mb-4">Distribución porcentual entre Costo de Ventas, Gastos Administrativos, Comerciales y Financieros</p>
+          <div class="h-72">
+            <canvas id="chartCostComposition"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 lg:col-span-7">
+          <h3 class="text-sm font-bold text-white mb-1">Curva de Pareto (80/20) de Principales Rubros de Costo y Gasto</h3>
+          <p class="text-xs text-slate-400 mb-4">Identificación de las cuentas contables que concentran el 80% del desembolso total</p>
+          <div class="h-72">
+            <canvas id="chartCostPareto"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desglose de Costos de Producción por Naturaleza + Fijos vs Variables -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sac-defer-section">
+        <div class="glass-card p-5 lg:col-span-6">
+          <h3 class="text-sm font-bold text-white mb-1">Estructura de Costos de Producción y Transformación</h3>
+          <p class="text-xs text-slate-400 mb-3">Participación de Materias Primas, Mano de Obra Directa, Costos Indirectos de Planta y Servicios</p>
+          <div id="productionNatureList" class="space-y-3 mt-4"></div>
+        </div>
+
+        <div class="glass-card p-5 lg:col-span-6">
+          <h3 class="text-sm font-bold text-white mb-1">Ranking de Centros de Costo Operativos y Corporativos</h3>
+          <p class="text-xs text-slate-400 mb-3">Centros con mayor absorción presupuestal y proporción de costos fijos vs. variables</p>
+          <div class="table-container">
+            <table class="sac-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Centro de Costo</th>
+                  <th class="text-left" data-priority="low">Categoría Principal</th>
+                  <th class="text-right">Ejecución Actual</th>
+                  <th class="text-right">Var. Interanual</th>
+                  <th class="text-right">% Costo Fijo</th>
+                </tr>
+              </thead>
+              <tbody id="tableCostCentersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Detallada de Pareto de Cuentas de Costo y Gasto -->
+      <div class="glass-card p-5 sac-defer-section">
+        <h3 class="text-sm font-bold text-white mb-1">Detalle de Principales Rubros Contables de Costo y Gasto (Análisis de Pareto)</h3>
+        <p class="text-xs text-slate-400 mb-3">Clasificación por comportamiento (Fijo / Variable), imputación (Directo / Indirecto) y peso acumulado</p>
+        <div class="table-container">
+          <table class="sac-table">
+            <thead>
+              <tr>
+                <th class="text-center">#</th>
+                <th class="text-left">Rubro / Cuenta Contable</th>
+                <th class="text-left">Categoría</th>
+                <th class="text-center">Comportamiento</th>
+                <th class="text-right">Importe Actual (COP)</th>
+                <th class="text-right" data-priority="low">Año Anterior</th>
+                <th class="text-right">Crecimiento %</th>
+                <th class="text-right">% del Total</th>
+                <th class="text-right">% Acumulado</th>
+                <th class="text-center">Clasificación ABC</th>
+              </tr>
+            </thead>
+            <tbody id="tableCostAccountsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 5: SIMULACIÓN DE ESCENARIOS, VALUE DRIVER TREE Y MONTE CARLO        -->
+    <!-- ========================================================================== -->
+    <section id="page-5" class="sac-page hidden space-y-6">
+      <!-- Barra de Selección de Escenarios y Guardado de Escenarios Personalizados (Sección 8.B y 9) -->
+      <div class="glass-card p-5 border-emerald-500/30">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              SAC Planning &amp; Compass Simulation Engine
+            </span>
+            <h2 class="text-base font-bold text-white mt-1">Simulador Estratégico What-If, Árbol de Valor (VDT) y Monte Carlo</h2>
+            <p class="text-xs text-slate-400">
+              Modifica cualquier palanca de ingresos, costos, gastos o entorno macroeconómico para evaluar en tiempo real el impacto en EBITDA, Margen Operacional y Utilidad Neta.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="btnResetSliders" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition">
+              Restablecer a Real (0%)
+            </button>
+            <button type="button" id="btnOpenSaveScenarioModal" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-900/30 transition">
+              💾 Guardar Escenario Personalizado
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjetas de Escenarios Disponibles (Optimista, Base, Pesimista y Personalizados) -->
+        <div id="scenarioCardsContainer" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+      </div>
+
+      <!-- Panel Principal: 12 Sliders Interactivos (Izquierda) + Impacto Inmediato y VDT (Derecha) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Columna Izquierda: 12 Variables Simulables (Sección 8.A) -->
+        <div class="glass-card p-5 lg:col-span-5 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white">Palancas de Simulación (12 Drivers)</h3>
+            <span id="activeScenarioLabel" class="text-xs font-semibold text-emerald-400">Escenario Base Activo</span>
+          </div>
+
+          <!-- 1. Drivers de Ingresos -->
+          <div class="space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400">1. Variables de Ingresos Comerciales</h4>
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:2;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_priceChangePct" class="text-slate-300 font-medium">Precio promedio de venta (%)</label>
+                <output id="out_priceChangePct" for="slider_priceChangePct" class="font-mono font-bold text-emerald-300">+2.0%</output>
+              </div>
+              <input id="slider_priceChangePct" data-driver="priceChangePct" type="range" min="-20" max="25" step="0.5" value="2" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:2.5;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_volumeChangePct" class="text-slate-300 font-medium">Volumen de ventas comercializado (%)</label>
+                <output id="out_volumeChangePct" for="slider_volumeChangePct" class="font-mono font-bold text-emerald-300">+2.5%</output>
+              </div>
+              <input id="slider_volumeChangePct" data-driver="volumeChangePct" type="range" min="-20" max="25" step="0.5" value="2.5" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-30; --control-max:30; --control-value:0;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_discountChangePct" class="text-slate-300 font-medium">Descuentos comerciales y notas crédito (%)</label>
+                <output id="out_discountChangePct" for="slider_discountChangePct" class="font-mono font-bold text-slate-300">0.0%</output>
+              </div>
+              <input id="slider_discountChangePct" data-driver="discountChangePct" type="range" min="-30" max="30" step="1" value="0" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-15; --control-max:15; --control-value:1;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_mixShiftPct" class="text-slate-300 font-medium">Mezcla hacia productos de alto margen (%)</label>
+                <output id="out_mixShiftPct" for="slider_mixShiftPct" class="font-mono font-bold text-emerald-300">+1.0%</output>
+              </div>
+              <input id="slider_mixShiftPct" data-driver="mixShiftPct" type="range" min="-15" max="15" step="0.5" value="1" />
+            </div>
+          </div>
+
+          <!-- 2. Drivers de Costos -->
+          <div class="space-y-3 pt-2 border-t border-slate-800/80">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400">2. Variables de Costos Directos</h4>
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1.5;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_rawMaterialCostPct" class="text-slate-300 font-medium">Costo de materias primas e insumos (%)</label>
+                <output id="out_rawMaterialCostPct" for="slider_rawMaterialCostPct" class="font-mono font-bold text-amber-300">+1.5%</output>
+              </div>
+              <input id="slider_rawMaterialCostPct" data-driver="rawMaterialCostPct" type="range" min="-20" max="25" step="0.5" value="1.5" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_productionCostPct" class="text-slate-300 font-medium">Costos de producción y planta (%)</label>
+                <output id="out_productionCostPct" for="slider_productionCostPct" class="font-mono font-bold text-amber-300">+1.0%</output>
+              </div>
+              <input id="slider_productionCostPct" data-driver="productionCostPct" type="range" min="-20" max="25" step="0.5" value="1" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1.5;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_logisticsCostPct" class="text-slate-300 font-medium">Costos logísticos, fletes y puerto (%)</label>
+                <output id="out_logisticsCostPct" for="slider_logisticsCostPct" class="font-mono font-bold text-amber-300">+1.5%</output>
+              </div>
+              <input id="slider_logisticsCostPct" data-driver="logisticsCostPct" type="range" min="-20" max="25" step="0.5" value="1.5" />
+            </div>
+          </div>
+
+          <!-- 3. Drivers de Gastos -->
+          <div class="space-y-3 pt-2 border-t border-slate-800/80">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400">3. Variables de Gastos Operacionales</h4>
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_adminExpensePct" class="text-slate-300 font-medium">Gastos administrativos generales (%)</label>
+                <output id="out_adminExpensePct" for="slider_adminExpensePct" class="font-mono font-bold text-cyan-300">+1.0%</output>
+              </div>
+              <input id="slider_adminExpensePct" data-driver="adminExpensePct" type="range" min="-20" max="25" step="0.5" value="1" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1.5;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_commercialExpensePct" class="text-slate-300 font-medium">Gastos comerciales y mercadeo (%)</label>
+                <output id="out_commercialExpensePct" for="slider_commercialExpensePct" class="font-mono font-bold text-cyan-300">+1.5%</output>
+              </div>
+              <input id="slider_commercialExpensePct" data-driver="commercialExpensePct" type="range" min="-20" max="25" step="0.5" value="1.5" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-15; --control-max:20; --control-value:1.5;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_payrollExpensePct" class="text-slate-300 font-medium">Gastos de personal y nómina (%)</label>
+                <output id="out_payrollExpensePct" for="slider_payrollExpensePct" class="font-mono font-bold text-cyan-300">+1.5%</output>
+              </div>
+              <input id="slider_payrollExpensePct" data-driver="payrollExpensePct" type="range" min="-15" max="20" step="0.5" value="1.5" />
+            </div>
+          </div>
+
+          <!-- 4. Drivers Macroeconómicos -->
+          <div class="space-y-3 pt-2 border-t border-slate-800/80">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400">4. Variables Externas y Macroeconómicas</h4>
+            <div class="driver-slider-group" style="--control-min:-20; --control-max:25; --control-value:1;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_fxRateChangePct" class="text-slate-300 font-medium">Tasa de cambio USD / COP (%)</label>
+                <output id="out_fxRateChangePct" for="slider_fxRateChangePct" class="font-mono font-bold text-indigo-300">+1.0%</output>
+              </div>
+              <input id="slider_fxRateChangePct" data-driver="fxRateChangePct" type="range" min="-20" max="25" step="0.5" value="1" />
+            </div>
+
+            <div class="driver-slider-group" style="--control-min:-300; --control-max:300; --control-value:0;">
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider_interestRateDeltaBps" class="text-slate-300 font-medium">Tasas de interés deuda (Puntos Básicos)</label>
+                <output id="out_interestRateDeltaBps" for="slider_interestRateDeltaBps" class="font-mono font-bold text-indigo-300">0 pbs</output>
+              </div>
+              <input id="slider_interestRateDeltaBps" data-driver="interestRateDeltaBps" type="range" min="-300" max="300" step="25" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Resultados Simulados + Value Driver Tree (VDT) -->
+        <div class="lg:col-span-7 space-y-5">
+          <!-- Tarjetas de Impacto Instantáneo del Escenario -->
+          <div id="simImpactCards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5"></div>
+
+          <!-- Árbol de Creación de Valor (Value Driver Tree - Sección 8.D) -->
+          <div class="glass-card p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white">Árbol de Creación de Valor (Value Driver Tree — VDT)</h3>
+                <p class="text-xs text-slate-400">Propagación matemática desde las palancas operativas hasta la Utilidad Neta del Ejercicio</p>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                Fórmulas Conectadas en Vivo
+              </span>
+            </div>
+            <div id="vdtTreeContainer" class="space-y-3"></div>
+          </div>
+
+          <!-- Comparación Simultánea de Escenarios (Optimista vs Base vs Pesimista vs Simulación Activa) -->
+          <div class="glass-card p-5">
+            <h3 class="text-sm font-bold text-white mb-1">Comparación Simultánea de Escenarios Financieros</h3>
+            <p class="text-xs text-slate-400 mb-3">Evaluación lado a lado entre Ejecución Real, Presupuesto, Escenarios Predefinidos y Simulación Activa</p>
+            <div class="table-container">
+              <table class="sac-table">
+                <thead>
+                  <tr>
+                    <th class="text-left">Escenario / Versión</th>
+                    <th class="text-right">Ingresos Netos</th>
+                    <th class="text-right">Utilidad Bruta</th>
+                    <th class="text-right">Margen Bruto</th>
+                    <th class="text-right">EBITDA</th>
+                    <th class="text-right">Utilidad Neta</th>
+                    <th class="text-right">Impacto vs Real</th>
+                    <th class="text-center">Prob. Éxito Meta</th>
+                  </tr>
+                </thead>
+                <tbody id="tableScenarioComparisonBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulación Probabilística Monte Carlo (SAC Compass — Sección 8.E) -->
+      <div class="glass-card p-5 border-indigo-500/30 sac-defer-section">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              SAC Compass • Simulación Estocástica Monte Carlo (2,000 Iteraciones)
+            </span>
+            <h3 class="text-base font-bold text-white mt-1">Distribución Probabilística de Resultados y Análisis de Riesgo</h3>
+            <p class="text-xs text-slate-400">
+              Evalúa la incertidumbre combinada en precios, volumen, costos de materias primas, logística y tasa de cambio alrededor de los supuestos actuales.
+            </p>
+          </div>
+        </div>
+
+        <div id="monteCarloSummaryCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-5"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div class="lg:col-span-7 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Histograma de Distribución de Utilidad Neta (2,000 Escenarios Aleatorios)</h4>
+            <p class="text-[11px] text-slate-400 mb-3">Rojo: Zona Pesimista (&lt; P10) • Cian: Zona Central Probable (P10 - P90) • Verde: Zona Optimista (&gt; P90)</p>
+            <div class="h-64">
+              <canvas id="chartMonteCarloHist"></canvas>
+            </div>
+          </div>
+          <div class="lg:col-span-5 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Diagrama Tornado de Sensibilidad en Utilidad Neta</h4>
+            <p class="text-[11px] text-slate-400 mb-3">Impacto absoluto en Utilidad Neta ante una variación de ±5% en cada factor crítico</p>
+            <div class="h-64">
+              <canvas id="chartMonteCarloTornado"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- PÁGINA 6: CONTROL PRESUPUESTAL, DESVIACIONES Y RECOMENDACIONES FINANCIERAS -->
+    <!-- ========================================================================== -->
+    <section id="page-6" class="sac-page hidden space-y-6">
+      <!-- Control Presupuestal por Sociedad (Sección 7) -->
+      <div class="glass-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-white">Control de Ejecución Presupuestal y Desviaciones por Sociedad</h2>
+            <p class="text-xs text-slate-400">
+              Comparación de ingresos y costos frente al presupuesto anual. En ingresos, superar el presupuesto es Favorable; en costos y gastos, superar el presupuesto se señala como Desfavorable.
+            </p>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="sac-table">
+            <thead>
+              <tr>
+                <th class="text-left">Sociedad / Unidad Operativa</th>
+                <th class="text-right">Ingresos Reales</th>
+                <th class="text-right">Ppto. Ingresos</th>
+                <th class="text-right">% Ejec. Ingresos</th>
+                <th class="text-center">Estado Ingresos</th>
+                <th class="text-right">Costos y Gastos Reales</th>
+                <th class="text-right">Ppto. Costos y Gastos</th>
+                <th class="text-right">Desviación Costos ($)</th>
+                <th class="text-center">Estado Costos</th>
+                <th class="text-right">Utilidad Operacional</th>
+              </tr>
+            </thead>
+            <tbody id="tableBudgetSocietyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Gráfico de Ejecución Presupuestal por Sociedad -->
+      <div class="glass-card p-5 sac-defer-section">
+        <h3 class="text-sm font-bold text-white mb-1">Comparativo de Utilidad Operacional por Sociedad: Ejecución Real vs. Meta Presupuestal</h3>
+        <p class="text-xs text-slate-400 mb-4">Identificación visual de las unidades de negocio que superan o presentan brecha frente a la meta</p>
+        <div class="h-72">
+          <canvas id="chartBudgetVariance"></canvas>
+        </div>
+      </div>
+
+      <!-- Inteligencia Financiera y Recomendaciones Estratégicas (Sección 14) -->
+      <div class="glass-card p-5 border-emerald-500/30 sac-defer-section">
+        <div class="mb-4">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Inteligencia Financiera Prescriptiva
+          </span>
+          <h3 class="text-base font-bold text-white mt-1">Plan de Acción y Recomendaciones Estratégicas Basadas en Datos</h3>
+          <p class="text-xs text-slate-400">
+            Oportunidades cuantificadas de reducción de costos, optimización de portafolio, control presupuestal y cobertura financiera.
+          </p>
+        </div>
+        <div id="recommendationsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: GUARDAR ESCENARIO PERSONALIZADO (SECCIÓN 9) -->
+  <div id="modalSaveScenario" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-6 border-emerald-500/40 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white">Guardar Escenario Financiero Personalizado</h3>
+        <button type="button" id="btnCloseSaveScenarioModal" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">
+        El escenario guardará los 12 supuestos actuales en una versión de planificación separada sin alterar los saldos reales ni el presupuesto oficial.
+      </p>
+      <div class="space-y-3">
+        <div>
+          <label for="inputScenarioName" class="block text-xs font-medium text-slate-300 mb-1">Nombre del Escenario</label>
+          <input id="inputScenarioName" type="text" placeholder="Ej. Plan Eficiencia Logística Q3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="inputScenarioAuthor" class="block text-xs font-medium text-slate-300 mb-1">Autor / Responsable</label>
+            <input id="inputScenarioAuthor" type="text" value="Dirección Financiera" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label for="inputScenarioBaseVersion" class="block text-xs font-medium text-slate-300 mb-1">Versión Base</label>
+            <select id="inputScenarioBaseVersion" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <option value="Actual">Ejecución Real (Actual)</option>
+              <option value="Budget">Presupuesto Oficial (Budget)</option>
+              <option value="Forecast">Pronóstico Rolling (Forecast)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="inputScenarioDesc" class="block text-xs font-medium text-slate-300 mb-1">Supuestos y Notas Ejecutivas</label>
+          <textarea id="inputScenarioDesc" rows="2" placeholder="Describe brevemente las decisiones estratégicas simuladas..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" id="btnCancelSaveScenario" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Cancelar</button>
+        <button type="button" id="btnConfirmSaveScenario" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white">Guardar Escenario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DOCUMENTACIÓN DEL MODELO FINANCIERO Y DICCIONARIO DE KPIS (SECCIONES 2, 12, 13 Y 15) -->
+  <div id="modalDocumentation" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card max-w-4xl w-full max-h-[88vh] overflow-y-auto p-6 border-cyan-500/40 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-cyan-500/20 text-cyan-300">Gobernanza y Arquitectura del Modelo</span>
+          <h3 class="text-base font-bold text-white mt-1">Fuentes Financieras, Reglas de Asignación y Diccionario de Indicadores</h3>
+        </div>
+        <button type="button" id="btnCloseDocModal" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Cerrar ✕</button>
+      </div>
+
+      <div id="docModalContent" class="space-y-5 text-xs text-slate-300"></div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // ESTADO GLOBAL DEL DASHBOARD FINANCIERO SAC
+    // ============================================================================
+    let currentData = null;
+    let currentAllocationMode = 'full';
+    let currentDrivers = {
+      priceChangePct: 2.0,
+      volumeChangePct: 2.5,
+      discountChangePct: 0.0,
+      mixShiftPct: 1.0,
+      rawMaterialCostPct: 1.5,
+      productionCostPct: 1.0,
+      logisticsCostPct: 1.5,
+      adminExpensePct: 1.0,
+      commercialExpensePct: 1.5,
+      payrollExpensePct: 1.5,
+      fxRateChangePct: 1.0,
+      interestRateDeltaBps: 0
+    };
+    let catalogsPopulated = false;
+    const charts = {};
+
+    // ============================================================================
+    // UTILIDADES DE FORMATO MONETARIO Y PORCENTUAL
+    // ============================================================================
+    function formatCopCompact(val) {
+      const n = Number(val || 0);
+      const sign = n < 0 ? '-' : '';
+      const abs = Math.abs(n);
+      if (abs >= 1e12) return `${sign}$ ${(abs / 1e12).toFixed(2)} B`;
+      if (abs >= 1e9) return `${sign}$ ${(abs / 1e9).toFixed(2)} Mil M`;
+      if (abs >= 1e6) return `${sign}$ ${(abs / 1e6).toFixed(1)} M`;
+      return `${sign}$ ${Math.round(abs).toLocaleString('es-CO')}`;
+    }
+
+    function formatCopFull(val) {
+      const n = Math.round(Number(val || 0));
+      return `$ ${n.toLocaleString('es-CO')}`;
+    }
+
+    function formatPct(val, includePlus = false) {
+      const n = Number(val || 0);
+      const prefix = includePlus && n > 0 ? '+' : '';
+      return `${prefix}${n.toFixed(2)}%`;
+    }
+
+    function statusBadgeHtml(status) {
+      if (status === 'favorable') {
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">● Favorable</span>`;
+      }
+      if (status === 'atencion') {
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">● Atención</span>`;
+      }
+      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30">● Desfavorable</span>`;
+    }
+
+    // ============================================================================
+    // CARGA Y SINCRONIZACIÓN DE DATOS DESDE EL BACKEND
+    // ============================================================================
+    function getActiveFilterPayload(forceRefresh = false) {
+      return {
+        year: document.getElementById('filterYear').value,
+        quarter: document.getElementById('filterQuarter').value,
+        month: document.getElementById('filterMonth').value,
+        bukrs: document.getElementById('filterBukrs').value,
+        prctr: document.getElementById('filterPrctr').value,
+        kostl: document.getElementById('filterKostl').value,
+        allocationMode: currentAllocationMode,
+        drivers: currentDrivers,
+        refresh: forceRefresh
+      };
+    }
+
+    async function fetchFinancialOverview(forceRefresh = false) {
+      const banner = document.getElementById('loadingBanner');
+      banner.classList.remove('hidden');
+      try {
+        const payload = getActiveFilterPayload(forceRefresh);
+        const res = await fetch('/api/finanzas/overview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Error cargando analítica financiera');
+        currentData = json;
+
+        if (!catalogsPopulated) {
+          populateFilterSelects(json.filterCatalogs, json.activeFilters);
+          catalogsPopulated = true;
+        }
+
+        renderAllPages(json);
+      } catch (err) {
+        console.error('[FINANZAS UI] Error:', err);
+      } finally {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function populateFilterSelects(catalogs, active) {
+      const fillSelect = (id, list) => {
+        const el = document.getElementById(id);
+        if (!el || !Array.isArray(list)) return;
+        el.innerHTML = list.map(item => {
+          const code = typeof item === 'string' ? item : item.code;
+          const name = typeof item === 'string' ? item : item.name;
+          return `<option value="${code}">${name}</option>`;
+        }).join('');
+      };
+      fillSelect('filterMonth', catalogs.months);
+      fillSelect('filterBukrs', catalogs.sociedades);
+      fillSelect('filterPrctr', catalogs.profitCenters);
+      fillSelect('filterKostl', catalogs.costCenters);
+
+      if (active) {
+        document.getElementById('filterYear').value = active.year || '2025';
+        document.getElementById('filterQuarter').value = active.quarter || 'ALL';
+        document.getElementById('filterMonth').value = active.month || 'ALL';
+        document.getElementById('filterBukrs').value = active.bukrs || 'ALL';
+        document.getElementById('filterPrctr').value = active.prctr || 'ALL';
+        document.getElementById('filterKostl').value = active.kostl || 'ALL';
+      }
+    }
+
+    // ============================================================================
+    // RENDERIZADO DE LAS 6 PÁGINAS DEL DASHBOARD
+    // ============================================================================
+    function renderAllPages(data) {
+      renderPage1ExecutiveSummary(data);
+      renderPage2PnlStatement(data);
+      renderPage3SegmentProfitability(data);
+      renderPage4CostAnalysis(data);
+      renderPage5ScenarioSimulation(data.scenarios.activeSimulation, data.scenarios.list, data.pnlSummary);
+      renderPage6BudgetAndRecommendations(data);
+      renderDocumentationModal(data.modelDocumentation);
+    }
+
+    // PÁGINA 1: RESUMEN EJECUTIVO (16 KPIS + 2 GRÁFICOS)
+    function renderPage1ExecutiveSummary(data) {
+      const kpis = data.executiveKpis || [];
+      const renderCard = (k) => {
+        const valFormatted = k.unit === '%' ? formatPct(k.actualValue) : formatCopCompact(k.actualValue);
+        const priorFormatted = k.unit === '%' ? formatPct(k.priorValue) : formatCopCompact(k.priorValue);
+        const budFormatted = k.unit === '%' ? formatPct(k.budgetValue) : formatCopCompact(k.budgetValue);
+        const deltaPriorColor = k.varVsPriorPct >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+        return `
+          <article class="glass-card p-4 flex flex-col justify-between hover:border-slate-700 transition">
+            <div>
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-xs font-semibold text-slate-300 leading-snug">${k.title}</h3>
+                ${statusBadgeHtml(k.status)}
+              </div>
+              <div class="text-xl font-extrabold text-white font-mono tabular-nums mt-2">${valFormatted}</div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mt-1.5 font-mono tabular-nums">
+                <span>vs Año Ant: <strong class="${deltaPriorColor}">${formatPct(k.varVsPriorPct, true)}</strong></span>
+                <span>Ppto: <strong class="text-slate-200">${k.budgetExecutionPct}%</strong></span>
+              </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-800/80">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mb-1">
+                <span>Ant: ${priorFormatted}</span>
+                <span>Meta: ${budFormatted}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">${k.interpretation}</p>
+            </div>
+          </article>
+        `;
+      };
+
+      document.getElementById('kpiGridIngresos').innerHTML = kpis.filter(k => k.group === 'ingresos').map(renderCard).join('');
+      document.getElementById('kpiGridCostos').innerHTML = kpis.filter(k => k.group === 'costos').map(renderCard).join('');
+      document.getElementById('kpiGridRentabilidad').innerHTML = kpis.filter(k => k.group === 'rentabilidad').map(renderCard).join('');
+
+      // Gráfico 1: Evolución Mensual
+      const mSeries = data.monthlySeries || [];
+      const labels = mSeries.map(m => m.period);
+      if (charts.execTrend) charts.execTrend.destroy();
+      charts.execTrend = new Chart(document.getElementById('chartExecTrend'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              type: 'line',
+              label: 'Presupuesto Ingresos (Mil M)',
+              data: mSeries.map(m => +(m.budgetNetRevenue / 1e9).toFixed(2)),
+              borderColor: '#38bdf8',
+              borderDash: [5, 5],
+              borderWidth: 2,
+              pointRadius: 2,
+              tension: 0.3
+            },
+            {
+              type: 'line',
+              label: 'Utilidad Neta Real (Mil M)',
+              data: mSeries.map(m => +(m.actualNetIncome / 1e9).toFixed(2)),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              borderWidth: 2.5,
+              pointRadius: 3,
+              fill: true,
+              tension: 0.3
+            },
+            {
+              type: 'bar',
+              label: 'Ingresos Netos Reales (Mil M)',
+              data: mSeries.map(m => +(m.actualNetRevenue / 1e9).toFixed(2)),
+              backgroundColor: 'rgba(99, 102, 241, 0.55)',
+              borderRadius: 4
+            },
+            {
+              type: 'bar',
+              label: 'Costo de Ventas (Mil M)',
+              data: mSeries.map(m => +(m.actualCogs / 1e9).toFixed(2)),
+              backgroundColor: 'rgba(245, 158, 11, 0.5)',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      // Gráfico 2: Puente P&L
+      const act = data.pnlSummary.actual;
+      const bridgeLabels = ['Ingresos Brutos', '(-) Descuentos', 'Ingresos Netos', '(-) Costo Ventas', 'Utilidad Bruta', '(-) Gastos Op.', 'EBIT', 'EBITDA', 'Utilidad Neta'];
+      const bridgeValues = [
+        act.gross_revenue,
+        -act.discounts_returns,
+        act.net_revenue,
+        -act.cogs,
+        act.gross_profit,
+        -act.operating_expenses_total,
+        act.operating_profit,
+        act.ebitda,
+        act.net_income
+      ].map(v => +(v / 1e9).toFixed(2));
+
+      if (charts.execBridge) charts.execBridge.destroy();
+      charts.execBridge = new Chart(document.getElementById('chartExecBridge'), {
+        type: 'bar',
+        data: {
+          labels: bridgeLabels,
+          datasets: [{
+            label: 'Miles de Millones COP',
+            data: bridgeValues,
+            backgroundColor: bridgeValues.map((v, idx) => {
+              if ([0, 2, 4, 6, 7, 8].includes(idx)) return v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(244, 63, 94, 0.7)';
+              return 'rgba(245, 158, 11, 0.65)';
+            }),
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+    }
+
+    // PÁGINA 2: ESTADO DE RESULTADOS (13 LÍNEAS)
+    function renderPage2PnlStatement(data) {
+      const rows = data.pnlStatement || [];
+      const tbody = document.getElementById('pnlTableBody');
+      tbody.innerHTML = rows.map(r => {
+        const rowClass = r.rowType === 'total' ? 'row-total' : (r.rowType === 'subtotal' ? 'row-subtotal' : '');
+        const varColor = r.varianceStatus === 'favorable' ? 'text-emerald-400' : (r.varianceStatus === 'atencion' ? 'text-amber-400' : 'text-rose-400');
+        return `
+          <tr class="${rowClass}">
+            <td class="text-left font-medium">${r.step}. ${r.label}</td>
+            <td class="text-right font-mono">${formatCopCompact(r.actual)}</td>
+            <td class="text-right font-mono text-slate-300">${formatCopCompact(r.budget)}</td>
+            <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(r.forecast)}</td>
+            <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(r.priorYear)}</td>
+            <td class="text-right font-mono ${varColor}">${formatCopCompact(r.varBudgetAbs)}</td>
+            <td class="text-right font-mono ${varColor}">${formatPct(r.varBudgetPct, true)}</td>
+            <td class="text-right font-mono text-slate-300" data-priority="low">${formatPct(r.varPriorPct, true)}</td>
+            <td class="text-right font-mono text-cyan-300">${formatPct(r.verticalPct)}</td>
+            <td class="text-center">${statusBadgeHtml(r.varianceStatus)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const mSeries = data.monthlySeries || [];
+      const labels = mSeries.map(m => m.period);
+
+      if (charts.pnlMargins) charts.pnlMargins.destroy();
+      charts.pnlMargins = new Chart(document.getElementById('chartPnlMargins'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Margen Bruto %', data: mSeries.map(m => m.grossMarginPct), borderColor: '#38bdf8', tension: 0.3, borderWidth: 2 },
+            { label: 'Margen Operacional %', data: mSeries.map(m => m.operatingMarginPct), borderColor: '#f59e0b', tension: 0.3, borderWidth: 2 },
+            { label: 'Margen Neto %', data: mSeries.map(m => m.netMarginPct), borderColor: '#10b981', tension: 0.3, borderWidth: 2.5 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      if (charts.pnlNetComparison) charts.pnlNetComparison.destroy();
+      charts.pnlNetComparison = new Chart(document.getElementById('chartPnlNetComparison'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Utilidad Neta Real (Mil M)', data: mSeries.map(m => +(m.actualNetIncome / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 4 },
+            { label: 'Utilidad Neta Presupuesto (Mil M)', data: mSeries.map(m => +(m.budgetNetIncome / 1e9).toFixed(2)), backgroundColor: 'rgba(56, 189, 248, 0.45)', borderRadius: 4 },
+            { label: 'Pronóstico Rolling (Mil M)', data: mSeries.map(m => +(m.forecastNetIncome / 1e9).toFixed(2)), type: 'line', borderColor: '#f59e0b', borderWidth: 2, tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+    }
+
+    // PÁGINA 3: RENTABILIDAD POR SEGMENTO
+    function renderPage3SegmentProfitability(data) {
+      const prof = data.profitability || {};
+      const badge = document.getElementById('allocModeBadge');
+      if (prof.allocationMode === 'direct') {
+        badge.textContent = 'Vista activa: Contribución Directa (Sin Prorrateo de Gastos Indirectos)';
+        badge.className = 'px-2.5 py-1 rounded text-xs font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+      } else {
+        badge.textContent = 'Vista activa: Rentabilidad Completa (Costos Directos + Gastos Asignados)';
+        badge.className = 'px-2.5 py-1 rounded text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      }
+
+      const prods = prof.byProduct || [];
+      document.getElementById('tableSegmentProductsBody').innerHTML = prods.map(p => {
+        const quadColor = p.quadrant.includes('Estrella')
+          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          : (p.quadrant.includes('Especialidad') ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30');
+        return `
+          <tr>
+            <td class="font-medium text-white">${p.name}</td>
+            <td class="text-right font-mono">${formatCopCompact(p.grossRevenue)}</td>
+            <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(p.discountsReturns)}</td>
+            <td class="text-right font-mono font-semibold">${formatCopCompact(p.netRevenue)}</td>
+            <td class="text-right font-mono text-amber-300">${formatCopCompact(p.directCogs)}</td>
+            <td class="text-right font-mono text-emerald-300">${formatCopCompact(p.grossProfit)}</td>
+            <td class="text-right font-mono">${formatPct(p.grossMarginPct)}</td>
+            <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(p.allocatedOpExpenses)}</td>
+            <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(p.operatingProfit)}</td>
+            <td class="text-right font-mono">${formatPct(p.netMarginPct)}</td>
+            <td><span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${quadColor}">${p.quadrant}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      const custs = prof.byCustomer || [];
+      document.getElementById('tableSegmentCustomersBody').innerHTML = custs.slice(0, 10).map(c => `
+        <tr>
+          <td>
+            <div class="font-medium text-white">${c.name}</div>
+            <div class="text-[10px] text-slate-400">${c.region} • ${c.channel}</div>
+          </td>
+          <td class="text-right font-mono">${formatCopCompact(c.netRevenue)}</td>
+          <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(c.discountsReturns)}</td>
+          <td class="text-right font-mono text-emerald-300">${formatCopCompact(c.grossProfit)}</td>
+          <td class="text-right font-mono">${formatPct(c.grossMarginPct)}</td>
+          <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(c.netProfit)}</td>
+        </tr>
+      `).join('');
+
+      const socs = prof.bySociety || [];
+      document.getElementById('tableSegmentSocietiesBody').innerHTML = socs.slice(0, 10).map(s => `
+        <tr>
+          <td>
+            <div class="font-medium text-white">${s.name}</div>
+            <div class="text-[10px] text-slate-400">${s.businessUnit}</div>
+          </td>
+          <td class="text-right font-mono">${formatCopCompact(s.netRevenue)}</td>
+          <td class="text-right font-mono text-emerald-300">${formatCopCompact(s.grossProfit)}</td>
+          <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(s.operatingExpenses)}</td>
+          <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(s.operatingProfit)}</td>
+          <td class="text-right font-mono">${formatPct(s.operatingMarginPct)}</td>
+        </tr>
+      `).join('');
+
+      if (charts.segmentProducts) charts.segmentProducts.destroy();
+      charts.segmentProducts = new Chart(document.getElementById('chartSegmentProducts'), {
+        type: 'bar',
+        data: {
+          labels: prods.slice(0, 8).map(p => p.name.slice(0, 26)),
+          datasets: [
+            { label: 'Ingresos Netos (Mil M)', data: prods.slice(0, 8).map(p => +(p.netRevenue / 1e9).toFixed(2)), backgroundColor: 'rgba(99, 102, 241, 0.65)', borderRadius: 4 },
+            { label: 'Utilidad Bruta (Mil M)', data: prods.slice(0, 8).map(p => +(p.grossProfit / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      if (charts.segmentSocieties) charts.segmentSocieties.destroy();
+      charts.segmentSocieties = new Chart(document.getElementById('chartSegmentSocieties'), {
+        type: 'bar',
+        data: {
+          labels: socs.slice(0, 8).map(s => s.name.slice(0, 22)),
+          datasets: [
+            { label: 'Ingresos Netos (Mil M)', data: socs.slice(0, 8).map(s => +(s.netRevenue / 1e9).toFixed(2)), backgroundColor: 'rgba(6, 182, 212, 0.6)', borderRadius: 4 },
+            { label: 'Utilidad Operacional EBIT (Mil M)', data: socs.slice(0, 8).map(s => +(s.operatingProfit / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+    }
+
+    // PÁGINA 4: ANÁLISIS DE COSTOS Y GASTOS
+    function renderPage4CostAnalysis(data) {
+      const ca = data.costAnalysis || {};
+      const eff = ca.efficiencyMetrics || {};
+
+      document.getElementById('costEfficiencyCards').innerHTML = `
+        <div class="glass-card p-4">
+          <div class="text-xs font-semibold text-slate-400">1. Relación Costo de Ventas / Ingresos</div>
+          <div class="text-2xl font-extrabold text-amber-400 font-mono mt-1">${formatPct(eff.costToRevenueRatioPct)}</div>
+          <p class="text-[11px] text-slate-400 mt-1">Fórmula: Costo de Ventas ÷ Ingresos Netos</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="text-xs font-semibold text-slate-400">2. Relación Gastos Operacionales / Ingresos</div>
+          <div class="text-2xl font-extrabold text-cyan-400 font-mono mt-1">${formatPct(eff.opexToRevenueRatioPct)}</div>
+          <p class="text-[11px] text-slate-400 mt-1">Fórmula: Gastos Operacionales ÷ Ingresos Netos</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="text-xs font-semibold text-slate-400">3. Costo Unitario Promedio Operativo</div>
+          <div class="text-2xl font-extrabold text-white font-mono mt-1">${formatCopCompact(eff.unitCostAverageCop)}</div>
+          <p class="text-[11px] text-slate-400 mt-1">Sobre ${Number(eff.totalCommercialUnits || 0).toLocaleString('es-CO')} unidades comercializadas</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="text-xs font-semibold text-slate-400">4. Contribución Marginal y Punto de Equilibrio</div>
+          <div class="text-2xl font-extrabold text-emerald-400 font-mono mt-1">${formatCopCompact(eff.contributionMarginCop)} <span class="text-xs">(${formatPct(eff.contributionMarginPct)})</span></div>
+          <p class="text-[11px] text-slate-400 mt-1">Costos Variables: ${eff.variableCostsSharePct}% • Fijos: ${eff.fixedCostsSharePct}%</p>
+        </div>
+      `;
+
+      // Desglose de Costos de Producción
+      const prodNature = ca.productionNatureBreakdown || [];
+      document.getElementById('productionNatureList').innerHTML = prodNature.map(item => `
+        <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-800">
+          <div class="flex justify-between text-xs mb-1">
+            <span class="font-semibold text-white">${item.label}</span>
+            <span class="font-mono text-emerald-300">${formatCopCompact(item.amount)} (${item.sharePct}%)</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full" style="width:${Math.min(100, item.sharePct)}%"></div>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-1">Naturaleza: ${item.behavior}</div>
+        </div>
+      `).join('');
+
+      // Tabla Centros de Costo
+      const ccs = ca.topCostCenters || [];
+      document.getElementById('tableCostCentersBody').innerHTML = ccs.slice(0, 10).map(c => `
+        <tr>
+          <td class="font-medium text-white">${c.name}</td>
+          <td class="text-slate-400" data-priority="low">${c.topCategory}</td>
+          <td class="text-right font-mono font-semibold text-amber-300">${formatCopCompact(c.currentAmount)}</td>
+          <td class="text-right font-mono ${c.growthPct > 5 ? 'text-rose-400' : 'text-emerald-400'}">${formatPct(c.growthPct, true)}</td>
+          <td class="text-right font-mono">${c.fixedSharePct}%</td>
+        </tr>
+      `).join('');
+
+      // Tabla Pareto de Cuentas de Costo y Gasto
+      const pareto = ca.topAccountsPareto || [];
+      document.getElementById('tableCostAccountsBody').innerHTML = pareto.map(a => `
+        <tr>
+          <td class="text-center font-mono text-slate-400">${a.rank}</td>
+          <td class="font-medium text-white">${a.name}</td>
+          <td class="text-slate-300">${a.category}</td>
+          <td class="text-center"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300">${a.costBehavior} / ${a.directness}</span></td>
+          <td class="text-right font-mono font-semibold">${formatCopCompact(a.currentAmount)}</td>
+          <td class="text-right font-mono text-slate-400" data-priority="low">${formatCopCompact(a.priorAmount)}</td>
+          <td class="text-right font-mono ${a.growthPct > 5 ? 'text-rose-400' : 'text-emerald-400'}">${formatPct(a.growthPct, true)}</td>
+          <td class="text-right font-mono">${formatPct(a.sharePct)}</td>
+          <td class="text-right font-mono text-cyan-300">${formatPct(a.cumulativeSharePct)}</td>
+          <td class="text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${a.paretoClass.startsWith('A') ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'}">${a.paretoClass}</span></td>
+        </tr>
+      `).join('');
+
+      // Gráfico Composición
+      const comp = ca.composition || [];
+      if (charts.costComposition) charts.costComposition.destroy();
+      charts.costComposition = new Chart(document.getElementById('chartCostComposition'), {
+        type: 'doughnut',
+        data: {
+          labels: comp.slice(0, 6).map(c => c.category),
+          datasets: [{
+            data: comp.slice(0, 6).map(c => +(c.currentAmount / 1e9).toFixed(2)),
+            backgroundColor: ['#f59e0b', '#10b981', '#06b6d4', '#6366f1', '#f43f5e', '#8b5cf6'],
+            borderWidth: 1,
+            borderColor: '#0f172a'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 } } } }
+        }
+      });
+
+      // Gráfico Pareto
+      const pTop = pareto.slice(0, 10);
+      if (charts.costPareto) charts.costPareto.destroy();
+      charts.costPareto = new Chart(document.getElementById('chartCostPareto'), {
+        type: 'bar',
+        data: {
+          labels: pTop.map(p => p.name.slice(0, 22)),
+          datasets: [
+            {
+              type: 'line',
+              label: '% Acumulado Pareto',
+              data: pTop.map(p => p.cumulativeSharePct),
+              borderColor: '#38bdf8',
+              borderWidth: 2.5,
+              yAxisID: 'y1',
+              tension: 0.2
+            },
+            {
+              type: 'bar',
+              label: 'Importe (Mil M COP)',
+              data: pTop.map(p => +(p.currentAmount / 1e9).toFixed(2)),
+              backgroundColor: 'rgba(245, 158, 11, 0.65)',
+              borderRadius: 4,
+              yAxisID: 'y'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { position: 'left', ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y1: { position: 'right', min: 0, max: 100, ticks: { color: '#38bdf8', callback: v => v + '%' }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // PÁGINA 5: SIMULACIÓN DE ESCENARIOS, VDT Y MONTE CARLO COMPASS
+    function renderPage5ScenarioSimulation(sim, scenariosList, pnlSummary) {
+      if (!sim) return;
+
+      // 1. Tarjetas de Escenarios Disponibles
+      const scenContainer = document.getElementById('scenarioCardsContainer');
+      scenContainer.innerHTML = (scenariosList || []).map(sc => {
+        const deltaSign = sc.summary.netIncomeDeltaAbs >= 0 ? 'text-emerald-400' : 'text-rose-400';
+        const deleteBtn = sc.type === 'custom'
+          ? `<button type="button" onclick="handleDeleteScenario('${sc.id}', event)" class="text-slate-500 hover:text-rose-400 text-xs" title="Eliminar escenario">✕</button>`
+          : '';
+        return `
+          <div onclick="applyScenarioPreset('${sc.id}')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-3.5 transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-300">${sc.badge}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-slate-400">Base: ${sc.baseVersion}</span>
+                  ${deleteBtn}
+                </div>
+              </div>
+              <div class="text-xs font-bold text-white mt-1.5">${sc.name}</div>
+              <p class="text-[11px] text-slate-400 mt-1 line-clamp-2">${sc.description}</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
+              <span>Utilidad Neta: <strong class="text-white">${formatCopCompact(sc.summary.netIncome)}</strong></span>
+              <span class="${deltaSign} font-bold">${formatPct(sc.summary.netIncomeDeltaPct, true)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 2. Tarjetas de Impacto Instantáneo
+      const d = sim.deltas;
+      const sPnl = sim.simulatedPnl;
+      document.getElementById('simImpactCards').innerHTML = `
+        <div class="glass-card p-4 border-l-4 border-l-indigo-500">
+          <div class="text-[11px] text-slate-400 font-semibold">Ingresos Netos Simulados</div>
+          <div class="text-lg font-extrabold text-white font-mono mt-1">${formatCopCompact(sPnl.net_revenue)}</div>
+          <div class="text-xs font-mono mt-1 ${d.netRevenueDeltaAbs >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            Δ vs Real: ${formatCopCompact(d.netRevenueDeltaAbs)} (${formatPct(d.netRevenueDeltaPct, true)})
+          </div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-cyan-500">
+          <div class="text-[11px] text-slate-400 font-semibold">Utilidad Bruta Simulada</div>
+          <div class="text-lg font-extrabold text-white font-mono mt-1">${formatCopCompact(sPnl.gross_profit)}</div>
+          <div class="text-xs font-mono mt-1 ${d.grossProfitDeltaAbs >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            Margen: ${formatPct(sPnl.gross_margin_pct)} (${formatPct(d.grossMarginDeltaPts, true)} pts)
+          </div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-amber-500">
+          <div class="text-[11px] text-slate-400 font-semibold">EBITDA Simulado</div>
+          <div class="text-lg font-extrabold text-white font-mono mt-1">${formatCopCompact(sPnl.ebitda)}</div>
+          <div class="text-xs font-mono mt-1 ${d.ebitdaDeltaAbs >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            Δ EBITDA: ${formatCopCompact(d.ebitdaDeltaAbs)}
+          </div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-emerald-500">
+          <div class="text-[11px] text-slate-400 font-semibold">Utilidad Neta Simulada</div>
+          <div class="text-lg font-extrabold text-emerald-300 font-mono mt-1">${formatCopCompact(sPnl.net_income)}</div>
+          <div class="text-xs font-mono mt-1 ${d.netIncomeDeltaAbs >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            Δ Neto: ${formatCopCompact(d.netIncomeDeltaAbs)} (${formatPct(d.netMarginDeltaPts, true)} pts)
+          </div>
+        </div>
+      `;
+
+      // 3. Value Driver Tree (VDT)
+      const nodes = sim.vdtNodes || [];
+      document.getElementById('vdtTreeContainer').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          ${nodes.slice(0, 9).map(n => {
+            const isCostNode = ['costos', 'gastos', 'impuestos'].includes(n.category);
+            const favorable = isCostNode ? n.deltaAbs <= 0 : n.deltaAbs >= 0;
+            const deltaColor = favorable ? 'text-emerald-400' : 'text-rose-400';
+            return `
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                <div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400">
+                  <span>${n.category}</span>
+                  <span class="font-mono ${deltaColor}">${formatPct(n.deltaPct, true)}</span>
+                </div>
+                <div class="text-xs font-bold text-white mt-0.5">${n.label}</div>
+                <div class="flex items-baseline justify-between mt-2 font-mono">
+                  <span class="text-sm font-extrabold text-emerald-300">${formatCopCompact(n.simValue)}</span>
+                  <span class="text-[11px] text-slate-400">Base: ${formatCopCompact(n.baseValue)}</span>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-1 truncate" title="${n.formula}">Fórmula: ${n.formula}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      // 4. Tabla de Comparación Simultánea de Escenarios
+      const baseActual = sim.basePnl;
+      const budget = pnlSummary ? pnlSummary.budget : currentData.pnlSummary.budget;
+      const comparisonRows = [
+        {
+          name: 'Ejecución Real (Actual)',
+          badge: 'Real',
+          netRevenue: baseActual.net_revenue,
+          grossProfit: baseActual.gross_profit,
+          grossMarginPct: baseActual.gross_margin_pct,
+          ebitda: baseActual.ebitda,
+          netIncome: baseActual.net_income,
+          deltaVsReal: 0,
+          probPct: '—'
+        },
+        {
+          name: 'Presupuesto Oficial (Budget)',
+          badge: 'Meta POA',
+          netRevenue: budget.net_revenue,
+          grossProfit: budget.gross_profit,
+          grossMarginPct: budget.gross_margin_pct,
+          ebitda: budget.ebitda,
+          netIncome: budget.net_income,
+          deltaVsReal: budget.net_income - baseActual.net_income,
+          probPct: '100% (Meta)'
+        },
+        {
+          name: 'Simulación Interactiva Activa',
+          badge: 'En Vivo',
+          netRevenue: sPnl.net_revenue,
+          grossProfit: sPnl.gross_profit,
+          grossMarginPct: sPnl.gross_margin_pct,
+          ebitda: sPnl.ebitda,
+          netIncome: sPnl.net_income,
+          deltaVsReal: sPnl.net_income - baseActual.net_income,
+          probPct: `${sim.monteCarlo.probabilityBeatTargetPct}%`
+        },
+        ...(scenariosList || []).map(sc => ({
+          name: sc.name,
+          badge: sc.badge,
+          netRevenue: sc.summary.netRevenue,
+          grossProfit: sc.summary.grossProfit,
+          grossMarginPct: sc.summary.grossMarginPct,
+          ebitda: sc.summary.ebitda,
+          netIncome: sc.summary.netIncome,
+          deltaVsReal: sc.summary.netIncomeDeltaAbs,
+          probPct: `${sc.summary.probabilityBeatTargetPct}%`
+        }))
+      ];
+
+      document.getElementById('tableScenarioComparisonBody').innerHTML = comparisonRows.map((r, idx) => `
+        <tr class="${idx === 2 ? 'row-subtotal' : ''}">
+          <td>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-emerald-300 mr-1.5">${r.badge}</span>
+            <span class="font-medium text-white">${r.name}</span>
+          </td>
+          <td class="text-right font-mono">${formatCopCompact(r.netRevenue)}</td>
+          <td class="text-right font-mono">${formatCopCompact(r.grossProfit)}</td>
+          <td class="text-right font-mono">${formatPct(r.grossMarginPct)}</td>
+          <td class="text-right font-mono text-cyan-300">${formatCopCompact(r.ebitda)}</td>
+          <td class="text-right font-mono font-bold text-white">${formatCopCompact(r.netIncome)}</td>
+          <td class="text-right font-mono ${r.deltaVsReal >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatCopCompact(r.deltaVsReal)}</td>
+          <td class="text-center font-mono text-xs text-indigo-300">${r.probPct}</td>
+        </tr>
+      `).join('');
+
+      // 5. Monte Carlo Compass (Sección 8.E)
+      const mc = sim.monteCarlo;
+      document.getElementById('monteCarloSummaryCards').innerHTML = `
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[11px] text-slate-400">Resultado Esperado (Media)</div>
+          <div class="text-lg font-extrabold text-white font-mono mt-1">${formatCopCompact(mc.expectedNetIncome)}</div>
+          <div class="text-[10px] text-slate-400 mt-1">${mc.iterations} iteraciones estocásticas</div>
+        </div>
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-rose-500/30">
+          <div class="text-[11px] text-rose-300">Escenario Pesimista (Percentil 10)</div>
+          <div class="text-lg font-extrabold text-rose-400 font-mono mt-1">${formatCopCompact(mc.p10NetIncome)}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Margen Op. P10: ${formatPct(mc.p10OpMarginPct)}</div>
+        </div>
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-500/30">
+          <div class="text-[11px] text-cyan-300">Mediana Probable (Percentil 50)</div>
+          <div class="text-lg font-extrabold text-cyan-300 font-mono mt-1">${formatCopCompact(mc.p50NetIncome)}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Margen Op. P50: ${formatPct(mc.p50OpMarginPct)}</div>
+        </div>
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/30">
+          <div class="text-[11px] text-emerald-300">Escenario Optimista (Percentil 90)</div>
+          <div class="text-lg font-extrabold text-emerald-400 font-mono mt-1">${formatCopCompact(mc.p90NetIncome)}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Margen Op. P90: ${formatPct(mc.p90OpMarginPct)}</div>
+        </div>
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-indigo-500/40">
+          <div class="text-[11px] text-indigo-300">Probabilidad de Cumplir Meta</div>
+          <div class="text-lg font-extrabold text-indigo-300 font-mono mt-1">${mc.probabilityBeatTargetPct}%</div>
+          <div class="text-[10px] text-slate-400 mt-1">Prob. Utilidad Positiva: ${mc.probabilityPositiveProfitPct}%</div>
+        </div>
+      `;
+
+      // Gráfico Histograma Monte Carlo
+      const hist = mc.histogram || [];
+      if (charts.mcHist) charts.mcHist.destroy();
+      charts.mcHist = new Chart(document.getElementById('chartMonteCarloHist'), {
+        type: 'bar',
+        data: {
+          labels: hist.map(h => formatCopCompact(h.midpoint)),
+          datasets: [{
+            label: 'Probabilidad (%)',
+            data: hist.map(h => h.probabilityPct),
+            backgroundColor: hist.map(h => h.zone === 'pesimista' ? 'rgba(244, 63, 94, 0.7)' : (h.zone === 'optimista' ? 'rgba(16, 185, 129, 0.75)' : 'rgba(6, 182, 212, 0.65)')),
+            borderRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45 } },
+            y: { ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      // Gráfico Tornado de Sensibilidad
+      const tor = mc.tornadoDrivers || [];
+      if (charts.mcTornado) charts.mcTornado.destroy();
+      charts.mcTornado = new Chart(document.getElementById('chartMonteCarloTornado'), {
+        type: 'bar',
+        data: {
+          labels: tor.map(t => t.label),
+          datasets: [{
+            label: 'Impacto en Utilidad Neta (Mil M COP)',
+            data: tor.map(t => +(t.swing / 1e9).toFixed(2)),
+            backgroundColor: 'rgba(99, 102, 241, 0.75)',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+            y: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // PÁGINA 6: CONTROL PRESUPUESTAL Y RECOMENDACIONES
+    function renderPage6BudgetAndRecommendations(data) {
+      const bc = data.budgetControl?.bySociety || [];
+      document.getElementById('tableBudgetSocietyBody').innerHTML = bc.map(s => `
+        <tr>
+          <td>
+            <div class="font-medium text-white">${s.name}</div>
+            <div class="text-[10px] text-slate-400">${s.businessUnit}</div>
+          </td>
+          <td class="text-right font-mono">${formatCopCompact(s.revActual)}</td>
+          <td class="text-right font-mono text-slate-400">${formatCopCompact(s.revBudget)}</td>
+          <td class="text-right font-mono font-semibold">${s.revExecutionPct}%</td>
+          <td class="text-center">${statusBadgeHtml(s.revStatus)}</td>
+          <td class="text-right font-mono">${formatCopCompact(s.costActual)}</td>
+          <td class="text-right font-mono text-slate-400">${formatCopCompact(s.costBudget)}</td>
+          <td class="text-right font-mono ${s.costVarAbs > 0 ? 'text-rose-400' : 'text-emerald-400'}">${formatCopCompact(s.costVarAbs)} (${formatPct(s.costVarPct, true)})</td>
+          <td class="text-center">${statusBadgeHtml(s.costStatus)}</td>
+          <td class="text-right font-mono font-bold text-cyan-300">${formatCopCompact(s.opProfitActual)}</td>
+        </tr>
+      `).join('');
+
+      if (charts.budgetVariance) charts.budgetVariance.destroy();
+      charts.budgetVariance = new Chart(document.getElementById('chartBudgetVariance'), {
+        type: 'bar',
+        data: {
+          labels: bc.slice(0, 8).map(s => s.name.slice(0, 22)),
+          datasets: [
+            { label: 'Utilidad Operacional Real (Mil M)', data: bc.slice(0, 8).map(s => +(s.opProfitActual / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 },
+            { label: 'Meta Presupuestal EBIT (Mil M)', data: bc.slice(0, 8).map(s => +(s.opProfitBudget / 1e9).toFixed(2)), backgroundColor: 'rgba(56, 189, 248, 0.45)', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } }
+          }
+        }
+      });
+
+      const recs = data.recommendations || [];
+      document.getElementById('recommendationsGrid').innerHTML = recs.map(r => `
+        <article class="bg-slate-900/85 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-cyan-500/15 text-cyan-300">${r.category}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${r.priority === 'Alta' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'}">Prioridad ${r.priority}</span>
+            </div>
+            <h4 class="text-sm font-bold text-white mt-2">${r.title}</h4>
+            <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">${r.finding}</p>
+            <div class="flex flex-wrap gap-2 mt-2.5">
+              ${(r.supportingMetrics || []).map(m => `<span class="px-2 py-0.5 rounded bg-slate-800 text-[11px] font-mono text-slate-300">${m}</span>`).join('')}
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-1">
+            <div class="text-xs font-semibold text-emerald-300">Impacto Potencial: ${r.potentialImpact}</div>
+            <div class="text-[11px] text-slate-400">Supuesto aplicado: ${r.assumption}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    // MODAL DE DOCUMENTACIÓN Y DICCIONARIO DE KPIS
+    function renderDocumentationModal(doc) {
+      if (!doc) return;
+      document.getElementById('docModalContent').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] uppercase text-slate-400">Entorno Conectado</div>
+            <div class="text-sm font-bold text-white mt-0.5">${doc.sapSystem}</div>
+            <div class="text-[11px] text-emerald-400 mt-1">${doc.controllingArea}</div>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] uppercase text-slate-400">Estructura Contable</div>
+            <div class="text-sm font-bold text-white mt-0.5">${doc.chartOfAccounts}</div>
+            <div class="text-[11px] text-cyan-300 mt-1">Moneda Base: ${doc.baseCurrency}</div>
+          </div>
+          <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] uppercase text-slate-400">Volumen Procesado</div>
+            <div class="text-sm font-bold text-white mt-0.5 font-mono">${Number(doc.rawRowsProcessed || 0).toLocaleString('es-CO')} registros</div>
+            <div class="text-[11px] text-slate-400 mt-1">Sincronizado: ${new Date(doc.extractedAt).toLocaleString('es-CO')}</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Reglas de Imputación y Distribución de Costos</h4>
+          <p><strong>Costos Directos:</strong> ${doc.allocationMethodology.directCostsRule}</p>
+          <p><strong>Costos y Gastos Indirectos:</strong> ${doc.allocationMethodology.indirectCostsRule}</p>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">Gobierno de Versiones en SAP Analytics Cloud</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            ${(doc.versionsGovernance || []).map(v => `
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <div class="font-bold text-white">${v.name} <span class="text-emerald-400 font-mono">(${v.code})</span></div>
+                <p class="text-[11px] text-slate-400 mt-0.5">${v.description}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">Diccionario Oficial de Indicadores Financieros (KPIs)</h4>
+          <div class="table-container">
+            <table class="sac-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Indicador</th>
+                  <th class="text-left">Fórmula de Cálculo</th>
+                  <th class="text-left">Fuente Funcional</th>
+                  <th class="text-left">Nivel de Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(doc.kpiDictionary || []).map(k => `
+                  <tr>
+                    <td class="font-bold text-white">${k.name}</td>
+                    <td class="font-mono text-emerald-300">${k.formula}</td>
+                    <td>${k.source}</td>
+                    <td class="text-slate-400">${k.grain}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // ============================================================================
+    // INTERACCIÓN DE SLIDERS, ESCENARIOS Y PESTAÑAS
+    // ============================================================================
+    function syncSlidersFromDrivers(drivers, labelText = 'Simulación Personalizada en Vivo') {
+      currentDrivers = { ...currentDrivers, ...drivers };
+      document.getElementById('activeScenarioLabel').textContent = labelText;
+
+      Object.keys(currentDrivers).forEach(key => {
+        const slider = document.getElementById(`slider_${key}`);
+        const out = document.getElementById(`out_${key}`);
+        if (slider && out) {
+          const val = Number(currentDrivers[key] || 0);
+          slider.value = val;
+          slider.closest('.driver-slider-group')?.style.setProperty('--control-value', String(val));
+          if (key === 'interestRateDeltaBps') {
+            out.textContent = `${val > 0 ? '+' : ''}${val} pbs`;
+          } else {
+            out.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)}%`;
+          }
+        }
+      });
+    }
+
+    let simDebounceTimer = null;
+    async function triggerLiveSimulation() {
+      if (!currentData) return;
+      try {
+        const res = await fetch('/api/finanzas/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filters: getActiveFilterPayload(false),
+            drivers: currentDrivers
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          currentData.scenarios.activeSimulation = json.simulation;
+          currentData.scenarios.list = json.scenariosList;
+          renderPage5ScenarioSimulation(json.simulation, json.scenariosList, currentData.pnlSummary);
+        }
+      } catch (e) {
+        console.error('[SIMULATE ERROR]:', e);
+      }
+    }
+
+    window.applyScenarioPreset = function(scenarioId) {
+      if (!currentData || !currentData.scenarios?.list) return;
+      const found = currentData.scenarios.list.find(s => s.id === scenarioId);
+      if (!found) return;
+      syncSlidersFromDrivers(found.drivers, found.name);
+      triggerLiveSimulation();
+    };
+
+    window.handleDeleteScenario = async function(scenarioId, evt) {
+      if (evt) evt.stopPropagation();
+      try {
+        const res = await fetch(`/api/finanzas/scenarios/${encodeURIComponent(scenarioId)}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.success && currentData) {
+          currentData.scenarios.list = json.scenariosList;
+          renderPage5ScenarioSimulation(currentData.scenarios.activeSimulation, json.scenariosList, currentData.pnlSummary);
+        }
+      } catch (e) {
+        console.error('Error eliminando escenario:', e);
+      }
+    };
+
+    // Inicialización de Eventos DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      // Navegación entre las 6 páginas
+      document.querySelectorAll('.page-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.page-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const targetId = btn.getAttribute('data-page');
+          document.querySelectorAll('.sac-page').forEach(sec => {
+            sec.classList.toggle('hidden', sec.id !== targetId);
+          });
+        });
+      });
+
+      // Filtros globales
+      ['filterYear', 'filterQuarter', 'filterMonth', 'filterBukrs', 'filterPrctr', 'filterKostl'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => fetchFinancialOverview(false));
+      });
+
+      document.getElementById('btnResetFilters')?.addEventListener('click', () => {
+        document.getElementById('filterYear').value = '2025';
+        document.getElementById('filterQuarter').value = 'ALL';
+        document.getElementById('filterMonth').value = 'ALL';
+        document.getElementById('filterBukrs').value = 'ALL';
+        document.getElementById('filterPrctr').value = 'ALL';
+        document.getElementById('filterKostl').value = 'ALL';
+        fetchFinancialOverview(false);
+      });
+
+      document.getElementById('btnRefreshSap')?.addEventListener('click', () => fetchFinancialOverview(true));
+
+      // Conmutador de Regla de Asignación de Costos (Página 3)
+      document.getElementById('btnAllocFull')?.addEventListener('click', () => {
+        currentAllocationMode = 'full';
+        document.getElementById('btnAllocFull').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition';
+        document.getElementById('btnAllocDirect').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
+        fetchFinancialOverview(false);
+      });
+
+      document.getElementById('btnAllocDirect')?.addEventListener('click', () => {
+        currentAllocationMode = 'direct';
+        document.getElementById('btnAllocDirect').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition';
+        document.getElementById('btnAllocFull').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
+        fetchFinancialOverview(false);
+      });
+
+      // Sliders de Simulación (Página 5)
+      document.querySelectorAll('input[type="range"][data-driver]').forEach(slider => {
+        slider.addEventListener('input', () => {
+          const key = slider.getAttribute('data-driver');
+          const val = Number(slider.value);
+          currentDrivers[key] = val;
+          slider.closest('.driver-slider-group')?.style.setProperty('--control-value', String(val));
+          const out = document.getElementById(`out_${key}`);
+          if (out) {
+            out.textContent = key === 'interestRateDeltaBps'
+              ? `${val > 0 ? '+' : ''}${val} pbs`
+              : `${val > 0 ? '+' : ''}${val.toFixed(1)}%`;
+          }
+          document.getElementById('activeScenarioLabel').textContent = 'Simulación Personalizada en Vivo';
+          clearTimeout(simDebounceTimer);
+          simDebounceTimer = setTimeout(triggerLiveSimulation, 120);
+        });
+      });
+
+      document.getElementById('btnResetSliders')?.addEventListener('click', () => {
+        syncSlidersFromDrivers({
+          priceChangePct: 0,
+          volumeChangePct: 0,
+          discountChangePct: 0,
+          mixShiftPct: 0,
+          rawMaterialCostPct: 0,
+          productionCostPct: 0,
+          logisticsCostPct: 0,
+          adminExpensePct: 0,
+          commercialExpensePct: 0,
+          payrollExpensePct: 0,
+          fxRateChangePct: 0,
+          interestRateDeltaBps: 0
+        }, 'Línea Base Real (Sin Ajustes)');
+        triggerLiveSimulation();
+      });
+
+      // Modal Guardar Escenario
+      const modalSave = document.getElementById('modalSaveScenario');
+      document.getElementById('btnOpenSaveScenarioModal')?.addEventListener('click', () => modalSave.classList.remove('hidden'));
+      document.getElementById('btnCloseSaveScenarioModal')?.addEventListener('click', () => modalSave.classList.add('hidden'));
+      document.getElementById('btnCancelSaveScenario')?.addEventListener('click', () => modalSave.classList.add('hidden'));
+
+      document.getElementById('btnConfirmSaveScenario')?.addEventListener('click', async () => {
+        const name = document.getElementById('inputScenarioName').value.trim() || 'Escenario Estratégico Personalizado';
+        const author = document.getElementById('inputScenarioAuthor').value.trim() || 'Dirección Financiera';
+        const baseVersion = document.getElementById('inputScenarioBaseVersion').value;
+        const description = document.getElementById('inputScenarioDesc').value.trim() || 'Simulación financiera creada desde el motor interactivo.';
+
+        const res = await fetch('/api/finanzas/scenarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            author,
+            baseVersion,
+            description,
+            drivers: currentDrivers,
+            filters: getActiveFilterPayload(false)
+          })
+        });
+        const json = await res.json();
+        if (json.success && currentData) {
+          currentData.scenarios.list = json.scenariosList;
+          modalSave.classList.add('hidden');
+          document.getElementById('inputScenarioName').value = '';
+          document.getElementById('inputScenarioDesc').value = '';
+          renderPage5ScenarioSimulation(currentData.scenarios.activeSimulation, json.scenariosList, currentData.pnlSummary);
+        }
+      });
+
+      // Modal Documentación
+      const modalDoc = document.getElementById('modalDocumentation');
+      document.getElementById('btnOpenDocModal')?.addEventListener('click', () => modalDoc.classList.remove('hidden'));
+      document.getElementById('btnCloseDocModal')?.addEventListener('click', () => modalDoc.classList.add('hidden'));
+
+      // Exportar P&L a CSV
+      document.getElementById('btnExportCsv')?.addEventListener('click', () => {
+        if (!currentData || !currentData.pnlStatement) return;
+        const headers = ['Paso', 'Linea P&L', 'Real (COP)', 'Presupuesto (COP)', 'Pronostico (COP)', 'Ano Anterior (COP)', 'Var vs Presupuesto (COP)', 'Var vs Presupuesto (%)', '% Vertical', 'Estado'];
+        const csvRows = [headers.join(',')];
+        currentData.pnlStatement.forEach(r => {
+          csvRows.push([
+            r.step,
+            `"${r.label.replace(/"/g, '""')}"`,
+            r.actual,
+            r.budget,
+            r.forecast,
+            r.priorYear,
+            r.varBudgetAbs,
+            r.varBudgetPct,
+            r.verticalPct,
+            r.varianceStatus
+          ].join(','));
+        });
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Estado_Resultados_SAC_${document.getElementById('filterYear').value}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Carga inicial
+      fetchFinancialOverview(false);
+    });
+  </script>
+</body>
+</html>

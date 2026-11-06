@@ -56,7 +56,9 @@ const requiredViews = [
       'Optimizador de Inventarios IA',
       'Ingresar al optimizador',
       'Ventas y Predicción SAC',
-      '/ventas-sap'
+      '/ventas-sap',
+      'Desempeño Financiero y Simulación SAC',
+      '/finanzas-sap'
     ]
   },
   {
@@ -87,6 +89,19 @@ const requiredViews = [
       '4. Productos y Demanda',
       '5. Predicción de Ingresos y Demanda (ML)',
       '/api/ventas/overview'
+    ]
+  },
+  {
+    file: 'public/finanzas.html',
+    mustContain: [
+      'Dashboard de Desempeño Financiero, Rentabilidad y Simulación de Escenarios',
+      '1. Resumen Financiero Ejecutivo',
+      '2. Estado de Resultados (P&amp;L)',
+      '3. Rentabilidad por Segmento',
+      '4. Análisis de Costos y Gastos',
+      '5. Simulación de Escenarios &amp; Monte Carlo',
+      '6. Control Presupuestal y Recomendaciones',
+      '/api/finanzas/overview'
     ]
   }
 ];
