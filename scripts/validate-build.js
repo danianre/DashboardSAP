@@ -86,53 +86,39 @@ const requiredViews = [
   {
     file: 'public/ventas.html',
     mustContain: [
-      'Dashboard de Análisis de Ventas y Predicción de Ingresos',
-      '1. Resumen Ejecutivo',
-      '2. Análisis Histórico y Comercial',
-      '3. Inteligencia de Clientes (RFM)',
-      '4. Productos y Demanda',
-      '5. Predicción de Ingresos y Demanda (ML)',
+      'Análisis de Ventas y Predicción de Ingresos',
+      '1. Tendencias de Ventas Históricas',
+      '2. Análisis de Clientes y Patrones de Compra',
+      '3. Predicción de Ingresos y Demanda (SAC)',
       '/api/ventas/overview'
     ]
   },
   {
     file: 'public/finanzas.html',
     mustContain: [
-      'Dashboard de Desempeño Financiero, Rentabilidad y Simulación de Escenarios',
-      '1. Resumen Financiero Ejecutivo',
-      '2. Estado de Resultados (P&amp;L)',
-      '3. Rentabilidad por Segmento',
-      '4. Análisis de Costos y Gastos',
-      '5. Simulación de Escenarios &amp; Monte Carlo',
-      '6. Control Presupuestal y Recomendaciones',
+      'Desempeño Financiero y Simulación de Escenarios',
+      '1. Ingresos, Costos y Márgenes (P&amp;L)',
+      '2. Rentabilidad por Producto, Región y Cliente',
+      '3. Simulación de Escenarios Estratégicos',
       '/api/finanzas/overview'
     ]
   },
   {
     file: 'public/cadena-suministro.html',
     mustContain: [
-      'Inteligencia y Optimización de la Cadena de Suministro',
-      '1. Resumen Ejecutivo y Alertas',
-      '2. Proveedores y Abastecimiento (TCO)',
-      '3. Control y Optimización de Inventarios',
-      '4. Transporte, Tiempos y Costos',
-      '5. Recomendador de Rutas y Flota',
-      '6. Análisis Predictivo (Smart Predict)',
-      '7. Simulador de Escenarios y Acciones',
+      'Optimización de la Cadena de Suministro',
+      '1. Tiempos de Entrega, Costos y Cuellos de Botella',
+      '2. Niveles de Inventario y Oportunidades de Mejora',
+      '3. Sugerencia de Proveedores y Rutas Eficientes',
       '/api/cadena-suministro/overview'
     ]
   },
   {
     file: 'public/riesgos-financieros.html',
     mustContain: [
-      'Dashboard de Inteligencia y Análisis de Riesgos Financieros',
-      '1. Resumen Ejecutivo de Riesgos',
-      '2. Cartera y Antigüedad (Aging)',
-      '3. Riesgo Crediticio por Cliente',
-      '4. Entorno Macro y Exposición FX',
-      '5. Sensibilidad Financiera',
-      '6. Predicción Smart Predict y Alertas',
-      '7. Simulación y Pruebas de Estrés',
+      'Análisis de Riesgos Financieros',
+      '1. Evaluación de Riesgo Crediticio de Clientes',
+      '2. Impacto de Fluctuaciones Económicas en los Ingresos',
       '/api/riesgos-financieros/overview'
     ]
   }
