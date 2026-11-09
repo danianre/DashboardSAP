@@ -704,14 +704,15 @@
         if (!el || !Array.isArray(items)) return;
         items.forEach((item) => {
           const opt = document.createElement('option');
-          opt.value = typeof item === 'object' ? item[valKey] : item;
+          opt.value = typeof item === 'object' ? (item[valKey] || item.code || item.id || item.currency) : item;
           opt.textContent = labelFn ? labelFn(item) : opt.value;
           el.appendChild(opt);
         });
       };
       fill('filterCompany', catalogs.companies, 'code', (c) => `${c.name}`);
-      fill('filterSector', catalogs.sectors, 'id', (s) => `${s.name}`);
-      fill('filterCurrency', catalogs.currencies, 'code', (c) => `${c.code} — ${c.name}`);
+      fill('filterSector', catalogs.sectors, 'code', (s) => `${s.name || s.id || s.code}`);
+      fill('filterCurrency', catalogs.currencies, 'code', (c) => typeof c === 'string' ? c : `${c.code || c.currency} — ${c.name || ''}`);
+      fill('filterRiskLevel', catalogs.riskLevels, 'code', (r) => typeof r === 'string' ? r : (r.name || r.code));
       catalogsInitialized = true;
     }
 
@@ -729,23 +730,36 @@
 
     function renderKpis(kpis, macroPage) {
       if (!kpis) return;
-      document.getElementById('kpiTotalExposure').textContent = fmtCop(kpis.totalCreditExposureCop);
-      document.getElementById('kpiCreditUtilBadge').textContent = `${(kpis.creditUtilizationPct || 0).toFixed(1)}% del cupo`;
-      document.getElementById('kpiCustomerCountText').textContent = `${kpis.evaluatedCustomersCount || 0} clientes activos`;
+      const totalExposure = kpis.totalCreditExposureCop ?? kpis.totalExposureCop ?? (Array.isArray(kpis) && (kpis.totalCreditExposureCop || kpis.find(k => k.id === 'kpi-total-exposure')?.formatted)) ?? 0;
+      const creditUtilPct = kpis.creditUtilizationPct ?? (Array.isArray(kpis) && (kpis.creditUtilizationPct || parseFloat(kpis.find(k => k.id === 'kpi-limit-util')?.formatted))) ?? 0;
+      const custCount = kpis.evaluatedCustomersCount ?? (Array.isArray(kpis) && (kpis.evaluatedCustomersCount || parseInt(kpis.find(k => k.id === 'kpi-overdue-clients')?.formatted))) ?? 0;
 
-      document.getElementById('kpiOverduePortfolio').textContent = fmtCop(kpis.overduePortfolioCop);
-      const overdueBadge = document.getElementById('kpiOverduePctBadge');
-      overdueBadge.textContent = `${(kpis.overduePct || 0).toFixed(1)}% vencido`;
-      overdueBadge.className = 'badge ' + ((kpis.overduePct || 0) <= 15 ? 'badge-up' : 'badge-warn');
-      document.getElementById('kpiDsoText').textContent = `DSO: ${kpis.weightedDsoDays || 0} días`;
+      const overduePort = kpis.overduePortfolioCop ?? kpis.totalOverdueCop ?? (Array.isArray(kpis) && kpis.totalOverdueCop) ?? 0;
+      const overduePct = kpis.overduePct ?? kpis.overdueRatePct ?? (Array.isArray(kpis) && kpis.overdueRatePct) ?? 0;
+      const dso = kpis.weightedDsoDays ?? kpis.dsoDays ?? (Array.isArray(kpis) && kpis.dsoDays) ?? 0;
 
-      document.getElementById('kpiExpectedLoss').textContent = fmtCop(kpis.expectedCreditLossCop);
-      document.getElementById('kpiHighRiskCountBadge').textContent = `${kpis.highAndCriticalCustomersCount || 0} clientes en riesgo alto/crítico`;
+      const expectedLoss = kpis.expectedCreditLossCop ?? kpis.totalExpectedCreditLossCop ?? (Array.isArray(kpis) && kpis.totalExpectedCreditLossCop) ?? 0;
+      const highRiskCount = kpis.highAndCriticalCustomersCount ?? kpis.highRiskCustomersCount ?? (Array.isArray(kpis) && (kpis.highRiskCustomersCount || parseInt(kpis.find(k => k.id === 'kpi-high-risk-clients')?.formatted))) ?? 0;
 
-      document.getElementById('kpiNetFxExposure').textContent = fmtCop(macroPage?.netForeignCurrencyExposureCop || kpis.fxExposedPortfolioCop);
+      const netFx = macroPage?.netForeignCurrencyExposureCop ?? kpis.fxExposedPortfolioCop ?? 0;
       const macro = macroPage?.macroeconomicContext || {};
-      document.getElementById('kpiMacroRatesBadge').textContent = `USD $${Math.round(macro.usdCopSpot || 4150).toLocaleString('es-CO')}`;
-      document.getElementById('kpiInflationIbrText').textContent = `IPC ${macro.inflationAnnualPct || 0}% · IBR ${macro.ibrRatePct || 0}%`;
+
+      document.getElementById('kpiTotalExposure').textContent = typeof totalExposure === 'string' ? totalExposure : fmtCop(totalExposure);
+      document.getElementById('kpiCreditUtilBadge').textContent = `${Number(creditUtilPct || 0).toFixed(1)}% del cupo`;
+      document.getElementById('kpiCustomerCountText').textContent = `${custCount} clientes activos`;
+
+      document.getElementById('kpiOverduePortfolio').textContent = fmtCop(overduePort);
+      const overdueBadge = document.getElementById('kpiOverduePctBadge');
+      overdueBadge.textContent = `${Number(overduePct || 0).toFixed(1)}% vencido`;
+      overdueBadge.className = 'badge ' + (Number(overduePct || 0) <= 15 ? 'badge-up' : 'badge-warn');
+      document.getElementById('kpiDsoText').textContent = `DSO: ${dso} días`;
+
+      document.getElementById('kpiExpectedLoss').textContent = fmtCop(expectedLoss);
+      document.getElementById('kpiHighRiskCountBadge').textContent = `${highRiskCount} clientes en riesgo alto/crítico`;
+
+      document.getElementById('kpiNetFxExposure').textContent = fmtCop(netFx);
+      document.getElementById('kpiMacroRatesBadge').textContent = `USD $${Math.round(macro.usdCopSpot || 4145).toLocaleString('es-CO')}`;
+      document.getElementById('kpiInflationIbrText').textContent = `IPC ${macro.inflationAnnualPct || 5.42}% · IBR ${macro.ibrRatePct || 8.75}%`;
     }
 
     function renderCreditTab(p1, p2, p3) {
@@ -784,11 +798,11 @@
       charts.hist = new Chart(ctxHist, {
         type: 'line',
         data: {
-          labels: hist.map((h) => h.label),
+          labels: hist.map((h) => h.label || h.period),
           datasets: [
             {
               label: 'Ingresos Mensuales',
-              data: hist.map((h) => h.revenueCop),
+              data: hist.map((h) => h.revenueCop ?? (h.revenueBillionCop ? Math.round(h.revenueBillionCop * 1e9) : 0)),
               borderColor: '#38bdf8',
               backgroundColor: 'rgba(56, 189, 248, 0.1)',
               fill: true,
@@ -796,7 +810,7 @@
             },
             {
               label: 'Cartera Vencida',
-              data: hist.map((h) => h.overdueCop),
+              data: hist.map((h) => h.overdueCop ?? (h.overdueBillionCop ? Math.round(h.overdueBillionCop * 1e9) : 0)),
               borderColor: '#f43f5e',
               backgroundColor: 'rgba(244, 63, 94, 0.12)',
               fill: true,
@@ -818,63 +832,89 @@
       // Tabla de clientes
       const customers = p3?.customers || [];
       document.getElementById('tableCustomerCreditBody').innerHTML = customers.map((c) => {
+        const riskLevel = c.riskLevel || (c.predictiveRiskLevel === 'Riesgo Muy Alto' ? 'CRITICO' : c.predictiveRiskLevel === 'Riesgo Alto' ? 'ALTO' : c.predictiveRiskLevel === 'Riesgo Moderado' ? 'MEDIO' : 'BAJO');
         const badgeCls =
-          c.riskLevel === 'CRITICO' ? 'badge-down'
-          : c.riskLevel === 'ALTO' ? 'badge-warn'
-          : c.riskLevel === 'MEDIO' ? 'badge-info'
+          riskLevel === 'CRITICO' || riskLevel === 'Riesgo Muy Alto' ? 'badge-down'
+          : riskLevel === 'ALTO' || riskLevel === 'Riesgo Alto' ? 'badge-warn'
+          : riskLevel === 'MEDIO' || riskLevel === 'Riesgo Moderado' ? 'badge-info'
           : 'badge-up';
+        const creditLimit = c.creditLimitCop ?? c.approvedCreditLimitCop ?? 0;
+        const totalExp = c.totalExposureCop ?? c.totalCreditExposureCop ?? 0;
+        const overdue = c.overdueCop ?? c.totalOverdueCop ?? 0;
+        const dso = c.actualDsoDays ?? Math.round((c.paymentTermsDays || 30) + (c.avgDaysPastDue || 0));
+        const defaultProb = c.defaultProbability90dPct ?? c.predictedDefaultProbPct ?? 0;
+        const score = c.creditScore ?? Math.max(18, Math.min(97, Math.round(96 - (defaultProb * 0.72))));
+        const action = c.recommendedAction || c.creditRecommendation || 'Monitoreo estándar';
+
         return `
           <tr>
             <td><strong>${c.name}</strong></td>
             <td>${c.sectorName || c.sector} · ${c.region}</td>
-            <td class="num">${fmtCop(c.creditLimitCop)}</td>
-            <td class="num">${fmtCop(c.totalExposureCop)}</td>
+            <td class="num">${fmtCop(creditLimit)}</td>
+            <td class="num">${fmtCop(totalExp)}</td>
             <td class="num">${(c.creditUtilizationPct || 0).toFixed(1)}%</td>
-            <td class="num">${fmtCop(c.overdueCop)} (${(c.overdueSharePct || 0).toFixed(1)}%)</td>
-            <td class="num">${c.actualDsoDays} d</td>
-            <td class="num"><strong>${c.creditScore}</strong></td>
-            <td class="num">${(c.defaultProbability90dPct || 0).toFixed(1)}%</td>
-            <td><span class="badge ${badgeCls}">${c.riskLevel}</span></td>
-            <td>${c.recommendedAction || 'Monitoreo estándar'}</td>
+            <td class="num">${fmtCop(overdue)} (${(c.overdueSharePct || 0).toFixed(1)}%)</td>
+            <td class="num">${dso} d</td>
+            <td class="num"><strong>${score}</strong></td>
+            <td class="num">${Number(defaultProb).toFixed(1)}%</td>
+            <td><span class="badge ${badgeCls}">${riskLevel}</span></td>
+            <td>${action}</td>
           </tr>
         `;
       }).join('');
 
       // Alertas tempranas
       const alerts = p1?.alerts || [];
-      document.getElementById('creditAlertsContainer').innerHTML = alerts.slice(0, 6).map((a) => `
-        <div class="insight-item">
-          <div class="insight-title">${a.title}</div>
-          <div class="insight-desc">${a.description}</div>
-          <div style="font-size:11.5px; color:#38bdf8; margin-top:4px;"><strong>Acción:</strong> ${a.recommendedAction || 'Revisar comité de crédito'}</div>
-        </div>
-      `).join('');
+      document.getElementById('creditAlertsContainer').innerHTML = alerts.slice(0, 6).map((a) => {
+        const title = a.title || a.riskDetected || 'Alerta de Riesgo Crediticio';
+        const desc = a.description || `${a.observedValue || ''}. ${a.evidence || ''}`.trim() || 'Deterioro detectado en comportamiento de cartera o exposición.';
+        const action = a.recommendedAction || a.recommendedMitigationAction || 'Revisar comité de crédito';
+        return `
+          <div class="insight-item">
+            <div class="insight-title">${title}</div>
+            <div class="insight-desc">${desc}</div>
+            <div style="font-size:11.5px; color:#38bdf8; margin-top:4px;"><strong>Acción:</strong> ${action}</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderMacroTab(p4, p5, p7) {
       // Tabla de exposición por moneda
       const currencies = p4?.currencyExposure || [];
-      document.getElementById('tableCurrencyExposureBody').innerHTML = currencies.map((c) => `
-        <tr>
-          <td><strong>${c.currency}</strong> (${c.name})</td>
-          <td class="num">${c.spotRateCop ? '$' + Math.round(c.spotRateCop).toLocaleString('es-CO') : '1.00'}</td>
-          <td class="num">${fmtCop(c.revenueCop)}</td>
-          <td class="num">${fmtCop(c.receivablesCop)}</td>
-          <td class="num">${fmtCop((c.payablesCop || 0) + (c.financialDebtCop || 0))}</td>
-          <td class="num"><span class="badge ${c.netExposureCop >= 0 ? 'badge-info' : 'badge-warn'}">${fmtCop(c.netExposureCop)}</span></td>
-        </tr>
-      `).join('');
+      document.getElementById('tableCurrencyExposureBody').innerHTML = currencies.map((c) => {
+        const cName = c.name || c.currencyName || c.currency;
+        const cRev = c.revenueCop ?? c.annualRevenueCop ?? 0;
+        const cRec = c.receivablesCop ?? c.monetaryAssetsArCop ?? 0;
+        const cPay = (c.payablesCop ?? c.monetaryLiabilitiesApCop ?? 0) + (c.financialDebtCop ?? c.financialDebtInCurrencyCop ?? 0);
+        const cNet = c.netExposureCop ?? c.netMonetaryExposureCop ?? 0;
+        const cRate = c.spotRateCop ?? 1;
+        return `
+          <tr>
+            <td><strong>${c.currency}</strong> (${cName})</td>
+            <td class="num">${cRate > 1 ? '$' + Math.round(cRate).toLocaleString('es-CO') : '$1'}</td>
+            <td class="num">${fmtCop(cRev)}</td>
+            <td class="num">${fmtCop(cRec)}</td>
+            <td class="num">${fmtCop(cPay)}</td>
+            <td class="num"><span class="badge ${cNet >= 0 ? 'badge-info' : 'badge-warn'}">${fmtCop(cNet)}</span></td>
+          </tr>
+        `;
+      }).join('');
 
       // Tabla de sensibilidad cambiaria
       const fxSens = p5?.fxSensitivityTable || [];
       document.getElementById('tableFxSensitivityBody').innerHTML = fxSens.map((row) => {
-        const netImpact = row.netProfitImpactCop || 0;
+        const netImpact = row.netProfitImpactCop ?? row.fxBalanceImpactCop ?? 0;
+        const shockLabel = row.shockLabel || (row.fxChangePct === 0 ? 'Escenario Base (TRM $4.145)' : (row.fxChangePct > 0 ? `Depreciación COP +${row.fxChangePct}%` : `Apreciación COP ${row.fxChangePct}%`));
+        const usdRate = row.simulatedUsdCop ?? row.usdSpotSimulated ?? Math.round(4145 * (1 + (row.fxChangePct || 0) / 100));
+        const revImpact = row.revenueImpactCop ?? (row.revenueSimulatedCop ? row.revenueSimulatedCop - (currentBaseline?.revenueCop || 0) : 0);
+        const costImpact = (row.costImpactCop || 0) + (row.debtServiceImpactCop || 0);
         return `
           <tr>
-            <td><strong>${row.shockLabel}</strong></td>
-            <td class="num">$${Math.round(row.simulatedUsdCop || 0).toLocaleString('es-CO')}</td>
-            <td class="num">${fmtCop(row.revenueImpactCop)}</td>
-            <td class="num">${fmtCop((row.costImpactCop || 0) + (row.debtServiceImpactCop || 0))}</td>
+            <td><strong>${shockLabel}</strong></td>
+            <td class="num">$${Math.round(usdRate).toLocaleString('es-CO')}</td>
+            <td class="num">${fmtCop(revImpact)}</td>
+            <td class="num">${fmtCop(costImpact)}</td>
             <td class="num"><span class="badge ${netImpact >= 0 ? 'badge-up' : 'badge-down'}">${fmtCop(netImpact)}</span></td>
           </tr>
         `;
@@ -893,9 +933,9 @@
 
     function updateSimulationView(baseline, sim) {
       if (!sim) return;
-      const baseRev = baseline?.revenueCop || sim.baseline?.revenueCop || 0;
-      const simRev = sim.projected?.revenueCop ?? sim.simulatedRevenueCop ?? baseRev;
-      const revDeltaPct = sim.deltas?.revenueChangePct ?? (baseRev > 0 ? ((simRev - baseRev) / baseRev) * 100 : 0);
+      const baseRev = baseline?.revenueCop || baseline?.totalAnnualRevenueCop || sim.baseline?.revenueCop || sim.current?.revenueCop || 0;
+      const simRev = sim.projected?.revenueCop ?? sim.simulated?.revenueCop ?? sim.simulatedRevenueCop ?? baseRev;
+      const revDeltaPct = sim.deltas?.revenueChangePct ?? sim.deltas?.revenueDeltaPct ?? (baseRev > 0 ? ((simRev - baseRev) / baseRev) * 100 : 0);
 
       document.getElementById('simRevenueVal').textContent = fmtCop(simRev);
       document.getElementById('simBaseRevenueText').textContent = `Base: ${fmtCop(baseRev)}`;
@@ -903,20 +943,20 @@
       revBadge.textContent = `${revDeltaPct >= 0 ? '+' : ''}${revDeltaPct.toFixed(1)}%`;
       revBadge.className = 'badge ' + (revDeltaPct >= 0 ? 'badge-up' : 'badge-down');
 
-      const simEbitda = sim.projected?.ebitdaCop ?? sim.simulatedEbitdaCop ?? 0;
-      const simEbitdaMargin = sim.projected?.ebitdaMarginPct ?? sim.simulatedEbitdaMarginPct ?? 0;
-      const simNetProfit = sim.projected?.netIncomeCop ?? sim.simulatedNetProfitCop ?? 0;
+      const simEbitda = sim.projected?.ebitdaCop ?? sim.simulated?.ebitdaCop ?? sim.simulatedEbitdaCop ?? 0;
+      const simEbitdaMargin = sim.projected?.ebitdaMarginPct ?? sim.simulated?.ebitdaMarginPct ?? sim.simulatedEbitdaMarginPct ?? (simRev > 0 ? (simEbitda / simRev) * 100 : 0);
+      const simNetProfit = sim.projected?.netIncomeCop ?? sim.projected?.netFinancialResultCop ?? sim.simulated?.netFinancialResultCop ?? sim.simulatedNetProfitCop ?? 0;
 
       document.getElementById('simEbitdaVal').textContent = fmtCop(simEbitda);
       const ebitdaBadge = document.getElementById('simEbitdaDeltaBadge');
       ebitdaBadge.textContent = `Margen ${simEbitdaMargin.toFixed(1)}%`;
-      ebitdaBadge.className = 'badge ' + (simEbitdaMargin >= 16 ? 'badge-up' : 'badge-warn');
+      ebitdaBadge.className = 'badge ' + (simEbitdaMargin >= 10 ? 'badge-up' : 'badge-warn');
       document.getElementById('simNetProfitText').textContent = `Utilidad Neta: ${fmtCop(simNetProfit)}`;
 
-      const baseEbitda = baseline?.ebitdaCop || sim.baseline?.ebitdaCop || 0;
-      const baseNet = baseline?.netIncomeCop || sim.baseline?.netIncomeCop || 0;
-      const baseEcl = baseline?.expectedCreditLossCop || sim.baseline?.expectedCreditLossCop || 0;
-      const simEcl = sim.projected?.expectedCreditLossCop ?? sim.simulatedExpectedLossCop ?? baseEcl;
+      const baseEbitda = baseline?.ebitdaCop || baseline?.ebitdaReferenceCop || sim.baseline?.ebitdaCop || sim.current?.ebitdaCop || 0;
+      const baseNet = baseline?.netIncomeCop || baseline?.netFinancialResultCop || sim.baseline?.netIncomeCop || sim.baseline?.netFinancialResultCop || sim.current?.netFinancialResultCop || 0;
+      const baseEcl = baseline?.expectedCreditLossCop || baseline?.totalExpectedCreditLossCop || sim.baseline?.expectedCreditLossCop || sim.current?.expectedCreditLossCop || 0;
+      const simEcl = sim.projected?.expectedCreditLossCop ?? sim.simulated?.expectedCreditLossCop ?? sim.simulatedExpectedLossCop ?? baseEcl;
 
       const ctx = document.getElementById('chartMacroImpact').getContext('2d');
       if (charts.macroSim) charts.macroSim.destroy();
@@ -952,17 +992,27 @@
     }
 
     async function runRiskSimulation() {
+      const fxRateChangePct = Number(document.getElementById('simFxDeltaPct').value);
+      const inflationChangePts = Number(document.getElementById('simInflationDeltaPct').value);
+      const interestRateDeltaBps = Number(document.getElementById('simInterestDeltaBps').value);
+      const revenueChangePct = Number(document.getElementById('simSalesDropPct').value);
+      const delinquencyShiftPct = Number(document.getElementById('simDefaultIncreasePct').value);
+
       const payload = {
-        fxDeltaPct: Number(document.getElementById('simFxDeltaPct').value),
-        inflationDeltaPct: Number(document.getElementById('simInflationDeltaPct').value),
-        interestRateDeltaBps: Number(document.getElementById('simInterestDeltaBps').value),
-        salesVolumeChangePct: Number(document.getElementById('simSalesDropPct').value),
-        defaultRateShockPct: Number(document.getElementById('simDefaultIncreasePct').value)
+        fxRateChangePct,
+        fxDeltaPct: fxRateChangePct,
+        inflationChangePts,
+        inflationDeltaPct: inflationChangePts,
+        interestRateDeltaBps,
+        revenueChangePct,
+        salesVolumeChangePct: revenueChangePct,
+        delinquencyShiftPct,
+        defaultRateShockPct: delinquencyShiftPct
       };
       const res = await fetch('/api/riesgos-financieros/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ assumptions: payload, ...payload })
       });
       const data = await res.json();
       if (data.ok && data.simulation) {

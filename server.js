@@ -625,7 +625,9 @@ app.post('/api/riesgos-financieros/overview', async (req, res) => {
 
 app.post('/api/riesgos-financieros/simulate', async (req, res) => {
   try {
-    const { filters = {}, assumptions = {} } = req.body || {};
+    const body = req.body || {};
+    const filters = body.filters || {};
+    const assumptions = body.assumptions || body;
     const overview = await getFinancialRiskOverview({ ...filters, customAssumptions: assumptions });
     res.json({
       ok: true,

@@ -586,21 +586,29 @@ async function syncFinancialRiskDatasetFromSap() {
 
     let predictiveRiskLevel = 'Riesgo Bajo';
     let riskTone = 'emerald';
+    let riskLevel = 'BAJO';
     if (predictedDefaultProbPct >= 45.0) {
       predictiveRiskLevel = 'Riesgo Muy Alto';
       riskTone = 'rose';
+      riskLevel = 'CRITICO';
     } else if (predictedDefaultProbPct >= 25.0) {
       predictiveRiskLevel = 'Riesgo Alto';
       riskTone = 'rose';
+      riskLevel = 'ALTO';
     } else if (predictedDefaultProbPct >= 10.0) {
       predictiveRiskLevel = 'Riesgo Moderado';
       riskTone = 'amber';
+      riskLevel = 'MEDIO';
     }
 
     // Cálculo de Pérdida Crediticia Esperada Simplificada: ECL = PD x LGD x EAD (Sección 3.5)
     // EAD = Exposición actual neta de notas crédito/disputas administrativas
     const eadCop = Math.max(0, totalCreditExposureCop - c.disputedOrCreditNotePendingCop);
     const expectedCreditLossCop = Math.round((predictedDefaultProbPct / 100) * (c.lgdPct / 100) * eadCop);
+
+    // Score crediticio normalizado 0-100 (100 = excelente solvencia, <40 = alto riesgo)
+    const creditScore = Math.max(18, Math.min(97, Math.round(96 - (predictedDefaultProbPct * 0.72) - (overdueSharePct * 0.32))));
+    const actualDsoDays = Math.round((c.paymentTermsDays || 30) + (c.avgDaysPastDue || 0));
 
     // Principales factores explicativos del resultado predictivo
     const keyRiskFactors = [];
@@ -622,22 +630,33 @@ async function syncFinancialRiskDatasetFromSap() {
 
     return {
       ...c,
-      totalOverdueCop,
-      netOverdueExcludingDisputesCop,
+      creditLimitCop: c.approvedCreditLimitCop,
+      approvedCreditLimitCop: c.approvedCreditLimitCop,
+      totalExposureCop: totalCreditExposureCop,
       totalCreditExposureCop,
+      overdueCop: totalOverdueCop,
+      totalOverdueCop,
+      actualDsoDays,
+      creditScore,
+      defaultProbability90dPct: predictedDefaultProbPct,
+      predictedDefaultProbPct,
+      riskLevel,
+      currentRiskLevel,
+      predictiveRiskLevel,
+      riskTone,
+      creditRecommendation,
+      recommendedAction: creditRecommendation,
+      sectorCode: c.sector,
+      sectorName: c.sectorName || c.sector,
+      netOverdueExcludingDisputesCop,
       creditUtilizationPct,
       availableCreditCop,
       exceededCreditLimitCop,
       overdueSharePct,
-      predictedDefaultProbPct,
       predictionHorizon: '90 días',
-      currentRiskLevel,
-      predictiveRiskLevel,
-      riskTone,
       eadCop,
       expectedCreditLossCop,
-      keyRiskFactors,
-      creditRecommendation
+      keyRiskFactors
     };
   });
 
@@ -656,18 +675,18 @@ async function syncFinancialRiskDatasetFromSap() {
       { id: 'cpo-price', name: 'Precio Internacional Aceite de Palma (CPO CIF Rotterdam)', currentValue: 'USD 1,045 / Ton', yoyChange: '+6.2%', source: 'Benchmark Internacional de Materias Primas', impactType: 'Principal impulsor de precios de venta de exportación y margen bruto agroindustrial.' }
     ],
     historical12M: [
-      { period: 'Nov 25', usdCop: 4010, eurCop: 4340, inflationPct: 6.45, interestRatePct: 10.25, cpoUsdTon: 975, revenueBillionCop: 44.2, overdueBillionCop: 9.8, fxDiffMillionCop: 410 },
-      { period: 'Dic 25', usdCop: 3995, eurCop: 4325, inflationPct: 6.30, interestRatePct: 10.00, cpoUsdTon: 982, revenueBillionCop: 45.8, overdueBillionCop: 9.5, fxDiffMillionCop: 280 },
-      { period: 'Ene 26', usdCop: 4030, eurCop: 4360, inflationPct: 6.12, interestRatePct: 9.75, cpoUsdTon: 990, revenueBillionCop: 43.9, overdueBillionCop: 9.9, fxDiffMillionCop: 520 },
-      { period: 'Feb 26', usdCop: 4055, eurCop: 4390, inflationPct: 5.98, interestRatePct: 9.50, cpoUsdTon: 1005, revenueBillionCop: 44.7, overdueBillionCop: 10.1, fxDiffMillionCop: 610 },
-      { period: 'Mar 26', usdCop: 4070, eurCop: 4410, inflationPct: 5.85, interestRatePct: 9.50, cpoUsdTon: 1012, revenueBillionCop: 46.1, overdueBillionCop: 10.4, fxDiffMillionCop: 690 },
-      { period: 'Abr 26', usdCop: 4090, eurCop: 4435, inflationPct: 5.76, interestRatePct: 9.25, cpoUsdTon: 1018, revenueBillionCop: 46.8, overdueBillionCop: 10.8, fxDiffMillionCop: 740 },
-      { period: 'May 26', usdCop: 4065, eurCop: 4415, inflationPct: 5.68, interestRatePct: 9.25, cpoUsdTon: 1010, revenueBillionCop: 46.3, overdueBillionCop: 11.0, fxDiffMillionCop: 430 },
-      { period: 'Jun 26', usdCop: 4105, eurCop: 4460, inflationPct: 5.60, interestRatePct: 9.00, cpoUsdTon: 1025, revenueBillionCop: 47.5, overdueBillionCop: 11.2, fxDiffMillionCop: 820 },
-      { period: 'Jul 26', usdCop: 4118, eurCop: 4475, inflationPct: 5.55, interestRatePct: 9.00, cpoUsdTon: 1030, revenueBillionCop: 48.0, overdueBillionCop: 11.5, fxDiffMillionCop: 890 },
-      { period: 'Ago 26', usdCop: 4130, eurCop: 4490, inflationPct: 5.50, interestRatePct: 8.75, cpoUsdTon: 1038, revenueBillionCop: 48.6, overdueBillionCop: 11.7, fxDiffMillionCop: 940 },
-      { period: 'Sep 26', usdCop: 4138, eurCop: 4502, inflationPct: 5.45, interestRatePct: 8.75, cpoUsdTon: 1042, revenueBillionCop: 49.1, overdueBillionCop: 11.9, fxDiffMillionCop: 980 },
-      { period: 'Oct 26', usdCop: 4145, eurCop: 4510, inflationPct: 5.42, interestRatePct: 8.75, cpoUsdTon: 1045, revenueBillionCop: 49.6, overdueBillionCop: 12.1, fxDiffMillionCop: 1040 }
+      { period: 'Nov 25', label: 'Nov 25', usdCop: 4010, eurCop: 4340, inflationPct: 6.45, interestRatePct: 10.25, cpoUsdTon: 975, revenueBillionCop: 44.2, overdueBillionCop: 9.8, revenueCop: 44200000000, overdueCop: 9800000000, fxDiffMillionCop: 410 },
+      { period: 'Dic 25', label: 'Dic 25', usdCop: 3995, eurCop: 4325, inflationPct: 6.30, interestRatePct: 10.00, cpoUsdTon: 982, revenueBillionCop: 45.8, overdueBillionCop: 9.5, revenueCop: 45800000000, overdueCop: 9500000000, fxDiffMillionCop: 280 },
+      { period: 'Ene 26', label: 'Ene 26', usdCop: 4030, eurCop: 4360, inflationPct: 6.12, interestRatePct: 9.75, cpoUsdTon: 990, revenueBillionCop: 43.9, overdueBillionCop: 9.9, revenueCop: 43900000000, overdueCop: 9900000000, fxDiffMillionCop: 520 },
+      { period: 'Feb 26', label: 'Feb 26', usdCop: 4055, eurCop: 4390, inflationPct: 5.98, interestRatePct: 9.50, cpoUsdTon: 1005, revenueBillionCop: 44.7, overdueBillionCop: 10.1, revenueCop: 44700000000, overdueCop: 10100000000, fxDiffMillionCop: 610 },
+      { period: 'Mar 26', label: 'Mar 26', usdCop: 4070, eurCop: 4410, inflationPct: 5.85, interestRatePct: 9.50, cpoUsdTon: 1012, revenueBillionCop: 46.1, overdueBillionCop: 10.4, revenueCop: 46100000000, overdueCop: 10400000000, fxDiffMillionCop: 690 },
+      { period: 'Abr 26', label: 'Abr 26', usdCop: 4090, eurCop: 4435, inflationPct: 5.76, interestRatePct: 9.25, cpoUsdTon: 1018, revenueBillionCop: 46.8, overdueBillionCop: 10.8, revenueCop: 46800000000, overdueCop: 10800000000, fxDiffMillionCop: 740 },
+      { period: 'May 26', label: 'May 26', usdCop: 4065, eurCop: 4415, inflationPct: 5.68, interestRatePct: 9.25, cpoUsdTon: 1010, revenueBillionCop: 46.3, overdueBillionCop: 11.0, revenueCop: 46300000000, overdueCop: 11000000000, fxDiffMillionCop: 430 },
+      { period: 'Jun 26', label: 'Jun 26', usdCop: 4105, eurCop: 4460, inflationPct: 5.60, interestRatePct: 9.00, cpoUsdTon: 1025, revenueBillionCop: 47.5, overdueBillionCop: 11.2, revenueCop: 47500000000, overdueCop: 11200000000, fxDiffMillionCop: 820 },
+      { period: 'Jul 26', label: 'Jul 26', usdCop: 4118, eurCop: 4475, inflationPct: 5.55, interestRatePct: 9.00, cpoUsdTon: 1030, revenueBillionCop: 48.0, overdueBillionCop: 11.5, revenueCop: 48000000000, overdueCop: 11500000000, fxDiffMillionCop: 890 },
+      { period: 'Ago 26', label: 'Ago 26', usdCop: 4130, eurCop: 4490, inflationPct: 5.50, interestRatePct: 8.75, cpoUsdTon: 1038, revenueBillionCop: 48.6, overdueBillionCop: 11.7, revenueCop: 48600000000, overdueCop: 11700000000, fxDiffMillionCop: 940 },
+      { period: 'Sep 26', label: 'Sep 26', usdCop: 4138, eurCop: 4502, inflationPct: 5.45, interestRatePct: 8.75, cpoUsdTon: 1042, revenueBillionCop: 49.1, overdueBillionCop: 11.9, revenueCop: 49100000000, overdueCop: 11900000000, fxDiffMillionCop: 980 },
+      { period: 'Oct 26', label: 'Oct 26', usdCop: 4145, eurCop: 4510, inflationPct: 5.42, interestRatePct: 8.75, cpoUsdTon: 1045, revenueBillionCop: 49.6, overdueBillionCop: 12.1, revenueCop: 49600000000, overdueCop: 12100000000, fxDiffMillionCop: 1040 }
     ]
   };
 
@@ -676,14 +695,20 @@ async function syncFinancialRiskDatasetFromSap() {
   const currencyExposure = [
     {
       currency: 'USD',
+      name: 'Dólar Estadounidense',
       currencyName: 'Dólar Estadounidense (USD)',
       spotRateCop: 4145,
+      revenueCop: 106900000000,
       annualRevenueCop: 106900000000,
       shareOfTotalRevenuePct: 46.7,
+      receivablesCop: 21380000000,
       monetaryAssetsArCop: 21380000000, // Cuentas por cobrar + bancos en USD
+      payablesCop: 7450000000,
       monetaryLiabilitiesApCop: 7450000000, // Cuentas por pagar importaciones en USD
+      financialDebtCop: 6120000000,
       financialDebtInCurrencyCop: 6120000000, // Crédito comercio exterior en USD
       totalMonetaryLiabilitiesCop: 13570000000,
+      netExposureCop: 7810000000,
       netMonetaryExposureCop: 7810000000, // Posición activa/larga neta en USD (+7.81B COP)
       positionType: 'Posición Activa Neta (Larga en USD)',
       historicalFxDifferenceCop: 685000000,
@@ -693,14 +718,20 @@ async function syncFinancialRiskDatasetFromSap() {
     },
     {
       currency: 'EUR',
+      name: 'Euro',
       currencyName: 'Euro (EUR)',
       spotRateCop: 4510,
+      revenueCop: 43500000000,
       annualRevenueCop: 43500000000,
       shareOfTotalRevenuePct: 19.0,
+      receivablesCop: 8560000000,
       monetaryAssetsArCop: 8560000000,
+      payablesCop: 1980000000,
       monetaryLiabilitiesApCop: 1980000000,
+      financialDebtCop: 1450000000,
       financialDebtInCurrencyCop: 1450000000,
       totalMonetaryLiabilitiesCop: 3430000000,
+      netExposureCop: 5130000000,
       netMonetaryExposureCop: 5130000000, // Posición activa neta en EUR (+5.13B COP)
       positionType: 'Posición Activa Neta (Larga en EUR)',
       historicalFxDifferenceCop: 355000000,
@@ -710,14 +741,20 @@ async function syncFinancialRiskDatasetFromSap() {
     },
     {
       currency: 'COP',
+      name: 'Peso Colombiano',
       currencyName: 'Peso Colombiano (Moneda Funcional COP)',
       spotRateCop: 1,
+      revenueCop: 78650000000,
       annualRevenueCop: 78650000000,
       shareOfTotalRevenuePct: 34.3,
+      receivablesCop: 30900000000,
       monetaryAssetsArCop: 30900000000,
+      payablesCop: 18400000000,
       monetaryLiabilitiesApCop: 18400000000,
+      financialDebtCop: 24800000000,
       financialDebtInCurrencyCop: 24800000000,
       totalMonetaryLiabilitiesCop: 43200000000,
+      netExposureCop: 0,
       netMonetaryExposureCop: 0, // Moneda funcional sin riesgo de reexpresión cambiaria directa
       positionType: 'Moneda Funcional Base',
       historicalFxDifferenceCop: 0,
@@ -909,7 +946,7 @@ async function syncFinancialRiskDatasetFromSap() {
     },
     catalogs: {
       companies: COMPANY_CODES_CATALOG,
-      sectors: ECONOMIC_SECTORS_CATALOG,
+      sectors: ECONOMIC_SECTORS_CATALOG.map(s => ({ ...s, id: s.code })),
       regions: [
         'Mercado Internacional (Europa)',
         'Mercado Internacional (Norteamérica)',
@@ -920,8 +957,17 @@ async function syncFinancialRiskDatasetFromSap() {
         'Santander',
         'Bolívar'
       ],
-      currencies: ['COP', 'USD', 'EUR'],
-      riskLevels: ['Riesgo Bajo', 'Riesgo Moderado', 'Riesgo Alto', 'Riesgo Muy Alto']
+      currencies: [
+        { code: 'COP', currency: 'COP', name: 'Peso Colombiano' },
+        { code: 'USD', currency: 'USD', name: 'Dólar Estadounidense' },
+        { code: 'EUR', currency: 'EUR', name: 'Euro' }
+      ],
+      riskLevels: [
+        { code: 'BAJO', name: 'Riesgo Bajo' },
+        { code: 'MEDIO', name: 'Riesgo Moderado' },
+        { code: 'ALTO', name: 'Riesgo Alto' },
+        { code: 'CRITICO', name: 'Riesgo Muy Alto / Crítico' }
+      ]
     },
     customers: evaluatedCustomers,
     macroeconomicContext,
@@ -968,12 +1014,12 @@ async function getOrSyncFinancialRiskDataset(forceRefresh = false) {
 /**
  * Simulador de Escenarios Económicos y Pruebas de Estrés Financiero (Módulo 4 — Sección 6)
  */
-function simulateFinancialRiskScenario(baseline, assumptions = {}) {
+function simulateFinancialRiskScenario(baseline = {}, assumptions = {}) {
   const a = {
-    delinquencyShiftPct: Number(assumptions.delinquencyShiftPct ?? 0.0),
-    revenueChangePct: Number(assumptions.revenueChangePct ?? 0.0),
-    fxRateChangePct: Number(assumptions.fxRateChangePct ?? 0.0),
-    inflationChangePts: Number(assumptions.inflationChangePts ?? 0.0),
+    delinquencyShiftPct: Number(assumptions.delinquencyShiftPct ?? assumptions.defaultRateShockPct ?? 0.0),
+    revenueChangePct: Number(assumptions.revenueChangePct ?? assumptions.salesVolumeChangePct ?? 0.0),
+    fxRateChangePct: Number(assumptions.fxRateChangePct ?? assumptions.fxDeltaPct ?? 0.0),
+    inflationChangePts: Number(assumptions.inflationChangePts ?? assumptions.inflationDeltaPct ?? 0.0),
     interestRateDeltaBps: Number(assumptions.interestRateDeltaBps ?? 0),
     dsoDeltaDays: Number(assumptions.dsoDeltaDays ?? 0.0),
     creditExposureGrowthPct: Number(assumptions.creditExposureGrowthPct ?? 0.0),
@@ -985,87 +1031,125 @@ function simulateFinancialRiskScenario(baseline, assumptions = {}) {
     return +(((simVal - baseVal) / Math.abs(baseVal)) * 100).toFixed(1);
   };
 
+  const baseRevenue = baseline.totalAnnualRevenueCop || baseline.revenueCop || 0;
+  const baseCreditExposure = baseline.totalCreditExposureCop || baseline.creditExposureCop || 0;
+  const baseOverdue = baseline.totalOverdueCop || baseline.overdueCop || baseline.overdueReceivablesCop || 0;
+  const baseEcl = baseline.totalExpectedCreditLossCop || baseline.expectedCreditLossCop || 0;
+  const baseFxExposure = baseline.netForeignCurrencyExposureCop || 0;
+  const baseVariableDebt = baseline.variableRateDebtCop || 0;
+  const baseInterestExpense = baseline.currentAnnualInterestExpenseCop || baseline.interestExpenseCop || 0;
+  const baseEbitda = baseline.ebitdaReferenceCop || baseline.ebitdaCop || 0;
+  const baseDso = baseline.dsoDays || 35.0;
+  const baseOverdueRate = baseline.overdueRatePct || 0;
+  const baseReceivables = baseline.totalReceivablesCop || baseline.receivablesCop || (baseRevenue * 0.25);
+
   // 1. Impacto en Ingresos (combinando crecimiento comercial y efecto conversión de exportaciones en USD/EUR)
   const fxRevenueShare = 0.657; // 65.7% de ingresos en USD + EUR
   const simulatedRevenueCop = Math.round(
-    baseline.totalAnnualRevenueCop * (1 + (a.revenueChangePct / 100) + ((a.fxRateChangePct / 100) * fxRevenueShare * 0.65))
+    baseRevenue * (1 + (a.revenueChangePct / 100) + ((a.fxRateChangePct / 100) * fxRevenueShare * 0.65))
   );
 
   // 2. Impacto en Exposición Crediticia y Cartera Vencida
   const simulatedCreditExposureCop = Math.round(
-    baseline.totalCreditExposureCop * (1 + (a.creditExposureGrowthPct / 100) + (a.dsoDeltaDays * 0.012))
+    baseCreditExposure * (1 + (a.creditExposureGrowthPct / 100) + (a.dsoDeltaDays * 0.012))
   );
   const simulatedOverdueCop = Math.round(
-    baseline.totalOverdueCop * (1 + (a.delinquencyShiftPct / 100) + Math.max(0, a.interestRateDeltaBps / 1000) + Math.max(0, a.inflationChangePts * 0.035))
+    baseOverdue * (1 + (a.delinquencyShiftPct / 100) + Math.max(0, a.interestRateDeltaBps / 1000) + Math.max(0, a.inflationChangePts * 0.035))
   );
   const simulatedExpectedCreditLossCop = Math.round(
-    baseline.totalExpectedCreditLossCop * (1 + (a.delinquencyShiftPct / 100) * 1.18 + Math.max(0, a.dsoDeltaDays * 0.015))
+    baseEcl * (1 + (a.delinquencyShiftPct / 100) * 1.18 + Math.max(0, a.dsoDeltaDays * 0.015))
   );
 
   // 3. Impacto Cambiario Neto sobre Posición Monetaria en Moneda Extranjera
-  const simulatedFxImpactCop = Math.round(baseline.netForeignCurrencyExposureCop * (a.fxRateChangePct / 100));
+  const simulatedFxImpactCop = Math.round(baseFxExposure * (a.fxRateChangePct / 100));
 
   // 4. Impacto de Tasas de Interés (aplicado exclusivamente sobre la Deuda a Tasa Variable - Sección 4.4)
-  const additionalVariableInterestCop = Math.round(baseline.variableRateDebtCop * (a.interestRateDeltaBps / 10000));
-  const simulatedInterestExpenseCop = Math.max(500000000, baseline.currentAnnualInterestExpenseCop + additionalVariableInterestCop);
+  const additionalVariableInterestCop = Math.round(baseVariableDebt * (a.interestRateDeltaBps / 10000));
+  const simulatedInterestExpenseCop = Math.max(500000000, baseInterestExpense + additionalVariableInterestCop);
 
   // 5. Impacto de Inflación y Costos sobre el EBITDA y Resultado Financiero
-  const baseOperatingCostsCop = Math.round(baseline.totalAnnualRevenueCop * 0.785);
+  const baseOperatingCostsCop = Math.round(baseRevenue * 0.785);
   const effectiveCostInflationPct = a.operatingCostChangePct + (a.inflationChangePts * 0.65);
   const simulatedOperatingCostsCop = Math.round(baseOperatingCostsCop * (1 + (effectiveCostInflationPct / 100)));
 
   const simulatedEbitdaCop = Math.round(
-    simulatedRevenueCop - simulatedOperatingCostsCop + simulatedFxImpactCop - (simulatedExpectedCreditLossCop - baseline.totalExpectedCreditLossCop)
+    simulatedRevenueCop - simulatedOperatingCostsCop + simulatedFxImpactCop - (simulatedExpectedCreditLossCop - baseEcl)
   );
   const simulatedNetFinancialResultCop = Math.round(simulatedEbitdaCop - simulatedInterestExpenseCop);
-  const baseNetFinancialResultCop = Math.round(baseline.ebitdaReferenceCop - baseline.currentAnnualInterestExpenseCop);
+  const baseNetFinancialResultCop = Math.round(baseEbitda - baseInterestExpense);
 
-  const simulatedDsoDays = +Math.max(15, baseline.dsoDays + a.dsoDeltaDays).toFixed(1);
+  const simulatedDsoDays = +Math.max(15, baseDso + a.dsoDeltaDays).toFixed(1);
   const simulatedOverdueRatePct = simulatedCreditExposureCop > 0
-    ? +Math.min(65.0, (simulatedOverdueCop / Math.max(1, baseline.totalReceivablesCop * (1 + a.creditExposureGrowthPct / 100))) * 100).toFixed(1)
+    ? +Math.min(65.0, (simulatedOverdueCop / Math.max(1, baseReceivables * (1 + a.creditExposureGrowthPct / 100))) * 100).toFixed(1)
     : 0;
+
+  const simulatedEbitdaMarginPct = simulatedRevenueCop > 0
+    ? +((simulatedEbitdaCop / simulatedRevenueCop) * 100).toFixed(1)
+    : 0;
+
+  const currentStatus = {
+    revenueCop: baseRevenue,
+    totalAnnualRevenueCop: baseRevenue,
+    creditExposureCop: baseCreditExposure,
+    totalCreditExposureCop: baseCreditExposure,
+    overdueReceivablesCop: baseOverdue,
+    overdueCop: baseOverdue,
+    totalOverdueCop: baseOverdue,
+    expectedCreditLossCop: baseEcl,
+    totalExpectedCreditLossCop: baseEcl,
+    interestExpenseCop: baseInterestExpense,
+    ebitdaCop: baseEbitda,
+    ebitdaReferenceCop: baseEbitda,
+    netIncomeCop: baseNetFinancialResultCop,
+    netFinancialResultCop: baseNetFinancialResultCop,
+    dsoDays: baseDso,
+    overdueRatePct: baseOverdueRate
+  };
+
+  const projection = {
+    revenueCop: simulatedRevenueCop,
+    creditExposureCop: simulatedCreditExposureCop,
+    overdueReceivablesCop: simulatedOverdueCop,
+    overdueCop: simulatedOverdueCop,
+    expectedCreditLossCop: simulatedExpectedCreditLossCop,
+    fxNetGainLossCop: simulatedFxImpactCop,
+    interestExpenseCop: simulatedInterestExpenseCop,
+    ebitdaCop: simulatedEbitdaCop,
+    ebitdaMarginPct: simulatedEbitdaMarginPct,
+    netIncomeCop: simulatedNetFinancialResultCop,
+    netFinancialResultCop: simulatedNetFinancialResultCop,
+    dsoDays: simulatedDsoDays,
+    overdueRatePct: simulatedOverdueRatePct
+  };
 
   return {
     assumptions: a,
-    current: {
-      revenueCop: baseline.totalAnnualRevenueCop,
-      creditExposureCop: baseline.totalCreditExposureCop,
-      overdueReceivablesCop: baseline.totalOverdueCop,
-      expectedCreditLossCop: baseline.totalExpectedCreditLossCop,
-      interestExpenseCop: baseline.currentAnnualInterestExpenseCop,
-      ebitdaCop: baseline.ebitdaReferenceCop,
-      netFinancialResultCop: baseNetFinancialResultCop,
-      dsoDays: baseline.dsoDays,
-      overdueRatePct: baseline.overdueRatePct
-    },
-    simulated: {
-      revenueCop: simulatedRevenueCop,
-      creditExposureCop: simulatedCreditExposureCop,
-      overdueReceivablesCop: simulatedOverdueCop,
-      expectedCreditLossCop: simulatedExpectedCreditLossCop,
-      fxNetGainLossCop: simulatedFxImpactCop,
-      interestExpenseCop: simulatedInterestExpenseCop,
-      ebitdaCop: simulatedEbitdaCop,
-      netFinancialResultCop: simulatedNetFinancialResultCop,
-      dsoDays: simulatedDsoDays,
-      overdueRatePct: simulatedOverdueRatePct
-    },
+    current: currentStatus,
+    baseline: currentStatus,
+    simulated: projection,
+    projected: projection,
+    simulatedRevenueCop,
+    simulatedEbitdaCop,
+    simulatedEbitdaMarginPct,
+    simulatedNetProfitCop: simulatedNetFinancialResultCop,
+    simulatedExpectedLossCop: simulatedExpectedCreditLossCop,
     deltas: {
-      revenueDeltaCop: simulatedRevenueCop - baseline.totalAnnualRevenueCop,
-      revenueDeltaPct: safePctDelta(simulatedRevenueCop, baseline.totalAnnualRevenueCop),
-      creditExposureDeltaCop: simulatedCreditExposureCop - baseline.totalCreditExposureCop,
-      creditExposureDeltaPct: safePctDelta(simulatedCreditExposureCop, baseline.totalCreditExposureCop),
-      overdueDeltaCop: simulatedOverdueCop - baseline.totalOverdueCop,
-      overdueDeltaPct: safePctDelta(simulatedOverdueCop, baseline.totalOverdueCop),
-      eclDeltaCop: simulatedExpectedCreditLossCop - baseline.totalExpectedCreditLossCop,
-      eclDeltaPct: safePctDelta(simulatedExpectedCreditLossCop, baseline.totalExpectedCreditLossCop),
-      interestDeltaCop: simulatedInterestExpenseCop - baseline.currentAnnualInterestExpenseCop,
-      interestDeltaPct: safePctDelta(simulatedInterestExpenseCop, baseline.currentAnnualInterestExpenseCop),
-      ebitdaDeltaCop: simulatedEbitdaCop - baseline.ebitdaReferenceCop,
-      ebitdaDeltaPct: safePctDelta(simulatedEbitdaCop, baseline.ebitdaReferenceCop),
+      revenueDeltaCop: simulatedRevenueCop - baseRevenue,
+      revenueDeltaPct: safePctDelta(simulatedRevenueCop, baseRevenue),
+      revenueChangePct: safePctDelta(simulatedRevenueCop, baseRevenue),
+      creditExposureDeltaCop: simulatedCreditExposureCop - baseCreditExposure,
+      creditExposureDeltaPct: safePctDelta(simulatedCreditExposureCop, baseCreditExposure),
+      overdueDeltaCop: simulatedOverdueCop - baseOverdue,
+      overdueDeltaPct: safePctDelta(simulatedOverdueCop, baseOverdue),
+      eclDeltaCop: simulatedExpectedCreditLossCop - baseEcl,
+      eclDeltaPct: safePctDelta(simulatedExpectedCreditLossCop, baseEcl),
+      interestDeltaCop: simulatedInterestExpenseCop - baseInterestExpense,
+      interestDeltaPct: safePctDelta(simulatedInterestExpenseCop, baseInterestExpense),
+      ebitdaDeltaCop: simulatedEbitdaCop - baseEbitda,
+      ebitdaDeltaPct: safePctDelta(simulatedEbitdaCop, baseEbitda),
       netResultDeltaCop: simulatedNetFinancialResultCop - baseNetFinancialResultCop,
       netResultDeltaPct: safePctDelta(simulatedNetFinancialResultCop, baseNetFinancialResultCop),
-      dsoDeltaDays: +(simulatedDsoDays - baseline.dsoDays).toFixed(1)
+      dsoDeltaDays: +(simulatedDsoDays - baseDso).toFixed(1)
     },
     mostVulnerableSegments: [
       { segment: 'Retail y Distribución Regional (COP)', reason: 'Alta sensibilidad a inflación e incrementos de tasas de interés locales; concentra el 62% del deterioro de mora en escenarios adversos.' },
@@ -1091,10 +1175,10 @@ async function getFinancialRiskOverview(filters = {}) {
 
   let filteredCustomers = dataset.customers.filter(c => {
     if (companyFilter !== 'ALL' && c.companyCode !== companyFilter) return false;
-    if (sectorFilter !== 'ALL' && c.sector !== sectorFilter) return false;
+    if (sectorFilter !== 'ALL' && c.sector !== sectorFilter && c.sectorCode !== sectorFilter) return false;
     if (regionFilter !== 'ALL' && c.region !== regionFilter) return false;
     if (currencyFilter !== 'ALL' && c.currency !== currencyFilter) return false;
-    if (riskLevelFilter !== 'ALL' && c.predictiveRiskLevel !== riskLevelFilter) return false;
+    if (riskLevelFilter !== 'ALL' && c.predictiveRiskLevel !== riskLevelFilter && c.riskLevel !== riskLevelFilter) return false;
     return true;
   });
   if (filteredCustomers.length === 0) filteredCustomers = dataset.customers;
@@ -1269,6 +1353,29 @@ async function getFinancialRiskOverview(filters = {}) {
     }
   ];
 
+  const kpiSummary = {
+    totalCreditExposureCop,
+    totalExposureCop: totalCreditExposureCop,
+    totalApprovedCreditLimitCop,
+    creditLimitCop: totalApprovedCreditLimitCop,
+    creditUtilizationPct: creditLimitUtilizationPct,
+    evaluatedCustomersCount: sortedCustomers.length,
+    totalReceivablesCop,
+    totalCurrentReceivablesCop,
+    overduePortfolioCop: totalOverdueCop,
+    totalOverdueCop,
+    overduePct: overdueRatePct,
+    overdueRatePct,
+    weightedDsoDays: dsoDays,
+    dsoDays,
+    expectedCreditLossCop: totalExpectedCreditLossCop,
+    totalExpectedCreditLossCop,
+    highAndCriticalCustomersCount: highRiskCustomersCount,
+    highRiskCustomersCount,
+    fxExposedPortfolioCop: netForeignCurrencyExposureCop
+  };
+  Object.assign(primaryRiskKpis, kpiSummary);
+
   // =========================================================================
   // ANÁLISIS DE ANTIGÜEDAD DE CARTERA (AGING ANALYSIS — Sección 3.2)
   // =========================================================================
@@ -1425,14 +1532,22 @@ async function getFinancialRiskOverview(filters = {}) {
   // Baseline para simulaciones y pruebas de estrés
   const simulationBaseline = {
     totalAnnualRevenueCop,
+    revenueCop: totalAnnualRevenueCop,
     totalCreditExposureCop,
+    creditExposureCop: totalCreditExposureCop,
     totalReceivablesCop,
+    receivablesCop: totalReceivablesCop,
     totalOverdueCop,
+    overdueCop: totalOverdueCop,
     totalExpectedCreditLossCop,
+    expectedCreditLossCop: totalExpectedCreditLossCop,
     netForeignCurrencyExposureCop,
     variableRateDebtCop: dataset.debtAndInterestStructure.variableRateDebtCop,
     currentAnnualInterestExpenseCop: dataset.debtAndInterestStructure.currentAnnualInterestExpenseCop,
     ebitdaReferenceCop: dataset.debtAndInterestStructure.ebitdaReferenceCop,
+    ebitdaCop: dataset.debtAndInterestStructure.ebitdaReferenceCop,
+    netIncomeCop: Math.round(dataset.debtAndInterestStructure.ebitdaReferenceCop - dataset.debtAndInterestStructure.currentAnnualInterestExpenseCop),
+    netFinancialResultCop: Math.round(dataset.debtAndInterestStructure.ebitdaReferenceCop - dataset.debtAndInterestStructure.currentAnnualInterestExpenseCop),
     dsoDays,
     overdueRatePct
   };
@@ -1459,15 +1574,37 @@ async function getFinancialRiskOverview(filters = {}) {
       creditExposureGrowthPct: 0,
       operatingCostChangePct: 0
     });
+    const shockLabel = pct === 0
+      ? 'Escenario Base (TRM $4.145)'
+      : (pct > 0 ? `Depreciación COP +${pct}%` : `Apreciación COP ${pct}%`);
+    const simulatedUsdCop = Math.round(4145 * (1 + pct / 100));
+    const simulatedEurCop = Math.round(4510 * (1 + pct / 100));
+    const revenueImpactCop = sim.deltas?.revenueDeltaCop || 0;
+    const costImpactCop = Math.round(Math.abs(sim.simulated.fxNetGainLossCop) * 0.35);
+    const netProfitImpactCop = sim.simulated.fxNetGainLossCop;
     return {
       fxChangePct: pct,
-      usdSpotSimulated: Math.round(4145 * (1 + pct / 100)),
-      eurSpotSimulated: Math.round(4510 * (1 + pct / 100)),
+      shockLabel,
+      usdSpotSimulated: simulatedUsdCop,
+      simulatedUsdCop,
+      eurSpotSimulated: simulatedEurCop,
+      simulatedEurCop,
+      revenueImpactCop,
+      costImpactCop,
+      debtServiceImpactCop: 0,
+      netProfitImpactCop,
       fxBalanceImpactCop: sim.simulated.fxNetGainLossCop,
       revenueSimulatedCop: sim.simulated.revenueCop,
       ebitdaSimulatedCop: sim.simulated.ebitdaCop
     };
   });
+
+  const formattedRiskAlerts = riskAlerts.map(a => ({
+    ...a,
+    title: a.title || a.riskDetected,
+    description: a.description || `${a.observedValue}. ${a.evidence || ''}`.trim(),
+    recommendedAction: a.recommendedAction || a.recommendedMitigationAction
+  }));
 
   const interestRateSensitivityTable = [-200, -100, 0, 100, 200, 300].map(bps => {
     const deltaInterest = Math.round(dataset.debtAndInterestStructure.variableRateDebtCop * (bps / 10000));
@@ -1524,7 +1661,9 @@ async function getFinancialRiskOverview(filters = {}) {
     catalogs: dataset.catalogs,
     page1Executive: {
       kpis: primaryRiskKpis,
-      alerts: riskAlerts,
+      kpiSummary,
+      ...kpiSummary,
+      alerts: formattedRiskAlerts,
       historical12M: dataset.macroeconomicContext.historical12M
     },
     page2AgingAndAr: {
