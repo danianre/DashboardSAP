@@ -113,7 +113,11 @@ if ! check_url "http://127.0.0.1:${APP_PORT}/api/health" "\"status\":\"ok\"" || 
    ! check_url "http://127.0.0.1:${APP_PORT}/" "Plataforma de Aplicaciones SAP" || \
    ! check_url "http://127.0.0.1:${APP_PORT}/monitor-sap" "Centro de Monitoreo" || \
    ! check_url "http://127.0.0.1:${APP_PORT}/notificaciones-sap" "Notificación SAP Producción" || \
-   ! check_url "http://127.0.0.1:${APP_PORT}/inventarios-sap" "Analítica Inteligente de Inventarios"; then
+   ! check_url "http://127.0.0.1:${APP_PORT}/inventarios-sap" "Analítica Inteligente de Inventarios" || \
+   ! check_url "http://127.0.0.1:${APP_PORT}/ventas-sap" "Análisis de Ventas y Predicción de Ingresos" || \
+   ! check_url "http://127.0.0.1:${APP_PORT}/finanzas-sap" "Desempeño Financiero y Simulación de Escenarios" || \
+   ! check_url "http://127.0.0.1:${APP_PORT}/cadena-suministro-sap" "Optimización de la Cadena de Suministro" || \
+   ! check_url "http://127.0.0.1:${APP_PORT}/riesgos-financieros-sap" "Análisis de Riesgos Financieros"; then
   echo "⚠️ ERROR EN VERIFICACIÓN POST-DESPLIEGUE. Ejecutando reversión automática..."
   bash "${DEPLOY_DIR}/scripts/rollback-remote.sh" "${BACKUP_FILE}"
   exit 1
