@@ -67,22 +67,30 @@
     .brand-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
     .brand-sub { font-size: 12px; color: var(--text-secondary); }
 
-    .nav-links { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .nav-pill {
-      text-decoration: none;
-      color: var(--text-secondary);
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      color: #cbd5e1;
       font-size: 12px;
       font-weight: 600;
-      padding: 7px 11px;
-      border-radius: 8px;
-      border: 1px solid transparent;
+      text-decoration: none;
       transition: all 0.16s ease;
+      white-space: nowrap;
     }
-    .nav-pill:hover { color: var(--text-primary); background: rgba(148, 163, 184, 0.08); }
-    .nav-pill.active {
-      color: #fecdd3;
-      background: rgba(244, 63, 94, 0.14);
-      border-color: rgba(244, 63, 94, 0.35);
+    .btn-back:hover {
+      background: rgba(30, 41, 59, 1);
+      color: #ffffff;
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .container {
@@ -354,22 +362,21 @@
 <body>
   <header class="topbar">
     <div class="brand">
+      <a href="/" class="btn-back">
+        <span>←</span>
+        <span>Portal SAP</span>
+      </a>
       <div class="brand-badge">SAP</div>
       <div>
         <div class="brand-title">Análisis de Riesgos Financieros</div>
         <div class="brand-sub">Evaluación de riesgo crediticio de clientes e impacto de fluctuaciones económicas en los ingresos</div>
       </div>
     </div>
-    <nav class="nav-links" aria-label="Módulos SAP">
-      <a href="/" class="nav-pill">Portal SAP</a>
-      <a href="/monitor-sap" class="nav-pill">Monitor Técnico</a>
-      <a href="/notificaciones-sap" class="nav-pill">Notificaciones</a>
-      <a href="/inventarios-sap" class="nav-pill">Inventarios</a>
-      <a href="/ventas-sap" class="nav-pill">Ventas SAC</a>
-      <a href="/finanzas-sap" class="nav-pill">Finanzas</a>
-      <a href="/cadena-suministro-sap" class="nav-pill">Cadena de Suministro</a>
-      <a href="/riesgos-financieros-sap" class="nav-pill active">Riesgos Financieros</a>
-    </nav>
+    <div class="header-actions">
+      <button id="btnSyncSap" type="button" class="btn btn-primary" style="padding: 7px 13px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+        <span>↻</span> Sincronizar SAP
+      </button>
+    </div>
   </header>
 
   <main class="container">
@@ -716,9 +723,12 @@
       catalogsInitialized = true;
     }
 
-    async function loadRiskDashboard() {
+    async function loadRiskDashboard(opts = {}) {
       const qs = getQuery();
-      const res = await fetch('/api/riesgos-financieros/overview' + (qs ? '?' + qs : ''));
+      const params = new URLSearchParams(qs);
+      if (opts.refresh) params.set('refresh', 'true');
+      const queryStr = params.toString();
+      const res = await fetch('/api/riesgos-financieros/overview' + (queryStr ? '?' + queryStr : ''));
       const data = await res.json();
       if (!data.ok) return;
 
@@ -1074,6 +1084,16 @@
       });
       loadRiskDashboard();
     });
+
+    const btnSync = document.getElementById('btnSyncSap');
+    if (btnSync) {
+      btnSync.addEventListener('click', () => {
+        btnSync.classList.add('loading');
+        loadRiskDashboard({ refresh: true }).finally(() => {
+          btnSync.classList.remove('loading');
+        });
+      });
+    }
 
     loadRiskDashboard();
   </script>
