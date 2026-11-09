@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Desempeño Financiero y Simulación de Escenarios — SAP Analytics Cloud</title>
+  <title>Desempeño Financiero y Simulación de Escenarios — SAP FI/CO</title>
   <link rel="icon" type="image/png" href="icon.jpg" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -233,7 +233,7 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              SAP Analytics Cloud • Finanzas &amp; Controlling
+              SAP ECC 6.0 • Finanzas &amp; Controlling
             </span>
             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -1186,7 +1186,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Estado_Resultados_SAC_${document.getElementById('filterYear').value}.csv`;
+        a.download = `Estado_Resultados_${document.getElementById('filterYear').value}.csv`;
         a.click();
         URL.revokeObjectURL(url);
       });

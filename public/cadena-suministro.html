@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Optimización de la Cadena de Suministro — SAP Analytics Cloud</title>
+  <title>Optimización de la Cadena de Suministro — SAP ECC Logística</title>
   <link rel="icon" type="image/png" href="icon.jpg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -128,7 +128,7 @@
 </head>
 <body class="antialiased selection:bg-teal-500/30 selection:text-teal-200">
 
-  <!-- BARRA SUPERIOR EJECUTIVA SAC -->
+  <!-- BARRA SUPERIOR EJECUTIVA -->
   <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
     <div class="max-w-[1560px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -141,7 +141,7 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">
-              SAP Analytics Cloud • Supply Chain Intelligence
+              SAP ECC 6.0 • Supply Chain &amp; Logística
             </span>
             <span id="sapConnectionBadge" class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               ● Conectado a SAP en Vivo
@@ -908,7 +908,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `SAC_Cadena_Suministro_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `Cadena_Suministro_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
       });

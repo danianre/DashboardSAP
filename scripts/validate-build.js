@@ -57,11 +57,11 @@ const requiredViews = [
       'Ingresar al optimizador',
       'Ventas y Predicción SAC',
       '/ventas-sap',
-      'Desempeño Financiero y Simulación SAC',
+      'Desempeño Financiero y Simulación',
       '/finanzas-sap',
-      'Cadena de Suministro y Logística SAC',
+      'Cadena de Suministro y Logística',
       '/cadena-suministro-sap',
-      'Riesgos Financieros y Estrés SAC',
+      'Riesgos Financieros y Estrés',
       '/riesgos-financieros-sap'
     ]
   },

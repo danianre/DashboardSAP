@@ -433,7 +433,7 @@ app.post('/api/ventas/overview', async (req, res) => {
 });
 
 // ============================================================================
-// MÓDULO 5: DESEMPEÑO FINANCIERO Y SIMULACIÓN DE ESCENARIOS (SAP FI/CO + SAC)
+// MÓDULO 5: DESEMPEÑO FINANCIERO Y SIMULACIÓN DE ESCENARIOS (SAP FI/CO)
 // ============================================================================
 app.get('/api/finanzas/overview', async (req, res) => {
   try {
@@ -543,7 +543,7 @@ app.delete('/api/finanzas/scenarios/:id', async (req, res) => {
 });
 
 // ============================================================================
-// MÓDULO 6: INTELIGENCIA Y OPTIMIZACIÓN DE LA CADENA DE SUMINISTRO (SAP SCM + SAC)
+// MÓDULO 6: INTELIGENCIA Y OPTIMIZACIÓN DE LA CADENA DE SUMINISTRO (SAP SCM)
 // ============================================================================
 app.get('/api/cadena-suministro/overview', async (req, res) => {
   try {
@@ -592,7 +592,7 @@ app.post('/api/cadena-suministro/simulate', async (req, res) => {
 });
 
 // ============================================================================
-// MÓDULO 7: INTELIGENCIA Y ANÁLISIS DE RIESGOS FINANCIEROS (SAP FI-AR / CREDIT / SAC)
+// MÓDULO 7: INTELIGENCIA Y ANÁLISIS DE RIESGOS FINANCIEROS (SAP FI-AR / CREDIT)
 // ============================================================================
 app.get('/api/riesgos-financieros/overview', async (req, res) => {
   try {
