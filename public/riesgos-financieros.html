@@ -45,6 +45,10 @@
       background: rgba(7, 11, 20, 0.9);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
       padding: 12px 24px;
       display: flex;
       align-items: center;
@@ -361,21 +365,23 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <a href="/" class="btn-back">
-        <span>←</span>
-        <span>Portal SAP</span>
-      </a>
-      <div class="brand-badge">SAP</div>
-      <div>
-        <div class="brand-title">Análisis de Riesgos Financieros</div>
-        <div class="brand-sub">Evaluación de riesgo crediticio de clientes e impacto de fluctuaciones económicas en los ingresos</div>
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="/" class="btn-back">
+          <span>←</span>
+          <span>Portal SAP</span>
+        </a>
+        <div class="brand-badge">SAP</div>
+        <div>
+          <div class="brand-title">Análisis de Riesgos Financieros</div>
+          <div class="brand-sub">Evaluación de riesgo crediticio de clientes e impacto de fluctuaciones económicas en los ingresos</div>
+        </div>
       </div>
-    </div>
-    <div class="header-actions">
-      <button id="btnSyncSap" type="button" class="btn btn-primary" style="padding: 7px 13px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
-        <span>↻</span> Sincronizar SAP
-      </button>
+      <div class="header-actions">
+        <button id="btnSyncSap" type="button" class="btn btn-primary" style="padding: 7px 13px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+          <span>↻</span> Sincronizar SAP
+        </button>
+      </div>
     </div>
   </header>
 
