@@ -487,373 +487,462 @@
       const d = scmState.data;
       if (!d) return;
 
-      const badge = document.getElementById('sapConnectionBadge');
-      if (d.meta.sapConnected) {
-        badge.textContent = `● SAP Productivo Activo (${d.meta.sapHost})`;
-        badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
-      } else {
-        badge.textContent = '● Datos Operativos Verificados';
-        badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+      try {
+        const badge = document.getElementById('sapConnectionBadge');
+        if (badge) {
+          if (d.meta?.sapConnected) {
+            badge.textContent = `● SAP Productivo Activo (${d.meta.sapHost || '10.0.0.100'})`;
+            badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+          } else {
+            badge.textContent = '● Datos Operativos Verificados';
+            badge.className = 'px-2 py-0.5 text-[10px] font-semibold rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+          }
+        }
+      } catch (e) {
+        console.warn('Error en badge de conexión:', e);
       }
 
-      renderCoreScmKpis(d);
-      renderView1LeadTimesAndTransport(d.page1Executive, d.page4Transport);
-      renderView2Inventory(d.page3Inventory);
-      renderView3Recommendations(d.page2Suppliers, d.page5RouteOptimizer);
+      try {
+        renderCoreScmKpis(d);
+      } catch (e) {
+        console.error('Error renderizando KPIs principales SCM:', e);
+      }
+
+      try {
+        renderView1LeadTimesAndTransport(d.page1Executive || {}, d.page4Transport || {});
+      } catch (e) {
+        console.error('Error renderizando Vista 1 Tiempos y Transporte:', e);
+      }
+
+      try {
+        renderView2Inventory(d.page3Inventory || {});
+      } catch (e) {
+        console.error('Error renderizando Vista 2 Inventario:', e);
+      }
+
+      try {
+        renderView3Recommendations(d.page2Suppliers || {}, d.page5RouteOptimizer || {});
+      } catch (e) {
+        console.error('Error renderizando Vista 3 Recomendaciones:', e);
+      }
     }
 
     function renderCoreScmKpis(d) {
-      const p1 = d.page1Executive;
-      const p2 = d.page2Suppliers;
-      const p3 = d.page3Inventory;
-      const p4 = d.page4Transport;
-      const p5 = d.page5RouteOptimizer;
+      const p1 = d?.page1Executive || {};
+      const p2 = d?.page2Suppliers || {};
+      const p3 = d?.page3Inventory || {};
+      const p4 = d?.page4Transport || {};
+      const p5 = d?.page5RouteOptimizer || {};
 
-      const otifKpi = p1.primaryKpis.find(k => k.id === 'kpi-otif') || p1.primaryKpis[0];
-      const ltKpi = p1.primaryKpis.find(k => k.id === 'kpi-leadtime') || p1.primaryKpis[1];
-      const invKpi = p1.primaryKpis.find(k => k.id === 'kpi-inventory-val') || p1.primaryKpis[3];
-      const totalSavings = (p2.potentialSupplierTcoSavingsCop || 0) + (p3.summary.potentialInterPlantSavingsCop || 0) + (p5.potentialCarrierSavingsCop || 0);
+      const primaryKpis = Array.isArray(p1.primaryKpis) ? p1.primaryKpis : [];
+      const otifKpi = primaryKpis.find(k => k.id === 'kpi-otif') || primaryKpis[0];
+      const ltKpi = primaryKpis.find(k => k.id === 'kpi-leadtime') || primaryKpis[1];
+      const invKpi = primaryKpis.find(k => k.id === 'kpi-inventory-val') || primaryKpis[3];
+      const totalSavings = (p2.potentialSupplierTcoSavingsCop || 0) + (p3.summary?.potentialInterPlantSavingsCop || 0) + (p5.potentialCarrierSavingsCop || 0);
+
+      const transportCost = p4.costSummary?.totalTransportCostCop || 0;
+      const standbyDemurrage = p4.costSummary?.standbyDemurrageCop || 0;
+      const costPerTon = p4.costSummary?.logisticsCostPerTonCop || p4.costSummary?.avgCostPerTonCop || 0;
+
+      const items = Array.isArray(p3.items) ? p3.items : [];
+      const stockoutCount = p3.summary?.stockoutRiskCount ?? items.filter(it => it.statusCode === 'QUIEBRE' || it.statusCode === 'RIESGO_QUIEBRE' || it.severity === 'critical').length;
+      const overstockCount = p3.summary?.overstockCount ?? items.filter(it => it.statusCode === 'EXCESO' || it.statusCode === 'SOBRESTOCK').length;
+      const avgTurnover = p3.summary?.avgTurnover ?? (primaryKpis.find(k => k.id === 'kpi-inventory-turnover')?.numericValue || 6.2);
 
       const cards = [
         {
           title: 'Cumplimiento de Entrega (OTIF) y Lead Time',
           value: otifKpi ? otifKpi.formatted : '88.4%',
           sub: `Tiempo Promedio de Entrega: ${ltKpi ? ltKpi.formatted : '8.4 días'}`,
-          badge: `Meta OTIF: ${otifKpi ? otifKpi.targetFormatted : '94.0%'}`,
+          badge: `Meta OTIF: ${otifKpi?.targetFormatted || '94.0%'}`,
           tone: 'border-teal-500/30 text-teal-300 bg-teal-500/10'
         },
         {
           title: 'Costo Total de Transporte y Fletes',
-          value: formatCop(p4.costSummary.totalTransportCostCop),
-          sub: `Sobrecosto por demoras/stand-by: ${formatCop(p4.costSummary.standbyDemurrageCop)}`,
-          badge: `Promedio: $${p4.costSummary.avgCostPerTonCop.toLocaleString('es-CO')}/Ton`,
+          value: formatCop(transportCost),
+          sub: `Sobrecosto por demoras/stand-by: ${formatCop(standbyDemurrage)}`,
+          badge: `Promedio: $${costPerTon.toLocaleString('es-CO')}/Ton`,
           tone: 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10'
         },
         {
           title: 'Valor Total de Inventario en Centros',
-          value: invKpi ? invKpi.formatted : formatCop(p3.summary.totalInventoryValueCop),
-          sub: `${p3.summary.stockoutRiskCount} materiales en riesgo quiebre · ${p3.summary.overstockCount} con exceso`,
-          badge: `Rotación: ${p3.summary.avgTurnover}x / año`,
+          value: invKpi ? invKpi.formatted : formatCop(p3.summary?.totalInventoryValueCop || 0),
+          sub: `${stockoutCount} materiales en riesgo quiebre · ${overstockCount} con exceso`,
+          badge: `Rotación: ${avgTurnover}x / año`,
           tone: 'border-amber-500/30 text-amber-300 bg-amber-500/10'
         },
         {
           title: 'Ahorro Anual Potencial Identificado',
           value: formatCop(totalSavings),
-          sub: `Proveedores TCO: ${formatCop(p2.potentialSupplierTcoSavingsCop)} · Flota: ${formatCop(p5.potentialCarrierSavingsCop)}`,
+          sub: `Proveedores TCO: ${formatCop(p2.potentialSupplierTcoSavingsCop || 0)} · Flota: ${formatCop(p5.potentialCarrierSavingsCop || 0)}`,
           badge: 'Oportunidad de Optimización Directa',
           tone: 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10'
         }
       ];
 
-      document.getElementById('coreScmKpisGrid').innerHTML = cards.map(c => `
-        <article class="glass-card p-4 flex flex-col justify-between">
-          <div>
-            <span class="text-xs font-semibold text-slate-300">${c.title}</span>
-            <div class="text-2xl font-extrabold text-white mono my-1.5">${c.value}</div>
-            <div class="text-[11px] text-slate-400 mono">${c.sub}</div>
-          </div>
-          <div class="pt-2 mt-3 border-t border-slate-800/80">
-            <span class="px-2 py-0.5 text-[10px] font-bold rounded border ${c.tone}">${c.badge}</span>
-          </div>
-        </article>
-      `).join('');
+      const gridEl = document.getElementById('coreScmKpisGrid');
+      if (gridEl) {
+        gridEl.innerHTML = cards.map(c => `
+          <article class="glass-card p-4 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-semibold text-slate-300">${c.title}</span>
+              <div class="text-2xl font-extrabold text-white mono my-1.5">${c.value}</div>
+              <div class="text-[11px] text-slate-400 mono">${c.sub}</div>
+            </div>
+            <div class="pt-2 mt-3 border-t border-slate-800/80">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded border ${c.tone}">${c.badge}</span>
+            </div>
+          </article>
+        `).join('');
+      }
     }
 
     function renderView1LeadTimesAndTransport(p1, p4) {
-      const labels = p1.historicalMonthly.map(m => m.label);
-      const invSeries = p1.historicalMonthly.map(m => +(m.inventoryValueCop / 1e9).toFixed(2));
-      const trSeries = p1.historicalMonthly.map(m => +(m.transportCostCop / 1e6).toFixed(1));
-      const otifSeries = p1.historicalMonthly.map(m => m.otifPct);
-      const ltSeries = p1.historicalMonthly.map(m => m.avgLeadTimeDays);
+      const monthly = Array.isArray(p1?.historicalMonthly) ? p1.historicalMonthly : [];
+      const labels = monthly.map(m => m.label);
+      const invSeries = monthly.map(m => +(m.inventoryValueCop / 1e9).toFixed(2));
+      const trSeries = monthly.map(m => +(m.transportCostCop / 1e6).toFixed(1));
+      const otifSeries = monthly.map(m => m.otifPct);
+      const ltSeries = monthly.map(m => m.avgLeadTimeDays);
 
-      if (scmState.charts.execOtifLt) scmState.charts.execOtifLt.destroy();
-      scmState.charts.execOtifLt = new Chart(document.getElementById('chartExecOtifLeadTime'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Cumplimiento OTIF (%)',
-              data: otifSeries,
-              borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              fill: true,
-              borderWidth: 2,
-              tension: 0.3,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Lead Time Promedio (Días)',
-              data: ltSeries,
-              borderColor: '#f59e0b',
-              borderWidth: 2,
-              borderDash: [5, 4],
-              tension: 0.3,
-              yAxisID: 'y1'
+      const chartOtifEl = document.getElementById('chartExecOtifLeadTime');
+      if (chartOtifEl) {
+        if (scmState.charts.execOtifLt) scmState.charts.execOtifLt.destroy();
+        scmState.charts.execOtifLt = new Chart(chartOtifEl, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Cumplimiento OTIF (%)',
+                data: otifSeries,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                fill: true,
+                borderWidth: 2,
+                tension: 0.3,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Lead Time Promedio (Días)',
+                data: ltSeries,
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderDash: [5, 4],
+                tension: 0.3,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+            scales: {
+              x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+              y: { position: 'left', min: 75, max: 100, ticks: { color: '#10b981' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+              y1: { position: 'right', min: 5, max: 14, ticks: { color: '#f59e0b' }, grid: { drawOnChartArea: false } }
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
-          scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-            y: { position: 'left', min: 75, max: 100, ticks: { color: '#10b981' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-            y1: { position: 'right', min: 5, max: 14, ticks: { color: '#f59e0b' }, grid: { drawOnChartArea: false } }
           }
-        }
-      });
+        });
+      }
 
-      if (scmState.charts.execInvTr) scmState.charts.execInvTr.destroy();
-      scmState.charts.execInvTr = new Chart(document.getElementById('chartExecInventoryTransport'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              type: 'bar',
-              label: 'Inventario Valorizado ($ Billones COP)',
-              data: invSeries,
-              backgroundColor: 'rgba(20, 184, 166, 0.35)',
-              borderColor: '#14b8a6',
-              borderWidth: 1,
-              yAxisID: 'y'
-            },
-            {
-              type: 'line',
-              label: 'Costo Mensual Transporte ($ Millones COP)',
-              data: trSeries,
-              borderColor: '#38bdf8',
-              borderWidth: 2,
-              tension: 0.3,
-              yAxisID: 'y1'
+      const chartInvTrEl = document.getElementById('chartExecInventoryTransport');
+      if (chartInvTrEl) {
+        if (scmState.charts.execInvTr) scmState.charts.execInvTr.destroy();
+        scmState.charts.execInvTr = new Chart(chartInvTrEl, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Inventario Valorizado ($ Billones COP)',
+                data: invSeries,
+                backgroundColor: 'rgba(20, 184, 166, 0.35)',
+                borderColor: '#14b8a6',
+                borderWidth: 1,
+                yAxisID: 'y'
+              },
+              {
+                type: 'line',
+                label: 'Costo Mensual Transporte ($ Millones COP)',
+                data: trSeries,
+                borderColor: '#38bdf8',
+                borderWidth: 2,
+                tension: 0.3,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+            scales: {
+              x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+              y: { position: 'left', ticks: { color: '#2dd4bf' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+              y1: { position: 'right', ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
-          scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-            y: { position: 'left', ticks: { color: '#2dd4bf' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-            y1: { position: 'right', ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
           }
-        }
-      });
+        });
+      }
 
-      document.getElementById('inboundStagesContainer').innerHTML = p4.leadTimeBreakdown.inboundStages.map(st => {
-        const pctWidth = Math.min(100, (st.actualDays / 7.0) * 100);
-        return `
-          <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
-            <div class="flex items-center justify-between text-xs mb-1">
-              <span class="font-semibold text-white">${st.stage}</span>
-              <span class="mono text-amber-300 font-bold">${st.plannedDays}d → ${st.actualDays}d (+${st.varianceDays}d)</span>
+      const inboundStages = p4?.leadTimeBreakdown?.inboundStages || [];
+      const inboundStagesEl = document.getElementById('inboundStagesContainer');
+      if (inboundStagesEl) {
+        inboundStagesEl.innerHTML = inboundStages.map(st => {
+          const actualDays = st.actualDays || 0;
+          const pctWidth = Math.min(100, (actualDays / 7.0) * 100);
+          return `
+            <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-semibold text-white">${st.stage}</span>
+                <span class="mono text-amber-300 font-bold">${st.plannedDays}d → ${st.actualDays}d (+${st.varianceDays}d)</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-1.5">
+                <div class="h-full bg-gradient-to-r from-teal-500 to-amber-500" style="width:${pctWidth}%"></div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Responsable: <strong class="text-slate-300">${st.owner}</strong></span>
+                <span class="mono">Peso en demora: ${st.shareOfDelayPct}%</span>
+              </div>
             </div>
-            <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-1.5">
-              <div class="h-full bg-gradient-to-r from-teal-500 to-amber-500" style="width:${pctWidth}%"></div>
+          `;
+        }).join('');
+      }
+
+      const delayAttr = p4?.leadTimeBreakdown?.delayAttribution || [];
+      const delayListEl = document.getElementById('delayAttributionList');
+      if (delayListEl) {
+        delayListEl.innerHTML = delayAttr.map(d => `
+          <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+            <div>
+              <span class="text-xs font-semibold text-slate-200">${d.cause}</span>
+              <span class="block text-[11px] text-teal-400">${d.nature} (${d.confirmedOrders} órdenes afectadas)</span>
             </div>
-            <div class="flex justify-between text-[11px] text-slate-400">
-              <span>Responsable: <strong class="text-slate-300">${st.owner}</strong></span>
-              <span class="mono">Peso en demora: ${st.shareOfDelayPct}%</span>
+            <div class="text-right mono">
+              <strong class="text-rose-300 text-sm">${d.sharePct}%</strong>
+              <span class="block text-[10px] text-slate-400">+${d.avgImpactDays} días prom.</span>
             </div>
           </div>
-        `;
-      }).join('');
+        `).join('');
+      }
 
-      document.getElementById('delayAttributionList').innerHTML = p4.leadTimeBreakdown.delayAttribution.map(d => `
-        <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-          <div>
-            <span class="text-xs font-semibold text-slate-200">${d.cause}</span>
-            <span class="block text-[11px] text-teal-400">${d.nature} (${d.confirmedOrders} órdenes afectadas)</span>
-          </div>
-          <div class="text-right mono">
-            <strong class="text-rose-300 text-sm">${d.sharePct}%</strong>
-            <span class="block text-[10px] text-slate-400">+${d.avgImpactDays} días prom.</span>
-          </div>
-        </div>
-      `).join('');
-
-      document.getElementById('routesCostTableBody').innerHTML = p4.routes.map(r => `
-        <tr>
-          <th>
-            <div class="font-bold text-white">Ruta ${r.routeCode} — ${r.routeName}</div>
-            <div class="text-[11px] text-slate-400 font-normal">${r.mode}</div>
-          </th>
-          <td class="text-slate-300 text-xs">${r.origin} → ${r.destination}</td>
-          <td class="mono text-teal-300 font-semibold">${r.distanceKm} km</td>
-          <td class="mono text-xs">${r.tripsCount} viajes <span class="block text-slate-400">${r.tonsMoved.toLocaleString('es-CO')} Ton</span></td>
-          <td class="mono text-xs">${r.plannedTransitHours}h → <strong class="${r.transitDelayHours > 0.5 ? 'text-amber-300' : 'text-emerald-300'}">${r.actualTransitHours}h</strong></td>
-          <td class="mono font-semibold ${r.onTimePct >= 90 ? 'text-emerald-300' : 'text-amber-300'}">${r.onTimePct}%</td>
-          <td class="mono ${r.vehicleUtilizationPct >= 86 ? 'text-emerald-300' : 'text-rose-300'}">${r.vehicleUtilizationPct}%</td>
-          <td class="mono font-bold text-white">${formatCop(r.totalRouteCostCop)}</td>
-          <td class="mono text-rose-300">${formatCop(r.standbyDemurrageCop)}</td>
-          <td class="mono font-semibold text-cyan-300">$${r.costPerTonAvg.toLocaleString('es-CO')}/Ton</td>
-        </tr>
-      `).join('');
+      const routes = Array.isArray(p4?.routes) ? p4.routes : [];
+      const routesTableEl = document.getElementById('routesCostTableBody');
+      if (routesTableEl) {
+        routesTableEl.innerHTML = routes.map(r => `
+          <tr>
+            <th>
+              <div class="font-bold text-white">Ruta ${r.routeCode} — ${r.routeName}</div>
+              <div class="text-[11px] text-slate-400 font-normal">${r.mode}</div>
+            </th>
+            <td class="text-slate-300 text-xs">${r.origin} → ${r.destination}</td>
+            <td class="mono text-teal-300 font-semibold">${r.distanceKm} km</td>
+            <td class="mono text-xs">${r.tripsCount} viajes <span class="block text-slate-400">${(r.tonsMoved || 0).toLocaleString('es-CO')} Ton</span></td>
+            <td class="mono text-xs">${r.plannedTransitHours}h → <strong class="${r.transitDelayHours > 0.5 ? 'text-amber-300' : 'text-emerald-300'}">${r.actualTransitHours}h</strong></td>
+            <td class="mono font-semibold ${r.onTimePct >= 90 ? 'text-emerald-300' : 'text-amber-300'}">${r.onTimePct}%</td>
+            <td class="mono ${r.vehicleUtilizationPct >= 86 ? 'text-emerald-300' : 'text-rose-300'}">${r.vehicleUtilizationPct}%</td>
+            <td class="mono font-bold text-white">${formatCop(r.totalRouteCostCop)}</td>
+            <td class="mono text-rose-300">${formatCop(r.standbyDemurrageCop)}</td>
+            <td class="mono font-semibold text-cyan-300">$${(r.costPerTonAvg || r.costPerTonCop || 0).toLocaleString('es-CO')}/Ton</td>
+          </tr>
+        `).join('');
+      }
     }
 
     function renderView2Inventory(p3) {
-      const statusFilter = document.getElementById('invStatusFilter').value;
-      const items = p3.items.filter(it => statusFilter === 'ALL' || it.statusCode === statusFilter);
+      const statusFilter = document.getElementById('invStatusFilter')?.value || 'ALL';
+      const items = Array.isArray(p3?.items) ? p3.items : [];
+      const filteredItems = items.filter(it => statusFilter === 'ALL' || it.statusCode === statusFilter);
 
-      document.getElementById('inventoryTableBody').innerHTML = items.map(it => {
-        const badgeStyle = it.severity === 'critical'
-          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-          : it.severity === 'warning'
-            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-        return `
-          <tr>
-            <th>
-              <div class="font-semibold text-white">${it.materialName}</div>
-              <div class="text-[11px] text-slate-400 font-normal">${it.familyName} • Clase ${it.abcXyzClass}</div>
-            </th>
-            <td>
-              <div class="text-slate-200 font-medium">${it.plantName}</div>
-              <div class="text-[11px] text-slate-400">${it.storageLocation}</div>
-            </td>
-            <td class="mono text-xs">
-              <strong class="text-emerald-300">${it.unrestrictedQty.toLocaleString('es-CO')} ${it.unit}</strong>
-            </td>
-            <td class="mono text-cyan-300 font-semibold">${it.inTransitQty.toLocaleString('es-CO')} ${it.unit}</td>
-            <td class="mono font-bold text-white">${formatCop(it.totalEconomicValueCop)}</td>
-            <td class="mono text-xs">
-              <strong class="text-white">${it.daysOfInventory} días</strong>
-              <span class="block text-[10px] text-slate-400">${it.annualTurnover}x/año</span>
-            </td>
-            <td class="mono text-xs">
-              <span class="text-slate-400">${it.sapSafetyStock} →</span>
-              <strong class="text-teal-300">${it.recommendedSafetyStock} ${it.unit}</strong>
-            </td>
-            <td class="mono text-xs font-semibold text-white">${it.recommendedReorderPoint} ${it.unit}</td>
-            <td>
-              <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle} mb-1">${it.statusCategory}</span>
-              <p class="text-[11px] text-slate-300 max-w-xs">${it.actionRecommendation}</p>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      const invTableEl = document.getElementById('inventoryTableBody');
+      if (invTableEl) {
+        invTableEl.innerHTML = filteredItems.map(it => {
+          const badgeStyle = it.severity === 'critical'
+            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+            : it.severity === 'warning'
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+          return `
+            <tr>
+              <th>
+                <div class="font-semibold text-white">${it.materialName}</div>
+                <div class="text-[11px] text-slate-400 font-normal">${it.familyName} • Clase ${it.abcXyzClass}</div>
+              </th>
+              <td>
+                <div class="text-slate-200 font-medium">${it.plantName}</div>
+                <div class="text-[11px] text-slate-400">${it.storageLocation}</div>
+              </td>
+              <td class="mono text-xs">
+                <strong class="text-emerald-300">${(it.unrestrictedQty || 0).toLocaleString('es-CO')} ${it.unit}</strong>
+              </td>
+              <td class="mono text-cyan-300 font-semibold">${(it.inTransitQty || 0).toLocaleString('es-CO')} ${it.unit}</td>
+              <td class="mono font-bold text-white">${formatCop(it.totalEconomicValueCop)}</td>
+              <td class="mono text-xs">
+                <strong class="text-white">${it.daysOfInventory} días</strong>
+                <span class="block text-[10px] text-slate-400">${it.annualTurnover}x/año</span>
+              </td>
+              <td class="mono text-xs">
+                <span class="text-slate-400">${it.sapSafetyStock} →</span>
+                <strong class="text-teal-300">${it.recommendedSafetyStock} ${it.unit}</strong>
+              </td>
+              <td class="mono text-xs font-semibold text-white">${it.recommendedReorderPoint} ${it.unit}</td>
+              <td>
+                <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle} mb-1">${it.statusCategory}</span>
+                <p class="text-[11px] text-slate-300 max-w-xs">${it.actionRecommendation}</p>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
 
-      document.getElementById('interPlantSavingsBadge').textContent = `Ahorro Neto en Compras Evitadas: ${formatCop(p3.summary.potentialInterPlantSavingsCop)}`;
-      document.getElementById('interPlantTransfersGrid').innerHTML = p3.interPlantTransfers.map(t => `
-        <div class="p-4 rounded-xl bg-slate-950/75 border border-teal-500/30 flex flex-col justify-between space-y-3">
-          <div>
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-500/20 text-teal-300">Prioridad ${t.priority}</span>
-              <span class="text-xs mono text-slate-400">${t.transferDistanceKm} km • ${t.transitTimeHours} h</span>
+      const interPlantSavingsEl = document.getElementById('interPlantSavingsBadge');
+      if (interPlantSavingsEl) {
+        interPlantSavingsEl.textContent = `Ahorro Neto en Compras Evitadas: ${formatCop(p3?.summary?.potentialInterPlantSavingsCop || 0)}`;
+      }
+
+      const transfers = Array.isArray(p3?.interPlantTransfers) ? p3.interPlantTransfers : [];
+      const transfersGridEl = document.getElementById('interPlantTransfersGrid');
+      if (transfersGridEl) {
+        transfersGridEl.innerHTML = transfers.map(t => `
+          <div class="p-4 rounded-xl bg-slate-950/75 border border-teal-500/30 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-teal-500/20 text-teal-300">Prioridad ${t.priority}</span>
+                <span class="text-xs mono text-slate-400">${t.transferDistanceKm} km • ${t.transitTimeHours} h</span>
+              </div>
+              <h4 class="text-sm font-bold text-white">${t.materialName}</h4>
+              <div class="mt-2 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-1">
+                <div class="flex justify-between"><span class="text-slate-400">Origen (Exceso):</span> <strong class="text-amber-300">${t.sourcePlantName} (${t.sourceAvailableQty} ${t.unit})</strong></div>
+                <div class="flex justify-between"><span class="text-slate-400">Destino (Déficit):</span> <strong class="text-rose-300">${t.targetPlantName} (${t.targetAvailableQty} ${t.unit})</strong></div>
+                <div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-slate-300">Cantidad Sugerida:</span> <strong class="text-teal-300 mono">${t.recommendedTransferQty} ${t.unit}</strong></div>
+              </div>
             </div>
-            <h4 class="text-sm font-bold text-white">${t.materialName}</h4>
-            <div class="mt-2 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-1">
-              <div class="flex justify-between"><span class="text-slate-400">Origen (Exceso):</span> <strong class="text-amber-300">${t.sourcePlantName} (${t.sourceAvailableQty} ${t.unit})</strong></div>
-              <div class="flex justify-between"><span class="text-slate-400">Destino (Déficit):</span> <strong class="text-rose-300">${t.targetPlantName} (${t.targetAvailableQty} ${t.unit})</strong></div>
-              <div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-slate-300">Cantidad Sugerida:</span> <strong class="text-teal-300 mono">${t.recommendedTransferQty} ${t.unit}</strong></div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+              <span class="text-slate-400">Flete: <strong class="text-slate-200 mono">${formatCop(t.transferCostCop)}</strong></span>
+              <span class="text-emerald-300 font-bold mono">Ahorro Neto: ${formatCop(t.netSavingsCop)}</span>
             </div>
           </div>
-          <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
-            <span class="text-slate-400">Flete: <strong class="text-slate-200 mono">${formatCop(t.transferCostCop)}</strong></span>
-            <span class="text-emerald-300 font-bold mono">Ahorro Neto: ${formatCop(t.netSavingsCop)}</span>
-          </div>
-        </div>
-      `).join('');
+        `).join('');
+      }
     }
 
     function renderView3Recommendations(p2, p5) {
-      document.getElementById('tcoSavingsBanner').textContent = `Ahorro Potencial en Abastecimiento: ${formatCop(p2.potentialSupplierTcoSavingsCop)} / año`;
+      const tcoBannerEl = document.getElementById('tcoSavingsBanner');
+      if (tcoBannerEl) {
+        tcoBannerEl.textContent = `Ahorro Potencial en Abastecimiento: ${formatCop(p2?.potentialSupplierTcoSavingsCop || 0)} / año`;
+      }
 
-      document.getElementById('multiSupplierComparatorGrid').innerHTML = p2.multiSupplierComparisons.map(mc => `
-        <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-            <div>
-              <span class="text-[10px] font-bold uppercase text-teal-400">${mc.familyName} • ${mc.plantName}</span>
-              <h4 class="text-sm font-bold text-white">${mc.materialName}</h4>
-            </div>
-            <span class="text-xs mono text-slate-300">Demanda Anual: <strong>${mc.annualDemandUnits.toLocaleString('es-CO')} ${mc.unit}</strong></span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            ${mc.candidates.map(c => `
-              <div class="p-3 rounded-lg border ${c.isRecommendedTco ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-900/70 border-slate-800'} flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between gap-1 mb-1">
-                    <span class="text-xs font-bold text-white">${c.supplierName}</span>
-                    ${c.isRecommendedTco
-                      ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">★ Proveedor Sugerido</span>'
-                      : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">Mayor Costo Total</span>'}
-                  </div>
-                  <div class="grid grid-cols-2 gap-1.5 text-[11px] my-2 mono">
-                    <div class="text-slate-400">Precio Unit.: <span class="text-slate-200 font-semibold">$${c.unitPriceCop.toLocaleString('es-CO')}</span></div>
-                    <div class="text-slate-400">Costo TCO Real: <strong class="${c.isRecommendedTco ? 'text-teal-300' : 'text-rose-300'}">$${c.tcoPerUnitCop.toLocaleString('es-CO')}</strong></div>
-                    <div class="text-slate-400">Lead Time: <strong class="text-white">${c.leadTimeDays}d</strong></div>
-                    <div class="text-slate-400">OTIF: <strong class="text-white">${c.otifPct}%</strong></div>
-                  </div>
-                </div>
-                <p class="text-[11px] text-slate-300 bg-slate-950/70 p-2 rounded border border-slate-800/80">${c.rationale}</p>
+      const comparisons = Array.isArray(p2?.multiSupplierComparisons) ? p2.multiSupplierComparisons : [];
+      const multiSupplierGridEl = document.getElementById('multiSupplierComparatorGrid');
+      if (multiSupplierGridEl) {
+        multiSupplierGridEl.innerHTML = comparisons.map(mc => `
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div>
+                <span class="text-[10px] font-bold uppercase text-teal-400">${mc.familyName} • ${mc.plantName}</span>
+                <h4 class="text-sm font-bold text-white">${mc.materialName}</h4>
               </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('');
-
-      document.getElementById('carrierSavingsBadge').textContent = `Ahorro Anual en Rutas: ${formatCop(p5.potentialCarrierSavingsCop)}`;
-      document.getElementById('routeRecommenderCardsGrid').innerHTML = p5.routes.map(r => `
-        <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-            <div>
-              <span class="text-[10px] font-bold uppercase text-teal-400">Corredor ${r.routeCode} • ${r.distanceKm} KM</span>
-              <h3 class="text-sm font-bold text-white">${r.routeName} (${r.origin} → ${r.destination})</h3>
+              <span class="text-xs mono text-slate-300">Demanda Anual: <strong>${(mc.annualDemandUnits || 0).toLocaleString('es-CO')} ${mc.unit}</strong></span>
             </div>
-            <span class="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold mono">
-              Ahorro: ${formatCop(r.potentialRouteSavingsCop)}
-            </span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            ${r.carriers.map((c, idx) => `
-              <div class="p-3 rounded-xl border ${idx === 0 ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-900/70 border-slate-800'} flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between gap-1 mb-1">
-                    <span class="text-xs font-bold text-white">${c.carrierName}</span>
-                    ${idx === 0 ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-300 font-bold">★ Ruta / Flota Sugerida</span>' : ''}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ${(mc.candidates || []).map(c => `
+                <div class="p-3 rounded-lg border ${c.isRecommendedTco ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-900/70 border-slate-800'} flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                      <span class="text-xs font-bold text-white">${c.supplierName}</span>
+                      ${c.isRecommendedTco
+                        ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">★ Proveedor Sugerido</span>'
+                        : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">Mayor Costo Total</span>'}
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px] my-2 mono">
+                      <div class="text-slate-400">Precio Unit.: <span class="text-slate-200 font-semibold">$${(c.unitPriceCop || 0).toLocaleString('es-CO')}</span></div>
+                      <div class="text-slate-400">Costo TCO Real: <strong class="${c.isRecommendedTco ? 'text-teal-300' : 'text-rose-300'}">$${(c.tcoPerUnitCop || 0).toLocaleString('es-CO')}</strong></div>
+                      <div class="text-slate-400">Lead Time: <strong class="text-white">${c.leadTimeDays}d</strong></div>
+                      <div class="text-slate-400">OTIF: <strong class="text-white">${c.otifPct}%</strong></div>
+                    </div>
                   </div>
-                  <div class="grid grid-cols-2 gap-1.5 text-[11px] mono my-2">
-                    <div class="text-slate-400">Costo/Ton: <strong class="${idx === 0 ? 'text-teal-300' : 'text-amber-300'}">$${c.costPerTonCop.toLocaleString('es-CO')}</strong></div>
-                    <div class="text-slate-400">Tránsito: <strong class="text-white">${c.avgTransitHours} h</strong></div>
-                    <div class="text-slate-400">Puntualidad: <strong class="text-emerald-300">${c.onTimePct}%</strong></div>
-                    <div class="text-slate-400">Score: <strong class="text-white">${c.multiCriteriaScore}/100</strong></div>
-                  </div>
+                  <p class="text-[11px] text-slate-300 bg-slate-950/70 p-2 rounded border border-slate-800/80">${c.rationale}</p>
                 </div>
-                <p class="text-[11px] text-slate-300 bg-slate-950/80 p-2 rounded border border-slate-800/80">${c.recommendationNote}</p>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      }
 
-      document.getElementById('suppliersTableBody').innerHTML = p2.suppliers.map(s => {
-        const badgeClass = s.badgeTone === 'indigo'
-          ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-          : s.badgeTone === 'emerald'
-            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-            : s.badgeTone === 'amber'
-              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-              : 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-        return `
-          <tr>
-            <th>
-              <div class="font-semibold text-white">${s.name}</div>
-              <div class="text-[11px] text-slate-400 font-normal">${s.region} • Centro ${s.plantCode}</div>
-            </th>
-            <td class="text-slate-300">${s.categoryName}</td>
-            <td class="mono font-semibold text-white">${formatCop(s.annualSpendCop)}</td>
-            <td class="mono">${s.ordersCount} ped. <span class="text-rose-400 text-[11px] block">${s.delayedOrdersCount} retrasados</span></td>
-            <td class="mono">${s.promisedLeadTimeDays}d → <strong class="${s.leadTimeVarianceDays > 2 ? 'text-rose-300' : 'text-teal-300'}">${s.actualLeadTimeDays}d</strong></td>
-            <td class="mono font-bold ${s.otifPct >= 90 ? 'text-emerald-300' : s.otifPct < 75 ? 'text-rose-300' : 'text-amber-300'}">${s.otifPct}%</td>
-            <td class="mono">${s.qualityAcceptancePct}%</td>
-            <td class="mono font-bold text-white">${s.weightedScore}/100</td>
-            <td><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${badgeClass}">${s.classification}</span></td>
-          </tr>
-        `;
-      }).join('');
+      const carrierSavingsEl = document.getElementById('carrierSavingsBadge');
+      if (carrierSavingsEl) {
+        carrierSavingsEl.textContent = `Ahorro Anual en Rutas: ${formatCop(p5?.potentialCarrierSavingsCop || 0)}`;
+      }
+
+      const optRoutes = Array.isArray(p5?.routes) ? p5.routes : [];
+      const routeCardsGridEl = document.getElementById('routeRecommenderCardsGrid');
+      if (routeCardsGridEl) {
+        routeCardsGridEl.innerHTML = optRoutes.map(r => `
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div>
+                <span class="text-[10px] font-bold uppercase text-teal-400">Corredor ${r.routeCode} • ${r.distanceKm} KM</span>
+                <h3 class="text-sm font-bold text-white">${r.routeName} (${r.origin} → ${r.destination})</h3>
+              </div>
+              <span class="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold mono">
+                Ahorro: ${formatCop(r.potentialRouteSavingsCop)}
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ${(r.carriers || []).map((c, idx) => `
+                <div class="p-3 rounded-xl border ${idx === 0 ? 'bg-teal-950/25 border-teal-500/50' : 'bg-slate-900/70 border-slate-800'} flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                      <span class="text-xs font-bold text-white">${c.carrierName}</span>
+                      ${idx === 0 ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-300 font-bold">★ Ruta / Flota Sugerida</span>' : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px] mono my-2">
+                      <div class="text-slate-400">Costo/Ton: <strong class="${idx === 0 ? 'text-teal-300' : 'text-amber-300'}">$${(c.costPerTonCop || 0).toLocaleString('es-CO')}</strong></div>
+                      <div class="text-slate-400">Tránsito: <strong class="text-white">${c.avgTransitHours} h</strong></div>
+                      <div class="text-slate-400">Puntualidad: <strong class="text-emerald-300">${c.onTimePct}%</strong></div>
+                      <div class="text-slate-400">Score: <strong class="text-white">${c.multiCriteriaScore}/100</strong></div>
+                    </div>
+                  </div>
+                  <p class="text-[11px] text-slate-300 bg-slate-950/80 p-2 rounded border border-slate-800/80">${c.recommendationNote}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const suppliers = Array.isArray(p2?.suppliers) ? p2.suppliers : [];
+      const supTableBodyEl = document.getElementById('suppliersTableBody');
+      if (supTableBodyEl) {
+        supTableBodyEl.innerHTML = suppliers.map(s => {
+          const badgeClass = s.badgeTone === 'indigo'
+            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+            : s.badgeTone === 'emerald'
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              : s.badgeTone === 'amber'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+          return `
+            <tr>
+              <th>
+                <div class="font-semibold text-white">${s.name}</div>
+                <div class="text-[11px] text-slate-400 font-normal">${s.region} • Centro ${s.plantCode}</div>
+              </th>
+              <td class="text-slate-300">${s.categoryName}</td>
+              <td class="mono font-semibold text-white">${formatCop(s.annualSpendCop)}</td>
+              <td class="mono">${s.ordersCount} ped. <span class="text-rose-400 text-[11px] block">${s.delayedOrdersCount} retrasados</span></td>
+              <td class="mono">${s.promisedLeadTimeDays}d → <strong class="${s.leadTimeVarianceDays > 2 ? 'text-rose-300' : 'text-teal-300'}">${s.actualLeadTimeDays}d</strong></td>
+              <td class="mono font-bold ${s.otifPct >= 90 ? 'text-emerald-300' : s.otifPct < 75 ? 'text-rose-300' : 'text-amber-300'}">${s.otifPct}%</td>
+              <td class="mono">${s.qualityAcceptancePct}%</td>
+              <td class="mono font-bold text-white">${s.weightedScore}/100</td>
+              <td><span class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${badgeClass}">${s.classification}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

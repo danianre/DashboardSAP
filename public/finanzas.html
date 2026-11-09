@@ -375,29 +375,38 @@
     <!-- ==================================================================== -->
     <section id="page2" class="sac-page hidden space-y-6 sac-defer-section">
       <!-- Conmutador de Asignación de Costos -->
-      <div class="glass-card p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-sm sm:text-base font-bold text-white">Análisis de Rentabilidad por Producto, Cliente/Región y Sociedad</h2>
-          <p class="text-xs text-slate-400">Identifica qué líneas de producto, mercados y clientes generan mayor margen de contribución</p>
+      <div class="glass-card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">Análisis de Rentabilidad por Producto, Cliente/Región y Sociedad</h2>
+            <p class="text-xs text-slate-400">Identifica qué líneas de producto, mercados y clientes generan mayor margen y valor</p>
+          </div>
+          <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+            <button type="button" id="btnAllocFull" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition shadow-sm">Rentabilidad Completa (Con Gastos Asignados)</button>
+            <button type="button" id="btnAllocDirect" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">Contribución Directa</button>
+          </div>
         </div>
-        <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
-          <button type="button" id="btnAllocFull" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition">Rentabilidad Completa (Con Gastos Asignados)</button>
-          <button type="button" id="btnAllocDirect" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">Contribución Directa</button>
+        <div id="allocationModeIndicator" class="px-3.5 py-2 rounded-lg text-xs font-medium border bg-emerald-950/40 border-emerald-500/40 text-emerald-200 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span><strong>Metodología Activa: Rentabilidad Completa con Gastos Asignados</strong> — Incluye distribución de gastos comerciales (52), administrativos (51) y corporativos para reflejar la Utilidad Operacional (EBIT) y Utilidad Neta real.</span>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 mono whitespace-nowrap">EBIT Completo</span>
         </div>
       </div>
 
       <!-- Gráficos de Rentabilidad por Producto y Sociedad -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="glass-card p-5">
-          <h3 class="text-sm font-bold text-white mb-1">Ingresos vs. Utilidad Bruta por Producto</h3>
-          <p class="text-xs text-slate-400 mb-3">Aporte económico de las principales familias y materiales (Mil M COP)</p>
+          <h3 id="chartProdHeading" class="text-sm font-bold text-white mb-1">Ingresos vs. Utilidad Operacional por Producto</h3>
+          <p id="chartProdSub" class="text-xs text-slate-400 mb-3">Aporte al EBIT corporativo con distribución de gastos comerciales y administrativos (Mil M COP)</p>
           <div class="h-64">
             <canvas id="chartSegmentProducts"></canvas>
           </div>
         </div>
         <div class="glass-card p-5">
-          <h3 class="text-sm font-bold text-white mb-1">Ingresos vs. Utilidad Operacional por Sociedad</h3>
-          <p class="text-xs text-slate-400 mb-3">Desempeño operativo por empresa del grupo (Mil M COP)</p>
+          <h3 id="chartSocHeading" class="text-sm font-bold text-white mb-1">Ingresos vs. Utilidad Operacional por Sociedad</h3>
+          <p id="chartSocSub" class="text-xs text-slate-400 mb-3">Desempeño operativo por empresa del grupo con OPEX deducido (Mil M COP)</p>
           <div class="h-64">
             <canvas id="chartSegmentSocieties"></canvas>
           </div>
@@ -416,8 +425,8 @@
                 <th class="text-right">Costo Directo</th>
                 <th class="text-right">Utilidad Bruta</th>
                 <th class="text-right">Margen Bruto %</th>
-                <th class="text-right">Utilidad Operacional</th>
-                <th class="text-right">Margen Neto %</th>
+                <th id="thProdCol6" class="text-right">Utilidad Operacional (EBIT)</th>
+                <th id="thProdCol7" class="text-right">Margen Neto %</th>
                 <th>Clasificación</th>
               </tr>
             </thead>
@@ -437,8 +446,8 @@
                   <th>Cliente / Región y Canal</th>
                   <th class="text-right">Ingresos Netos</th>
                   <th class="text-right">Utilidad Bruta</th>
-                  <th class="text-right">Margen Bruto %</th>
-                  <th class="text-right">Utilidad Neta</th>
+                  <th id="thCustCol4" class="text-right">Margen Bruto %</th>
+                  <th id="thCustCol5" class="text-right">Utilidad Neta (Asignada)</th>
                 </tr>
               </thead>
               <tbody id="tableSegmentCustomersBody"></tbody>
@@ -455,8 +464,8 @@
                   <th>Sociedad / Unidad</th>
                   <th class="text-right">Ingresos Netos</th>
                   <th class="text-right">Utilidad Bruta</th>
-                  <th class="text-right">Utilidad Operacional</th>
-                  <th class="text-right">Margen Op. %</th>
+                  <th id="thSocCol3" class="text-right">Utilidad Operacional (EBIT)</th>
+                  <th id="thSocCol4" class="text-right">Margen Operacional %</th>
                 </tr>
               </thead>
               <tbody id="tableSegmentSocietiesBody"></tbody>
@@ -844,53 +853,139 @@
 
     function renderPage2Profitability(data) {
       const prof = data.profitability || {};
-      const prods = prof.byProduct || [];
+      const prods = Array.isArray(prof.byProduct) ? prof.byProduct : [];
+      const custs = Array.isArray(prof.byCustomer) ? prof.byCustomer : [];
+      const socs = Array.isArray(prof.bySociety) ? prof.bySociety : [];
+      const isDirect = (prof.allocationMode || currentAllocationMode) === 'direct';
 
-      document.getElementById('tableSegmentProductsBody').innerHTML = prods.map(p => {
-        const quadColor = p.quadrant.includes('Estrella')
-          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-          : (p.quadrant.includes('Especialidad') ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30');
-        return `
-          <tr>
-            <th scope="row" class="font-medium text-white">${p.name}</th>
-            <td class="text-right font-mono font-semibold">${formatCopCompact(p.netRevenue)}</td>
-            <td class="text-right font-mono text-amber-300">${formatCopCompact(p.directCogs)}</td>
-            <td class="text-right font-mono text-emerald-300">${formatCopCompact(p.grossProfit)}</td>
-            <td class="text-right font-mono">${formatPct(p.grossMarginPct)}</td>
-            <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(p.operatingProfit)}</td>
-            <td class="text-right font-mono">${formatPct(p.netMarginPct)}</td>
-            <td><span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${quadColor}">${p.quadrant}</span></td>
-          </tr>
-        `;
-      }).join('');
+      // 1. Actualizar indicador visual de metodología activa
+      const indicatorEl = document.getElementById('allocationModeIndicator');
+      if (indicatorEl) {
+        if (isDirect) {
+          indicatorEl.className = 'px-3.5 py-2 rounded-lg text-xs font-medium border bg-cyan-950/40 border-cyan-500/40 text-cyan-200 flex items-center justify-between gap-3';
+          indicatorEl.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span><strong>Metodología Activa: Margen de Contribución Directa</strong> — Se evalúa exclusivamente el ingreso neto vs. costo directo de ventas (COGS directo). Sin prorrateo de gastos de administración ni comerciales.</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 mono whitespace-nowrap">Margen Bruto Puro</span>
+          `;
+        } else {
+          indicatorEl.className = 'px-3.5 py-2 rounded-lg text-xs font-medium border bg-emerald-950/40 border-emerald-500/40 text-emerald-200 flex items-center justify-between gap-3';
+          indicatorEl.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span><strong>Metodología Activa: Rentabilidad Completa con Gastos Asignados</strong> — Incluye distribución de gastos comerciales (52), administrativos (51) y corporativos para reflejar la Utilidad Operacional (EBIT) y Utilidad Neta real.</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 mono whitespace-nowrap">EBIT Completo</span>
+          `;
+        }
+      }
 
-      const custs = prof.byCustomer || [];
-      document.getElementById('tableSegmentCustomersBody').innerHTML = custs.slice(0, 10).map(c => `
-        <tr>
-          <th scope="row">
-            <div class="font-medium text-white">${c.name}</div>
-            <div class="text-[10px] text-slate-400 font-normal">${c.region} • ${c.channel}</div>
-          </th>
-          <td class="text-right font-mono">${formatCopCompact(c.netRevenue)}</td>
-          <td class="text-right font-mono text-emerald-300">${formatCopCompact(c.grossProfit)}</td>
-          <td class="text-right font-mono">${formatPct(c.grossMarginPct)}</td>
-          <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(c.netProfit)}</td>
-        </tr>
-      `).join('');
+      // 2. Encabezados dinámicos de tablas y títulos de gráficos
+      const thProdCol6 = document.getElementById('thProdCol6');
+      if (thProdCol6) thProdCol6.textContent = isDirect ? 'Contribución Directa' : 'Utilidad Operacional (EBIT)';
+      const thProdCol7 = document.getElementById('thProdCol7');
+      if (thProdCol7) thProdCol7.textContent = isDirect ? 'Margen Contribución %' : 'Margen Neto %';
 
-      const socs = prof.bySociety || [];
-      document.getElementById('tableSegmentSocietiesBody').innerHTML = socs.slice(0, 10).map(s => `
-        <tr>
-          <th scope="row">
-            <div class="font-medium text-white">${s.name}</div>
-            <div class="text-[10px] text-slate-400 font-normal">${s.businessUnit}</div>
-          </th>
-          <td class="text-right font-mono">${formatCopCompact(s.netRevenue)}</td>
-          <td class="text-right font-mono text-emerald-300">${formatCopCompact(s.grossProfit)}</td>
-          <td class="text-right font-mono font-semibold text-cyan-300">${formatCopCompact(s.operatingProfit)}</td>
-          <td class="text-right font-mono">${formatPct(s.operatingMarginPct)}</td>
-        </tr>
-      `).join('');
+      const thCustCol4 = document.getElementById('thCustCol4');
+      if (thCustCol4) thCustCol4.textContent = isDirect ? 'Margen Contribución %' : 'Margen Bruto %';
+      const thCustCol5 = document.getElementById('thCustCol5');
+      if (thCustCol5) thCustCol5.textContent = isDirect ? 'Contribución Directa' : 'Utilidad Neta (Asignada)';
+
+      const thSocCol3 = document.getElementById('thSocCol3');
+      if (thSocCol3) thSocCol3.textContent = isDirect ? 'Contribución Directa' : 'Utilidad Operacional (EBIT)';
+      const thSocCol4 = document.getElementById('thSocCol4');
+      if (thSocCol4) thSocCol4.textContent = isDirect ? 'Margen Contribución %' : 'Margen Operacional %';
+
+      const chartProdHeading = document.getElementById('chartProdHeading');
+      if (chartProdHeading) {
+        chartProdHeading.textContent = isDirect ? 'Ingresos vs. Contribución Directa por Producto' : 'Ingresos vs. Utilidad Operacional por Producto';
+      }
+      const chartProdSub = document.getElementById('chartProdSub');
+      if (chartProdSub) {
+        chartProdSub.textContent = isDirect ? 'Margen directo puro sin asignación de gastos fijos/indirectos (Mil M COP)' : 'Aporte al EBIT corporativo con distribución de gastos comerciales y administrativos (Mil M COP)';
+      }
+
+      const chartSocHeading = document.getElementById('chartSocHeading');
+      if (chartSocHeading) {
+        chartSocHeading.textContent = isDirect ? 'Ingresos vs. Contribución Directa por Sociedad' : 'Ingresos vs. Utilidad Operacional por Sociedad';
+      }
+      const chartSocSub = document.getElementById('chartSocSub');
+      if (chartSocSub) {
+        chartSocSub.textContent = isDirect ? 'Margen bruto directo generado por cada empresa del grupo (Mil M COP)' : 'Desempeño operativo EBIT por empresa del grupo con OPEX deducido (Mil M COP)';
+      }
+
+      // 3. Renderizar tabla de Productos
+      const prodBody = document.getElementById('tableSegmentProductsBody');
+      if (prodBody) {
+        prodBody.innerHTML = prods.map(p => {
+          const quadColor = (p.quadrant || '').includes('Estrella')
+            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+            : ((p.quadrant || '').includes('Especialidad') ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30');
+          const valueCol6 = isDirect ? p.grossProfit : p.operatingProfit;
+          const valueCol7 = isDirect ? p.grossMarginPct : p.netMarginPct;
+          return `
+            <tr>
+              <th scope="row" class="font-medium text-white">${p.name}</th>
+              <td class="text-right font-mono font-semibold">${formatCopCompact(p.netRevenue)}</td>
+              <td class="text-right font-mono text-amber-300">${formatCopCompact(p.directCogs)}</td>
+              <td class="text-right font-mono text-emerald-300">${formatCopCompact(p.grossProfit)}</td>
+              <td class="text-right font-mono">${formatPct(p.grossMarginPct)}</td>
+              <td class="text-right font-mono font-semibold ${isDirect ? 'text-emerald-300' : 'text-cyan-300'}">${formatCopCompact(valueCol6)}</td>
+              <td class="text-right font-mono">${formatPct(valueCol7)}</td>
+              <td><span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${quadColor}">${p.quadrant}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 4. Renderizar tabla de Clientes
+      const custBody = document.getElementById('tableSegmentCustomersBody');
+      if (custBody) {
+        custBody.innerHTML = custs.slice(0, 10).map(c => {
+          const custVal5 = isDirect ? c.grossProfit : c.netProfit;
+          return `
+            <tr>
+              <th scope="row">
+                <div class="font-medium text-white">${c.name}</div>
+                <div class="text-[10px] text-slate-400 font-normal">${c.region} • ${c.channel}</div>
+              </th>
+              <td class="text-right font-mono">${formatCopCompact(c.netRevenue)}</td>
+              <td class="text-right font-mono text-emerald-300">${formatCopCompact(c.grossProfit)}</td>
+              <td class="text-right font-mono">${formatPct(c.grossMarginPct)}</td>
+              <td class="text-right font-mono font-semibold ${isDirect ? 'text-emerald-300' : 'text-cyan-300'}">${formatCopCompact(custVal5)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 5. Renderizar tabla de Sociedades
+      const socBody = document.getElementById('tableSegmentSocietiesBody');
+      if (socBody) {
+        socBody.innerHTML = socs.slice(0, 10).map(s => {
+          const socVal3 = isDirect ? s.grossProfit : s.operatingProfit;
+          const socVal4 = isDirect ? s.grossMarginPct : s.operatingMarginPct;
+          return `
+            <tr>
+              <th scope="row">
+                <div class="font-medium text-white">${s.name}</div>
+                <div class="text-[10px] text-slate-400 font-normal">${s.businessUnit}</div>
+              </th>
+              <td class="text-right font-mono">${formatCopCompact(s.netRevenue)}</td>
+              <td class="text-right font-mono text-emerald-300">${formatCopCompact(s.grossProfit)}</td>
+              <td class="text-right font-mono font-semibold ${isDirect ? 'text-emerald-300' : 'text-cyan-300'}">${formatCopCompact(socVal3)}</td>
+              <td class="text-right font-mono">${formatPct(socVal4)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 6. Gráfico de Productos interactivo según el modo
+      const prodLabel2 = isDirect ? 'Contribución Directa (Mil M)' : 'Utilidad Operacional EBIT (Mil M)';
+      const prodData2 = isDirect
+        ? prods.slice(0, 8).map(p => +(p.grossProfit / 1e9).toFixed(2))
+        : prods.slice(0, 8).map(p => +(p.operatingProfit / 1e9).toFixed(2));
 
       if (charts.segmentProducts) charts.segmentProducts.destroy();
       charts.segmentProducts = new Chart(document.getElementById('chartSegmentProducts'), {
@@ -899,7 +994,7 @@
           labels: prods.slice(0, 8).map(p => p.name.slice(0, 26)),
           datasets: [
             { label: 'Ingresos Netos (Mil M)', data: prods.slice(0, 8).map(p => +(p.netRevenue / 1e9).toFixed(2)), backgroundColor: 'rgba(99, 102, 241, 0.65)', borderRadius: 4 },
-            { label: 'Utilidad Bruta (Mil M)', data: prods.slice(0, 8).map(p => +(p.grossProfit / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 }
+            { label: prodLabel2, data: prodData2, backgroundColor: isDirect ? 'rgba(16, 185, 129, 0.8)' : 'rgba(6, 182, 212, 0.8)', borderRadius: 4 }
           ]
         },
         options: {
@@ -913,6 +1008,12 @@
         }
       });
 
+      // 7. Gráfico de Sociedades interactivo según el modo
+      const socLabel2 = isDirect ? 'Contribución Directa (Mil M)' : 'Utilidad Operacional EBIT (Mil M)';
+      const socData2 = isDirect
+        ? socs.slice(0, 8).map(s => +(s.grossProfit / 1e9).toFixed(2))
+        : socs.slice(0, 8).map(s => +(s.operatingProfit / 1e9).toFixed(2));
+
       if (charts.segmentSocieties) charts.segmentSocieties.destroy();
       charts.segmentSocieties = new Chart(document.getElementById('chartSegmentSocieties'), {
         type: 'bar',
@@ -920,7 +1021,7 @@
           labels: socs.slice(0, 8).map(s => s.name.slice(0, 22)),
           datasets: [
             { label: 'Ingresos Netos (Mil M)', data: socs.slice(0, 8).map(s => +(s.netRevenue / 1e9).toFixed(2)), backgroundColor: 'rgba(6, 182, 212, 0.6)', borderRadius: 4 },
-            { label: 'Utilidad Operacional EBIT (Mil M)', data: socs.slice(0, 8).map(s => +(s.operatingProfit / 1e9).toFixed(2)), backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 4 }
+            { label: socLabel2, data: socData2, backgroundColor: isDirect ? 'rgba(16, 185, 129, 0.8)' : 'rgba(14, 165, 233, 0.8)', borderRadius: 4 }
           ]
         },
         options: {
@@ -1122,14 +1223,14 @@
 
       document.getElementById('btnAllocFull')?.addEventListener('click', () => {
         currentAllocationMode = 'full';
-        document.getElementById('btnAllocFull').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition';
+        document.getElementById('btnAllocFull').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition shadow-sm';
         document.getElementById('btnAllocDirect').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
         fetchFinancialOverview(false);
       });
 
       document.getElementById('btnAllocDirect')?.addEventListener('click', () => {
         currentAllocationMode = 'direct';
-        document.getElementById('btnAllocDirect').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition';
+        document.getElementById('btnAllocDirect').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition shadow-sm';
         document.getElementById('btnAllocFull').className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition';
         fetchFinancialOverview(false);
       });

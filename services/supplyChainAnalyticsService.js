@@ -2572,7 +2572,11 @@ async function getSupplyChainOverview(filters = {}) {
         totalInTransitValueCop,
         excessInventoryValueCop,
         obsoleteInventoryValueCop,
-        potentialInterPlantSavingsCop
+        potentialInterPlantSavingsCop,
+        stockoutRiskCount: criticalItemsCount,
+        overstockCount: filteredInventory.filter(i => i.statusCode === 'EXCESO').length,
+        avgTurnover: avgInventoryTurnover,
+        avgDaysOfInventory
       }
     },
     page4Transport: {
@@ -2582,6 +2586,7 @@ async function getSupplyChainOverview(filters = {}) {
         totalTransportCostCop,
         totalTonsMoved,
         logisticsCostPerTonCop,
+        avgCostPerTonCop: logisticsCostPerTonCop,
         avgVehicleUtilizationPct,
         freightBaseCop: evaluatedRoutes.reduce((s, r) => s + r.freightBaseCop, 0),
         fuelSurchargeCop: evaluatedRoutes.reduce((s, r) => s + r.fuelSurchargeCop, 0),

@@ -2031,6 +2031,11 @@ async function computeFinancialAnalytics(finDataset, filters = {}) {
     .map(s => {
       finalizePnlBucket(s.pnl);
       finalizePnlBucket(s.priorPnl);
+      const activeOpExpenses = allocationMode === 'direct' ? 0 : Math.round(s.pnl.operating_expenses_total);
+      const operatingProfit = allocationMode === 'direct' ? Math.round(s.pnl.gross_profit) : Math.round(s.pnl.operating_profit);
+      const operatingMarginPct = s.pnl.net_revenue > 0 ? Number(((operatingProfit / s.pnl.net_revenue) * 100).toFixed(2)) : 0;
+      const netProfit = allocationMode === 'direct' ? Math.round(s.pnl.gross_profit) : Math.round(s.pnl.net_income);
+      const netMarginPct = s.pnl.net_revenue > 0 ? Number(((netProfit / s.pnl.net_revenue) * 100).toFixed(2)) : 0;
       return {
         code: s.code,
         name: s.name,
@@ -2039,12 +2044,12 @@ async function computeFinancialAnalytics(finDataset, filters = {}) {
         cogs: Math.round(s.pnl.cogs),
         grossProfit: Math.round(s.pnl.gross_profit),
         grossMarginPct: Number(s.pnl.gross_margin_pct.toFixed(2)),
-        operatingExpenses: Math.round(s.pnl.operating_expenses_total),
-        operatingProfit: Math.round(s.pnl.operating_profit),
-        operatingMarginPct: Number(s.pnl.operating_margin_pct.toFixed(2)),
+        operatingExpenses: activeOpExpenses,
+        operatingProfit,
+        operatingMarginPct,
         ebitda: Math.round(s.pnl.ebitda),
-        netIncome: Math.round(s.pnl.net_income),
-        netMarginPct: Number(s.pnl.net_margin_pct.toFixed(2)),
+        netIncome: netProfit,
+        netMarginPct,
         revenueSharePct: actualBucket.net_revenue > 0 ? Number(((s.pnl.net_revenue / actualBucket.net_revenue) * 100).toFixed(2)) : 0
       };
     })
