@@ -31,6 +31,13 @@ apps-sap/
 backups/
 .deploy-meta.json
 sales_analytics_cache.json.gz
+financial_analytics_cache.json.gz
+financial_risk_cache.json.gz
+supply_chain_cache.json.gz
+*.xlsx
+scripts/*.json
+
+
 
 # Archivos de entorno del editor y sistema operativo
 .DS_Store

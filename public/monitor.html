@@ -284,6 +284,33 @@
         </div>
       </div>
 
+      <!-- Roles Sin Uso (3m / 6m) - Clic para abrir modal de depuración -->
+      <div id="unusedRolesBadge" onclick="openUnusedRolesModal()"
+        class="px-3.5 py-2 rounded-lg border border-amber-500/30 bg-amber-950/30 flex items-center gap-3 cursor-pointer hover:bg-amber-900/40 hover:border-amber-400/60 transition group active:scale-95 shadow-sm"
+        title="Clic para ver usuarios y roles sin uso en 3 meses y 6 meses para su eliminación">
+        <div class="relative">
+          <i class="fa-solid fa-user-xmark text-amber-400 text-lg group-hover:scale-110 transition-transform"></i>
+          <span class="absolute -top-1 -right-1 flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold group-hover:text-gray-200 transition-colors">Depuración Roles</span>
+            <span class="text-[9px] font-mono font-semibold text-amber-400/90 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+              <i class="fa-solid fa-shield-halved text-[8px]"></i> 3m / 6m
+            </span>
+          </div>
+          <div class="text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5 mt-0.5">
+            <span id="headerUnusedRolesText">1,391 ROLES A ELIMINAR</span>
+          </div>
+          <div class="text-[10px] text-amber-400/70 font-sans flex items-center gap-1 group-hover:text-amber-300 transition-colors">
+            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Clic para ver roles por usuario
+          </div>
+        </div>
+      </div>
+
       <!-- Usuario SAP Autenticado y Cierre de Sesión -->
       <div id="sapUserHeaderBadge" class="hidden px-3 py-2 rounded-lg border border-blue-500/30 bg-blue-950/30 items-center gap-3 shadow-sm">
         <div class="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
@@ -349,13 +376,28 @@
       </div>
     </div>
 
-    <div class="card p-4 border-amber-500/40">
-      <div class="flex justify-between items-center text-amber-300 text-xs font-semibold uppercase">
-        <span>Inactivos +30 Días</span>
-        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+    <div class="card p-4 border-amber-500/40 cursor-pointer hover:border-amber-400/80 hover:shadow-lg hover:shadow-amber-950/20 transition-all group flex flex-col justify-between"
+      onclick="openUnusedRolesModal()" title="Clic para abrir la ventana de roles sin uso por usuario en 3 y 6 meses">
+      <div>
+        <div class="flex justify-between items-center text-amber-300 text-xs font-semibold uppercase">
+          <span class="group-hover:text-amber-200 transition-colors">Inactivos y Roles Sin Uso</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30 group-hover:bg-amber-900 transition-colors">3m / 6m</span>
+            <i class="fa-solid fa-user-slash text-amber-400 group-hover:scale-110 transition-transform"></i>
+          </div>
+        </div>
+        <div class="text-2xl font-bold text-amber-400 mt-2 flex items-baseline gap-2">
+          <span id="kpiInactive30d">--</span>
+          <span class="text-xs text-amber-400/80 font-mono font-normal">| <span id="kpiUnusedRolesCount">1,391</span> roles</span>
+        </div>
+        <div class="text-xs text-gray-400 mt-1">Usuarios inactivos y roles para eliminar</div>
       </div>
-      <div class="text-2xl font-bold text-amber-400 mt-2" id="kpiInactive30d">--</div>
-      <div class="text-xs text-gray-400 mt-1">Candidatos a bloqueo preventivo</div>
+      <div class="mt-2.5 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px]">
+        <span class="text-amber-400 group-hover:text-amber-300 font-semibold flex items-center gap-1">
+          <i class="fa-solid fa-list-check text-[10px]"></i> Ver Roles por Usuario
+        </span>
+        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-amber-400/70 group-hover:text-amber-300"></i>
+      </div>
     </div>
 
     <div class="card p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between">
@@ -2231,6 +2273,128 @@
     </div>
   </div>
 
+  <!-- MODAL: DEPURACIÓN DE ROLES INACTIVOS POR USUARIO (3 MESES Y 6 MESES) -->
+  <div id="unusedRolesModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-2 sm:p-4 md:p-6" onclick="handleUnusedRolesBackdropClick(event)">
+    <div class="card max-w-6xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-amber-500/30 shadow-2xl bg-gray-900/95" onclick="event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-gray-950/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg shadow-sm">
+            <i class="fa-solid fa-user-xmark"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-base font-bold text-white tracking-wide">Depuración de Roles Inactivos por Usuario</h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950/70 text-blue-300 border border-blue-500/30">SAP ECC 6.0 (BOP:300)</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/30">Telemetría ST03N + SE97</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/30">Eliminación Segura</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">Identificación de roles con 0% de uso transaccional (directo e indirecto) para remoción en <code class="text-amber-300 font-mono">SU10</code> o <code class="text-amber-300 font-mono">PFCG</code>.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+          <a href="/api/roles/unused-audit/download-excel" download="Reporte_Transacciones_No_Usadas_SAP.xlsx"
+            class="px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+            title="Descargar libro Excel completo (3 hojas, detalle exhaustivo de 157 MB)">
+            <i class="fa-solid fa-file-excel text-emerald-400"></i>
+            <span class="hidden sm:inline">Descargar Excel (.xlsx)</span>
+          </a>
+          <button onclick="exportUnusedRolesCsv()"
+            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-medium flex items-center gap-1.5 transition active:scale-95"
+            title="Exportar listado visible en CSV">
+            <i class="fa-solid fa-file-csv text-blue-400"></i>
+            <span class="hidden sm:inline">Exportar CSV</span>
+          </button>
+          <button onclick="loadUnusedRolesAudit(true)"
+            class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 flex items-center justify-center transition active:scale-95"
+            title="Recargar datos">
+            <i class="fa-solid fa-rotate text-amber-400" id="unusedRolesRefreshIcon"></i>
+          </button>
+          <button onclick="closeUnusedRolesModal()"
+            class="w-8 h-8 rounded-lg bg-gray-800/80 hover:bg-rose-950 hover:text-rose-400 text-gray-400 border border-gray-700/80 flex items-center justify-center transition"
+            title="Cerrar ventana (Esc)">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Control Toolbar: Tabs 6 Meses vs 3 Meses + Buscador + Botón Copiar Masivo -->
+      <div class="px-6 py-3 bg-gray-950/50 border-b border-gray-800 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+        <!-- Selector de Ventana Temporal (Tabs) -->
+        <div class="flex items-center gap-1 bg-gray-900 p-1 rounded-xl border border-gray-800">
+          <button id="btnTab180d" onclick="setUnusedRolesWindow('180d')"
+            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm">
+            <i class="fa-solid fa-shield-check"></i>
+            <span>6 Meses (>180 días)</span>
+            <span id="badgeTab180d" class="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-200 text-[10px] font-mono border border-amber-400/40">1,391 roles</span>
+          </button>
+          <button id="btnTab90d" onclick="setUnusedRolesWindow('90d')"
+            class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60">
+            <i class="fa-solid fa-calendar-days"></i>
+            <span>3 Meses (>90 días)</span>
+            <span id="badgeTab90d" class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 text-[10px] font-mono border border-gray-700">1,427 roles</span>
+          </button>
+        </div>
+
+        <!-- Buscador y Acciones -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-500 text-xs"></i>
+            <input type="text" id="inputSearchUnusedUser" oninput="renderUnusedRolesList()"
+              placeholder="Buscar usuario o nombre..."
+              class="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-500 transition font-sans" />
+          </div>
+          <button onclick="copyAllFilteredRoles()"
+            class="px-3 py-1.5 rounded-lg bg-purple-950/70 hover:bg-purple-800 text-purple-200 hover:text-white border border-purple-500/40 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm whitespace-nowrap"
+            title="Copiar todos los roles únicos de los usuarios filtrados para pegar en SU10">
+            <i class="fa-solid fa-copy text-purple-400"></i>
+            <span class="hidden sm:inline">Copiar Roles Visibles</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Banner de Resumen y Recomendación de Seguridad -->
+      <div id="unusedRolesWindowBanner" class="px-6 py-2.5 bg-amber-950/20 border-b border-amber-500/20 flex flex-wrap items-center justify-between text-xs text-amber-300/90 gap-2">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+          <span id="unusedRolesBannerText"><strong>Ventana de 6 Meses activa:</strong> 1,391 roles identificados con 0% de uso transaccional en todo el semestre. <em class="text-emerald-300">Eliminación recomendada y segura.</em></span>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] font-mono text-gray-400">
+          <span>Usuarios con roles a eliminar: <strong id="lblUsersCount" class="text-amber-300">272</strong></span>
+          <span>•</span>
+          <span>Roles a eliminar: <strong id="lblRolesCount" class="text-amber-300">1,391</strong></span>
+        </div>
+      </div>
+
+      <!-- Modal Body (Scrollable User Cards List) -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4" id="unusedRolesListContainer">
+        <!-- Render dinámico de usuarios y sus roles a eliminar -->
+        <div class="text-center py-12 text-gray-500 text-sm">
+          <i class="fa-solid fa-spinner fa-spin text-2xl text-amber-400 mb-2"></i>
+          <p>Cargando auditoría de roles...</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-2 bg-gray-950/90 text-xs text-gray-400">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-lightbulb text-amber-400"></i>
+          <span><strong>Instrucción SAP Basis:</strong> Usa el botón <em>"Copiar Roles"</em> de cada usuario para pegarlo directamente en la pestaña <strong>Roles</strong> de la transacción <code class="text-gray-200 font-mono bg-gray-800 px-1 py-0.5 rounded">SU10</code> (Tratamiento masivo) o <code class="text-gray-200 font-mono bg-gray-800 px-1 py-0.5 rounded">SU01</code>.</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="unusedRolesListFooterCount" class="text-gray-400 font-mono text-[11px]">Mostrando 272 usuarios</span>
+          <button onclick="closeUnusedRolesModal()"
+            class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
+            Cerrar
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Notificación Toast -->
   <div id="toast"
     class="fixed bottom-5 right-5 hidden bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">
@@ -2879,6 +3043,286 @@
       }
     }
 
+    // ==========================================
+    // MODAL DE DEPURACIÓN DE ROLES INACTIVOS (3M / 6M)
+    // ==========================================
+    let unusedRolesAuditData = null;
+    let currentUnusedRolesWindow = '180d'; // '180d' o '90d'
+
+    function openUnusedRolesModal() {
+      const modal = document.getElementById('unusedRolesModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (!unusedRolesAuditData) {
+        loadUnusedRolesAudit();
+      } else {
+        renderUnusedRolesList();
+      }
+    }
+
+    function closeUnusedRolesModal() {
+      const modal = document.getElementById('unusedRolesModal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleUnusedRolesBackdropClick(event) {
+      if (event.target && event.target.id === 'unusedRolesModal') {
+        closeUnusedRolesModal();
+      }
+    }
+
+    async function loadUnusedRolesAudit(forceRefresh = false) {
+      const icon = document.getElementById('unusedRolesRefreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      try {
+        const res = await fetch('/api/roles/unused-audit');
+        const json = await res.json();
+        if (json.success) {
+          unusedRolesAuditData = json;
+          updateUnusedRolesBadges();
+          renderUnusedRolesList();
+          if (forceRefresh) showToast('Auditoría de roles actualizada correctamente');
+        } else {
+          showToast('Error cargando auditoría: ' + (json.error || 'Desconocido'));
+        }
+      } catch (err) {
+        console.error('Error loadUnusedRolesAudit:', err);
+        showToast('Error de red al consultar auditoría de roles');
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }
+
+    function updateUnusedRolesBadges() {
+      if (!unusedRolesAuditData || !unusedRolesAuditData.metrics) return;
+      const m = unusedRolesAuditData.metrics;
+      const headerText = document.getElementById('headerUnusedRolesText');
+      if (headerText) {
+        headerText.textContent = `${(m.totalRolesToRemove180 || 0).toLocaleString()} ROLES A ELIMINAR`;
+      }
+      const kpiCount = document.getElementById('kpiUnusedRolesCount');
+      if (kpiCount) {
+        kpiCount.textContent = (m.totalRolesToRemove180 || 0).toLocaleString();
+      }
+      const b180 = document.getElementById('badgeTab180d');
+      if (b180) b180.textContent = `${(m.totalRolesToRemove180 || 0).toLocaleString()} roles`;
+      const b90 = document.getElementById('badgeTab90d');
+      if (b90) b90.textContent = `${(m.totalRolesToRemove90 || 0).toLocaleString()} roles`;
+    }
+
+    function setUnusedRolesWindow(w) {
+      currentUnusedRolesWindow = w;
+      const btn180 = document.getElementById('btnTab180d');
+      const btn90 = document.getElementById('btnTab90d');
+      const bannerText = document.getElementById('unusedRolesBannerText');
+
+      if (w === '180d') {
+        if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
+        if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
+        if (bannerText) bannerText.innerHTML = '<strong>Ventana de 6 Meses activa:</strong> Roles con 0% de uso transaccional en todo el semestre (>180 días). <em class="text-emerald-300">Eliminación recomendada y segura.</em>';
+      } else {
+        if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
+        if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
+        if (bannerText) bannerText.innerHTML = '<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). <em class="text-amber-300">Incluye 36 roles con procesos semestrales que se aconseja validar antes de remover.</em>';
+      }
+      renderUnusedRolesList();
+    }
+
+    function renderUnusedRolesList() {
+      const container = document.getElementById('unusedRolesListContainer');
+      if (!container) return;
+      if (!unusedRolesAuditData || !unusedRolesAuditData.users) {
+        container.innerHTML = '<div class="text-center py-12 text-gray-500 font-sans">No hay datos de auditoría disponibles.</div>';
+        return;
+      }
+
+      const q = (document.getElementById('inputSearchUnusedUser')?.value || '').trim().toLowerCase();
+      const is180 = currentUnusedRolesWindow === '180d';
+
+      const filtered = unusedRolesAuditData.users.filter(u => {
+        const rolesList = is180 ? u.roles180 : u.roles90;
+        if (!rolesList || rolesList.length === 0) return false;
+        if (!q) return true;
+        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+      });
+
+      let totalRolesToRem = 0;
+      filtered.forEach(u => {
+        totalRolesToRem += (is180 ? u.roles180 : u.roles90).length;
+      });
+
+      const lblU = document.getElementById('lblUsersCount');
+      if (lblU) lblU.textContent = filtered.length;
+      const lblR = document.getElementById('lblRolesCount');
+      if (lblR) lblR.textContent = totalRolesToRem.toLocaleString();
+      const footerCount = document.getElementById('unusedRolesListFooterCount');
+      if (footerCount) footerCount.textContent = `Mostrando ${filtered.length} usuarios (${totalRolesToRem.toLocaleString()} roles a eliminar)`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-gray-500 font-sans">
+            <i class="fa-solid fa-user-check text-3xl text-emerald-500 mb-2"></i>
+            <p class="font-medium text-gray-300">No se encontraron usuarios con roles para eliminar con ese criterio.</p>
+            <p class="text-xs text-gray-500 mt-1">Intenta con otro término de búsqueda o cambia la ventana temporal.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(u => {
+        const rolesList = is180 ? u.roles180 : u.roles90;
+        const roleNames = rolesList.map(r => r.role);
+        const encodedRoles = encodeURIComponent(roleNames.join('\n'));
+
+        html += `
+          <div class="p-4 rounded-xl bg-gray-950/70 border border-gray-800 hover:border-amber-500/40 transition group">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b border-gray-800/80">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600/20 to-amber-900/40 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold font-mono text-sm shadow-sm">
+                  ${(u.username || '--').slice(0, 2)}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono font-bold text-white text-sm bg-gray-900 px-2 py-0.5 rounded border border-gray-700/60">${u.username}</span>
+                    <span class="text-xs font-semibold text-gray-200">${u.fullName}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">${u.userType}</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-[11px] text-gray-400 mt-0.5 font-mono">
+                    <span>Roles Asignados: <strong class="text-gray-200">${u.assignedRolesCount}</strong></span>
+                    <span>•</span>
+                    <span>Último Login: <span class="text-gray-300">${u.lastLogin}</span></span>
+                    ${u.redundantRolesCount > 0 ? `<span>•</span> <span class="text-purple-400 font-sans" title="Roles cuyas transacciones usadas ya están cubiertas por otros roles">${u.redundantRolesCount} solapados</span>` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 self-end md:self-auto">
+                <span class="px-2.5 py-1 rounded-lg bg-rose-950/70 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm">
+                  <i class="fa-solid fa-trash-can text-rose-400 text-[11px]"></i>
+                  <span>${rolesList.length} ${rolesList.length === 1 ? 'rol a eliminar' : 'roles a eliminar'}</span>
+                </span>
+                <button onclick="copyUserRoles('${u.username}', '${encodedRoles}')"
+                  class="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-amber-600 text-gray-300 hover:text-white border border-gray-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm"
+                  title="Copiar roles de ${u.username} (formato lista para SU10 / SU01)">
+                  <i class="fa-solid fa-copy text-amber-400 group-hover:text-white"></i>
+                  <span>Copiar Roles</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-amber-400 text-[10px]"></i>
+                <span>Roles a eliminar (Haz clic en un rol para copiarlo):</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
+                ${rolesList.map(r => {
+                  const is180Rol = r.isUnused180;
+                  const tagClass = is180Rol ? 'bg-amber-950/40 hover:bg-amber-800/60 border-amber-500/30 text-amber-200' : 'bg-blue-950/40 hover:bg-blue-800/60 border-blue-500/30 text-blue-200';
+                  return `
+                    <div onclick="copySingleRole('${r.role}')"
+                      class="px-2.5 py-1 rounded-md border ${tagClass} text-xs font-mono flex items-center gap-1.5 cursor-pointer transition group/pill active:scale-95"
+                      title="Clic para copiar '${r.role}' | ${r.totalTcodes} tcodes | ${r.action}">
+                      <i class="fa-solid fa-tag text-[10px] opacity-60 group-hover/pill:opacity-100"></i>
+                      <span class="font-bold">${r.role}</span>
+                      <span class="text-[10px] opacity-70 px-1 py-0.2 rounded bg-black/40">${r.totalTcodes} tc</span>
+                      ${!is180Rol ? '<span class="text-[9px] text-blue-300 bg-blue-900/60 px-1 rounded">Semestral</span>' : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function copySingleRole(roleName) {
+      navigator.clipboard.writeText(roleName).then(() => {
+        showToast(`Rol copiado: ${roleName}`);
+      }).catch(err => {
+        console.error('Error al copiar rol:', err);
+      });
+    }
+
+    function copyUserRoles(username, encodedRoles) {
+      const decoded = decodeURIComponent(encodedRoles);
+      navigator.clipboard.writeText(decoded).then(() => {
+        const lines = decoded.split('\n').filter(Boolean).length;
+        showToast(`${lines} roles de ${username} copiados al portapapeles`);
+      }).catch(err => {
+        console.error('Error al copiar roles:', err);
+      });
+    }
+
+    function copyAllFilteredRoles() {
+      if (!unusedRolesAuditData || !unusedRolesAuditData.users) return;
+      const q = (document.getElementById('inputSearchUnusedUser')?.value || '').trim().toLowerCase();
+      const is180 = currentUnusedRolesWindow === '180d';
+
+      const filtered = unusedRolesAuditData.users.filter(u => {
+        const rolesList = is180 ? u.roles180 : u.roles90;
+        if (!rolesList || rolesList.length === 0) return false;
+        if (!q) return true;
+        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+      });
+
+      const uniqueRoles = new Set();
+      filtered.forEach(u => {
+        const list = is180 ? u.roles180 : u.roles90;
+        list.forEach(r => uniqueRoles.add(r.role));
+      });
+
+      const arr = Array.from(uniqueRoles);
+      if (arr.length === 0) {
+        showToast('No hay roles para copiar en la vista actual');
+        return;
+      }
+
+      navigator.clipboard.writeText(arr.join('\n')).then(() => {
+        showToast(`${arr.length} roles únicos copiados al portapapeles para SU10`);
+      }).catch(err => {
+        console.error('Error al copiar todos los roles:', err);
+      });
+    }
+
+    function exportUnusedRolesCsv() {
+      if (!unusedRolesAuditData || !unusedRolesAuditData.users) return;
+      const q = (document.getElementById('inputSearchUnusedUser')?.value || '').trim().toLowerCase();
+      const is180 = currentUnusedRolesWindow === '180d';
+      const windowLabel = is180 ? '6 Meses (>180 dias)' : '3 Meses (>90 dias)';
+
+      const filtered = unusedRolesAuditData.users.filter(u => {
+        const rolesList = is180 ? u.roles180 : u.roles90;
+        if (!rolesList || rolesList.length === 0) return false;
+        if (!q) return true;
+        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+      });
+
+      let csv = 'Usuario;Nombre Completo;Ventana;Rol Asignado;Total TCodes Rol;Estado de Uso;Accion Sugerida\n';
+      filtered.forEach(u => {
+        const list = is180 ? u.roles180 : u.roles90;
+        list.forEach(r => {
+          csv += `"${u.username}";"${u.fullName}";"${windowLabel}";"${r.role}";${r.totalTcodes};"${r.isUnused180 ? 'Sin uso >180d' : 'Sin uso >90d'}";"${r.action}"\n`;
+        });
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Roles_a_Eliminar_SAP_${is180 ? '6M' : '3M'}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exportación CSV completada');
+    }
+
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         closePasswordResetsModal();
@@ -2888,6 +3332,7 @@
         closeSm12St22Modal();
         closeWsCpiModal();
         closeWhitelistModal();
+        closeUnusedRolesModal();
       }
     });
 
@@ -5796,6 +6241,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
       stopDashboardPolling();
       loadDashboard();
       loadDbacockpit();
+      loadUnusedRolesAudit();
       dashboardPollTimer = setInterval(loadDashboard, 5000);
       dbaPollTimer = setInterval(() => loadDbacockpit(false), 30000);
     }

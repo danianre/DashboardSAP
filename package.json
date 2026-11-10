@@ -15,7 +15,8 @@
     "express": "^5.3.0",
     "node-rfc": "^3.3.1",
     "sqlite": "^5.1.1",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^6.0.1",
+    "xlsx": "^0.18.5"
   },
   "allowScripts": {
     "sqlite3@6.0.1": true,

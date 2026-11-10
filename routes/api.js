@@ -421,4 +421,33 @@ router.get('/licenses/by-company', async (req, res) => {
   }
 });
 
+// Endpoint de Auditoría de Roles y Transacciones No Usadas (3m y 6m)
+router.get('/roles/unused-audit', (req, res) => {
+  try {
+    const cachePath = path.join(__dirname, '..', 'data', 'unused_roles_audit.json');
+    if (!fs.existsSync(cachePath)) {
+      return res.status(404).json({ success: false, error: 'Caché de auditoría de roles no disponible.' });
+    }
+    const raw = fs.readFileSync(cachePath, 'utf8');
+    const data = JSON.parse(raw);
+    res.json({ success: true, ...data });
+  } catch (error) {
+    console.error('[ERROR ENDPOINT GET /api/roles/unused-audit]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Descargar archivo Excel de auditoría de roles
+router.get('/roles/unused-audit/download-excel', (req, res) => {
+  try {
+    const excelPath = path.join(__dirname, '..', 'Reporte_Transacciones_No_Usadas_SAP.xlsx');
+    if (!fs.existsSync(excelPath)) {
+      return res.status(404).send('Archivo Excel no encontrado.');
+    }
+    res.download(excelPath, 'Reporte_Transacciones_No_Usadas_SAP.xlsx');
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 module.exports = router;
