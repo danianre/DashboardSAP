@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const {
   fetchSapDashboardData,
   manageUserLock,
@@ -422,15 +424,19 @@ router.get('/licenses/by-company', async (req, res) => {
 });
 
 // Endpoint de Auditoría de Roles y Transacciones No Usadas (3m y 6m)
+let _unusedRolesCacheMem = null;
 router.get('/roles/unused-audit', (req, res) => {
   try {
-    const cachePath = path.join(__dirname, '..', 'data', 'unused_roles_audit.json');
-    if (!fs.existsSync(cachePath)) {
-      return res.status(404).json({ success: false, error: 'Caché de auditoría de roles no disponible.' });
+    const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    if (!_unusedRolesCacheMem || forceRefresh) {
+      const cachePath = path.join(__dirname, '..', 'data', 'unused_roles_audit.json');
+      if (!fs.existsSync(cachePath)) {
+        return res.status(404).json({ success: false, error: 'Caché de auditoría de roles no disponible.' });
+      }
+      const raw = fs.readFileSync(cachePath, 'utf8');
+      _unusedRolesCacheMem = JSON.parse(raw);
     }
-    const raw = fs.readFileSync(cachePath, 'utf8');
-    const data = JSON.parse(raw);
-    res.json({ success: true, ...data });
+    res.json({ success: true, ..._unusedRolesCacheMem });
   } catch (error) {
     console.error('[ERROR ENDPOINT GET /api/roles/unused-audit]:', error);
     res.status(500).json({ success: false, error: error.message });

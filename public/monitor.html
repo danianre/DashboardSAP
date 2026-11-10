@@ -3077,20 +3077,42 @@
     async function loadUnusedRolesAudit(forceRefresh = false) {
       const icon = document.getElementById('unusedRolesRefreshIcon');
       if (icon) icon.classList.add('fa-spin');
+      const container = document.getElementById('unusedRolesListContainer');
+      if (container && !unusedRolesAuditData) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-gray-400 text-sm">
+            <i class="fa-solid fa-spinner fa-spin text-2xl text-amber-400 mb-2"></i>
+            <p>Cargando auditoría de roles por usuario...</p>
+          </div>
+        `;
+      }
       try {
-        const res = await fetch('/api/roles/unused-audit');
+        const url = forceRefresh ? '/api/roles/unused-audit?refresh=true' : '/api/roles/unused-audit';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if (json.success) {
+        if (json.success && json.users) {
           unusedRolesAuditData = json;
           updateUnusedRolesBadges();
           renderUnusedRolesList();
           if (forceRefresh) showToast('Auditoría de roles actualizada correctamente');
         } else {
-          showToast('Error cargando auditoría: ' + (json.error || 'Desconocido'));
+          throw new Error(json.error || 'Respuesta inválida del servidor');
         }
       } catch (err) {
         console.error('Error loadUnusedRolesAudit:', err);
-        showToast('Error de red al consultar auditoría de roles');
+        if (container && !unusedRolesAuditData) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-rose-400 text-sm">
+              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+              <p class="font-semibold">No se pudo cargar la auditoría de roles (${err.message})</p>
+              <button onclick="loadUnusedRolesAudit(true)" class="mt-3 px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition">
+                Reintentar Carga
+              </button>
+            </div>
+          `;
+        }
+        showToast('Error al consultar auditoría de roles: ' + err.message);
       } finally {
         if (icon) icon.classList.remove('fa-spin');
       }
@@ -3128,7 +3150,18 @@
         if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
         if (bannerText) bannerText.innerHTML = '<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). <em class="text-amber-300">Incluye 36 roles con procesos semestrales que se aconseja validar antes de remover.</em>';
       }
-      renderUnusedRolesList();
+      if (!unusedRolesAuditData) {
+        loadUnusedRolesAudit();
+      } else {
+        renderUnusedRolesList();
+      }
+    }
+
+    function handleRoleDropdownSelect(selectEl) {
+      const val = selectEl.value;
+      if (!val) return;
+      copySingleRole(val);
+      selectEl.selectedIndex = 0;
     }
 
     function renderUnusedRolesList() {
@@ -3146,7 +3179,9 @@
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;
-        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchUser = (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchRole = rolesList.some(r => (r.role || '').toLowerCase().includes(q));
+        return matchUser || matchRole;
       });
 
       let totalRolesToRem = 0;
@@ -3159,7 +3194,7 @@
       const lblR = document.getElementById('lblRolesCount');
       if (lblR) lblR.textContent = totalRolesToRem.toLocaleString();
       const footerCount = document.getElementById('unusedRolesListFooterCount');
-      if (footerCount) footerCount.textContent = `Mostrando ${filtered.length} usuarios (${totalRolesToRem.toLocaleString()} roles a eliminar)`;
+      if (footerCount) footerCount.textContent = `Mostrando ${filtered.length} usuarios únicos (${totalRolesToRem.toLocaleString()} roles a eliminar)`;
 
       if (filtered.length === 0) {
         container.innerHTML = `
@@ -3172,75 +3207,76 @@
         return;
       }
 
-      let html = '';
-      filtered.forEach(u => {
+      let rowsHtml = '';
+      filtered.forEach((u, index) => {
         const rolesList = is180 ? u.roles180 : u.roles90;
         const roleNames = rolesList.map(r => r.role);
         const encodedRoles = encodeURIComponent(roleNames.join('\n'));
+        const previewRoles = roleNames.slice(0, 2).join(', ') + (roleNames.length > 2 ? ` (+${roleNames.length - 2} más)` : '');
 
-        html += `
-          <div class="p-4 rounded-xl bg-gray-950/70 border border-gray-800 hover:border-amber-500/40 transition group">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b border-gray-800/80">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600/20 to-amber-900/40 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold font-mono text-sm shadow-sm">
-                  ${(u.username || '--').slice(0, 2)}
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono font-bold text-white text-sm bg-gray-900 px-2 py-0.5 rounded border border-gray-700/60">${u.username}</span>
-                    <span class="text-xs font-semibold text-gray-200">${u.fullName}</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">${u.userType}</span>
-                  </div>
-                  <div class="flex items-center gap-3 text-[11px] text-gray-400 mt-0.5 font-mono">
-                    <span>Roles Asignados: <strong class="text-gray-200">${u.assignedRolesCount}</strong></span>
-                    <span>•</span>
-                    <span>Último Login: <span class="text-gray-300">${u.lastLogin}</span></span>
-                    ${u.redundantRolesCount > 0 ? `<span>•</span> <span class="text-purple-400 font-sans" title="Roles cuyas transacciones usadas ya están cubiertas por otros roles">${u.redundantRolesCount} solapados</span>` : ''}
-                  </div>
-                </div>
+        rowsHtml += `
+          <tr class="border-b border-gray-800/70 hover:bg-gray-900/80 transition">
+            <td class="px-3 py-2.5 text-center font-mono text-xs text-gray-500">${index + 1}</td>
+            <td class="px-3 py-2.5 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-white text-xs bg-gray-900 px-2 py-1 rounded border border-gray-700/80">${u.username}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">${u.userType}</span>
               </div>
-
-              <div class="flex items-center gap-2 self-end md:self-auto">
-                <span class="px-2.5 py-1 rounded-lg bg-rose-950/70 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm">
-                  <i class="fa-solid fa-trash-can text-rose-400 text-[11px]"></i>
-                  <span>${rolesList.length} ${rolesList.length === 1 ? 'rol a eliminar' : 'roles a eliminar'}</span>
-                </span>
-                <button onclick="copyUserRoles('${u.username}', '${encodedRoles}')"
-                  class="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-amber-600 text-gray-300 hover:text-white border border-gray-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm"
-                  title="Copiar roles de ${u.username} (formato lista para SU10 / SU01)">
-                  <i class="fa-solid fa-copy text-amber-400 group-hover:text-white"></i>
-                  <span>Copiar Roles</span>
-                </button>
+            </td>
+            <td class="px-3 py-2.5">
+              <div class="text-xs font-semibold text-gray-200 leading-tight">${u.fullName}</div>
+              <div class="text-[10px] text-gray-500 font-mono mt-0.5">Últ. login: ${u.lastLogin}</div>
+            </td>
+            <td class="px-3 py-2.5 text-center font-mono text-xs text-gray-300">${u.assignedRolesCount}</td>
+            <td class="px-3 py-2.5 text-center whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded-md bg-rose-950/70 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold">
+                ${rolesList.length} ${rolesList.length === 1 ? 'rol' : 'roles'}
+              </span>
+            </td>
+            <td class="px-3 py-2.5 min-w-[290px] max-w-md">
+              <div class="relative">
+                <select onchange="handleRoleDropdownSelect(this)"
+                  class="w-full bg-gray-950 hover:bg-gray-900 border border-amber-500/40 hover:border-amber-400/70 rounded-lg px-3 py-1.5 text-xs font-mono text-amber-200 focus:outline-none focus:border-amber-400 transition cursor-pointer shadow-sm">
+                  <option value="">📋 Desplegar ${rolesList.length} ${rolesList.length === 1 ? 'rol' : 'roles'} (${previewRoles})</option>
+                  ${rolesList.map((r, i) => {
+                    const tag = r.isUnused180 ? 'Sin uso >180d' : 'Sin uso >90d (Validar Semestral)';
+                    return `<option value="${r.role}" class="bg-gray-900 text-gray-100 py-1">${i + 1}. ${r.role} — [${r.totalTcodes} TCodes | ${tag}]</option>`;
+                  }).join('')}
+                </select>
               </div>
-            </div>
-
-            <div class="mt-3">
-              <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <i class="fa-solid fa-list-check text-amber-400 text-[10px]"></i>
-                <span>Roles a eliminar (Haz clic en un rol para copiarlo):</span>
-              </div>
-              <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
-                ${rolesList.map(r => {
-                  const is180Rol = r.isUnused180;
-                  const tagClass = is180Rol ? 'bg-amber-950/40 hover:bg-amber-800/60 border-amber-500/30 text-amber-200' : 'bg-blue-950/40 hover:bg-blue-800/60 border-blue-500/30 text-blue-200';
-                  return `
-                    <div onclick="copySingleRole('${r.role}')"
-                      class="px-2.5 py-1 rounded-md border ${tagClass} text-xs font-mono flex items-center gap-1.5 cursor-pointer transition group/pill active:scale-95"
-                      title="Clic para copiar '${r.role}' | ${r.totalTcodes} tcodes | ${r.action}">
-                      <i class="fa-solid fa-tag text-[10px] opacity-60 group-hover/pill:opacity-100"></i>
-                      <span class="font-bold">${r.role}</span>
-                      <span class="text-[10px] opacity-70 px-1 py-0.2 rounded bg-black/40">${r.totalTcodes} tc</span>
-                      ${!is180Rol ? '<span class="text-[9px] text-blue-300 bg-blue-900/60 px-1 rounded">Semestral</span>' : ''}
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          </div>
+            </td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+              <button onclick="copyUserRoles('${u.username}', '${encodedRoles}')"
+                class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-amber-600 text-gray-200 hover:text-white border border-gray-700 text-xs font-semibold inline-flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm"
+                title="Copiar todos los roles a eliminar de ${u.username} para pegar en SU10 / SU01">
+                <i class="fa-solid fa-copy text-amber-400"></i>
+                <span>Copiar (${rolesList.length})</span>
+              </button>
+            </td>
+          </tr>
         `;
       });
 
-      container.innerHTML = html;
+      container.innerHTML = `
+        <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-950/60 shadow-inner">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-gray-800 bg-gray-900/90 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                <th class="px-3 py-2.5 text-center w-10">#</th>
+                <th class="px-3 py-2.5">Usuario</th>
+                <th class="px-3 py-2.5">Nombre Completo</th>
+                <th class="px-3 py-2.5 text-center" title="Total de roles asignados actualmente">Asignados</th>
+                <th class="px-3 py-2.5 text-center" title="Cantidad de roles con 0% de uso a eliminar">A Eliminar</th>
+                <th class="px-3 py-2.5">Roles a Eliminar (Lista Desplegable — Selecciona para copiar)</th>
+                <th class="px-3 py-2.5 text-right">Acción SU10</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
     function copySingleRole(roleName) {
@@ -3270,7 +3306,9 @@
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;
-        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchUser = (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchRole = rolesList.some(r => (r.role || '').toLowerCase().includes(q));
+        return matchUser || matchRole;
       });
 
       const uniqueRoles = new Set();
@@ -3302,15 +3340,16 @@
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;
-        return (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchUser = (u.username || '').toLowerCase().includes(q) || (u.fullName || '').toLowerCase().includes(q);
+        const matchRole = rolesList.some(r => (r.role || '').toLowerCase().includes(q));
+        return matchUser || matchRole;
       });
 
-      let csv = 'Usuario;Nombre Completo;Ventana;Rol Asignado;Total TCodes Rol;Estado de Uso;Accion Sugerida\n';
+      let csv = '\uFEFFUsuario;Nombre Completo;Ventana;Total Roles Asignados;Cantidad Roles a Eliminar;Roles a Eliminar (Agrupados)\n';
       filtered.forEach(u => {
         const list = is180 ? u.roles180 : u.roles90;
-        list.forEach(r => {
-          csv += `"${u.username}";"${u.fullName}";"${windowLabel}";"${r.role}";${r.totalTcodes};"${r.isUnused180 ? 'Sin uso >180d' : 'Sin uso >90d'}";"${r.action}"\n`;
-        });
+        const groupedRoles = list.map(r => r.role).join(' | ');
+        csv += `"${u.username}";"${u.fullName}";"${windowLabel}";${u.totalRolesAssigned};${list.length};"${groupedRoles}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
