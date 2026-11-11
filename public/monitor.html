@@ -276,10 +276,10 @@
             </span>
           </div>
           <div class="text-xs font-mono font-bold text-emerald-300 flex items-center gap-1.5 mt-0.5" id="hrJobText">
-            <span>ZHR_BLOQUEO_RETIROS_DIARIO: FINALIZADO OK</span>
+            <span>Usuarios bloqueados por retiro</span>
           </div>
           <div id="hrJobSubtext" class="text-[10px] text-emerald-400/80 font-sans flex items-center gap-1 group-hover:text-emerald-300 transition-colors">
-            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> <span>Usuarios retirados por retiro (ver detalle)</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> <span>Clic para ver historial (ver detalle)</span>
           </div>
         </div>
       </div>
@@ -6006,27 +6006,27 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         const hrPulse = document.getElementById('hrJobPulse');
 
         if (hrJob.status === 'F') {
-          if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: FINALIZADO OK`;
+          if (hrText) hrText.textContent = 'Usuarios bloqueados por retiro';
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Usuarios retirados por retiro (${hrJob.blocked_today != null ? hrJob.blocked_today + ' bloqueados hoy' : 'ver detalle'})`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Clic para ver historial (${hrJob.blocked_today != null ? hrJob.blocked_today + ' bloqueados hoy' : 'ver detalle'})`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-emerald-500/40 bg-emerald-950/30 flex items-center gap-3 cursor-pointer hover:bg-emerald-900/40 hover:border-emerald-400/60 transition group active:scale-95 shadow-sm';
           }
           if (hrPulse) hrPulse.classList.remove('hidden');
         } else if (hrJob.status === 'A') {
-          if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: CANCELADO (REVISAR SM37)`;
+          if (hrText) hrText.textContent = 'Usuarios bloqueados por retiro (Cancelado)';
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Usuarios retirados por retiro • Fallo de ejecución (ver historial)`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Fallo de ejecución • Clic para ver historial`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-rose-500 bg-rose-950/50 flex items-center gap-3 cursor-pointer hover:bg-rose-900/40 hover:border-rose-400 transition group active:scale-95 pulse-red';
           }
           if (hrPulse) hrPulse.classList.add('hidden');
         } else {
-          if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: ${hrJob.status || 'SIN EJECUCIÓN HOY'}`;
+          if (hrText) hrText.textContent = 'Usuarios bloqueados por retiro';
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Usuarios retirados por retiro (ver historial)`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Clic para ver historial de bloqueos`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-amber-500/40 bg-amber-950/30 flex items-center gap-3 cursor-pointer hover:bg-amber-900/40 hover:border-amber-400/60 transition group active:scale-95';
