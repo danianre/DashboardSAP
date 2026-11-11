@@ -620,7 +620,7 @@
             <i class="fa-solid fa-microchip text-blue-400"></i>
             Monitor de Procesos Activos en Tiempo Real (SM50 / SM66)
           </h2>
-          <p class="text-xs text-gray-400">Procesos que superen 300 segundos en diálogo se marcan en alerta crítica</p>
+          <p class="text-xs text-gray-400">Alerta en rojo: procesos <b class="text-rose-400 font-semibold">BTC &gt; 1 hora</b> y procesos <b class="text-rose-400 font-semibold">DIA &gt; 30 minutos</b></p>
         </div>
 
         <!-- Controles: Botón de Diagnóstico, Filtro de Activos y Contadores -->
@@ -5858,6 +5858,22 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
       return true;
     }
 
+    function formatProcessDuration(sec) {
+      const s = parseInt(sec, 10) || 0;
+      if (s >= 3600) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const remSec = s % 60;
+        return `${h}h ${m < 10 ? '0' + m : m}m (${s}s)`;
+      }
+      if (s >= 60) {
+        const m = Math.floor(s / 60);
+        const remSec = s % 60;
+        return `${m}m ${remSec < 10 ? '0' + remSec : remSec}s (${s}s)`;
+      }
+      return `${s}s`;
+    }
+
     function renderWorkProcesses() {
       const wpBody = document.getElementById('sm50TableBody');
       const onlyActive = document.getElementById('chkOnlyActiveWp')?.checked;
@@ -5865,19 +5881,34 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
 
       let diaBusy = 0, diaTotal = 0;
       let btcBusy = 0, btcTotal = 0;
+      let redAlertCount = 0;
 
       currentWorkProcesses.forEach(wp => {
         const active = isProcessActive(wp);
-        if (wp.wp_typ === 'DIA') {
+        const typ = String(wp.wp_typ || '').toUpperCase().trim();
+        const eltime = parseInt(String(wp.wp_eltime || '').trim(), 10) || 0;
+
+        if (typ === 'DIA') {
           diaTotal++;
-          if (active) diaBusy++;
-        } else if (wp.wp_typ === 'BTC') {
+          if (active) {
+            diaBusy++;
+            if (eltime > 1800) redAlertCount++;
+          }
+        } else if (typ === 'BTC') {
           btcTotal++;
-          if (active) btcBusy++;
+          if (active) {
+            btcBusy++;
+            if (eltime > 3600) redAlertCount++;
+          }
         }
       });
 
+      const redBadgeHtml = redAlertCount > 0
+        ? `<span class="px-2.5 py-1 rounded bg-rose-950 text-rose-200 border border-rose-500/80 flex items-center gap-1.5 font-bold animate-pulse shadow"><i class="fa-solid fa-triangle-exclamation text-rose-400"></i> ${redAlertCount} en Rojo</span>`
+        : '';
+
       document.getElementById('wpSummaryBadges').innerHTML = `
+        ${redBadgeHtml}
         <span class="px-2.5 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700/60">DIA Ocupados: <b class="text-amber-400">${diaBusy}/${diaTotal}</b></span>
         <span class="px-2.5 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700/60">BTC Ocupados: <b class="text-purple-400">${btcBusy}/${btcTotal}</b></span>
       `;
@@ -5899,21 +5930,42 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
 
       listToDisplay.forEach(wp => {
         const isRunning = isProcessActive(wp);
-        const isSlow = Number(wp.wp_eltime) > 300;
-        const rowClass = isSlow ? 'bg-rose-950/40 text-rose-200 font-bold' : '';
-        const statusBadge = isRunning
+        const typ = String(wp.wp_typ || '').toUpperCase().trim();
+        const eltime = parseInt(String(wp.wp_eltime || '').trim(), 10) || 0;
+
+        // Regla: Marcar en rojo cuando BTC dure > 1 hora (3600s) o DIA dure > 30 minutos (1800s)
+        const isBtcOver1h = (typ === 'BTC' && eltime > 3600);
+        const isDiaOver30m = (typ === 'DIA' && eltime > 1800);
+        const isRedAlert = isRunning && (isBtcOver1h || isDiaOver30m);
+
+        let rowClass = 'hover:bg-gray-800/40 transition-colors';
+        let statusBadge = isRunning
           ? `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">${wp.wp_status}</span>`
           : `<span class="px-2 py-0.5 rounded bg-gray-800 text-gray-400">${wp.wp_status}</span>`;
+        let timeDisplayHtml = `<span class="text-gray-400 font-mono">${formatProcessDuration(eltime)}</span>`;
+
+        if (isRedAlert) {
+          rowClass = 'bg-rose-950/60 text-rose-100 font-bold border-l-4 border-rose-500 shadow-inner hover:bg-rose-900/60 transition-colors';
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold animate-pulse text-[11px] shadow">${wp.wp_status}</span>`;
+          const alertBadgeLabel = isBtcOver1h ? 'BTC &gt; 1h' : 'DIA &gt; 30m';
+          timeDisplayHtml = `
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-950 border border-rose-500/60 text-rose-300 font-mono font-bold shadow-sm">
+              <i class="fa-solid fa-triangle-exclamation text-rose-400 animate-bounce text-xs"></i>
+              <span>${formatProcessDuration(eltime)}</span>
+              <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-rose-600 text-white uppercase">${alertBadgeLabel}</span>
+            </span>
+          `;
+        }
 
         wpBody.innerHTML += `
-          <tr class="${rowClass} hover:bg-gray-800/40 transition-colors">
+          <tr class="${rowClass}">
             <td class="py-2.5 px-3 whitespace-nowrap">${wp.wp_no}</td>
-            <td class="py-2.5 px-3 font-bold whitespace-nowrap">${wp.wp_typ}</td>
+            <td class="py-2.5 px-3 font-bold whitespace-nowrap ${isRedAlert ? 'text-rose-300' : ''}">${wp.wp_typ}</td>
             <td class="py-2.5 px-3 whitespace-nowrap">${statusBadge}</td>
-            <td class="py-2.5 px-3 text-white whitespace-nowrap">${wp.wp_bname || '-'}</td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${wp.wp_report || '-'}</td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${wp.wp_action || '-'} ${wp.wp_table ? `[${wp.wp_table}]` : ''}</td>
-            <td class="py-2.5 px-3 text-right whitespace-nowrap ${isSlow ? 'text-rose-400' : ''}">${wp.wp_eltime || 0}s</td>
+            <td class="py-2.5 px-3 whitespace-nowrap ${isRedAlert ? 'text-white font-bold' : 'text-gray-200'}">${wp.wp_bname || '-'}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap ${isRedAlert ? 'text-rose-200' : ''}">${wp.wp_report || '-'}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap ${isRedAlert ? 'text-rose-300' : ''}">${wp.wp_action || '-'} ${wp.wp_table ? `[${wp.wp_table}]` : ''}</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">${timeDisplayHtml}</td>
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
               ${isRunning ? `<button onclick="cancelWorkProcess(${wp.wp_no})" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 px-2.5 py-1 rounded text-[11px] transition active:scale-95" title="Forzar cancelación del proceso"><i class="fa-solid fa-xmark"></i></button>` : '-'}
             </td>

@@ -390,14 +390,31 @@ function analyzeWorkProcesses(workProcesses = [], userSessions = []) {
         reportProcessCount[report].push({ wp_no: wp.wp_no, typ, user, eltime });
       }
 
-      // 1. Anomalía: Tiempo de ejecución crítico en diálogo (> 300 segundos)
-      if (typ === 'DIA' && eltime > 300) {
+      // 1. Anomalía: Tiempo de ejecución crítico en diálogo (> 30 min / 1800s o > 300s)
+      if (typ === 'DIA' && eltime > 1800) {
+        anomalies.push({
+          id: `timeout-critical-wp-${wp.wp_no}`,
+          type: 'TIMEOUT_RISK',
+          severity: 'critical',
+          badge: 'DIA > 30 Min (Alerta Roja)',
+          badgeColor: 'rose',
+          wp_no: wp.wp_no,
+          wp_typ: typ,
+          wp_bname: user || 'Desconocido',
+          wp_report: report || 'Sin reporte',
+          wp_action: wp.wp_action || 'En ejecución',
+          wp_table: table,
+          wp_eltime: eltime,
+          reason: `El proceso de diálogo lleva ${eltime}s (${Math.floor(eltime / 60)} min) en ejecución continua (> 30 minutos). Provoca monopolización crítica del hilo y riesgo inminente de caída por rdisp/max_wprun_time.`,
+          recommendation: `Cancelar inmediatamente el Work Process #${wp.wp_no} para liberar el hilo interactivo del Dispatcher.`
+        });
+      } else if (typ === 'DIA' && eltime > 300) {
         anomalies.push({
           id: `timeout-wp-${wp.wp_no}`,
           type: 'TIMEOUT_RISK',
-          severity: eltime > 500 ? 'critical' : 'high',
+          severity: eltime > 900 ? 'high' : 'medium',
           badge: 'Riesgo de TIME_OUT',
-          badgeColor: 'rose',
+          badgeColor: 'amber',
           wp_no: wp.wp_no,
           wp_typ: typ,
           wp_bname: user || 'Desconocido',
@@ -407,6 +424,26 @@ function analyzeWorkProcesses(workProcesses = [], userSessions = []) {
           wp_eltime: eltime,
           reason: `El proceso de diálogo lleva ${eltime}s en ejecución. Al superar el umbral de 300s se encuentra cerca del límite definido en rdisp/max_wprun_time y generará un Short Dump en ST22.`,
           recommendation: `Cancelar puntualmente el Work Process #${wp.wp_no} para liberar el recurso de diálogo sin reiniciar la instancia.`
+        });
+      }
+
+      // 1.1 Anomalía: Proceso Background BTC prolongado (> 1 hora / 3600 segundos)
+      if (typ === 'BTC' && eltime > 3600) {
+        anomalies.push({
+          id: `btc-over1h-wp-${wp.wp_no}`,
+          type: 'BTC_LONG_RUNNER',
+          severity: 'critical',
+          badge: 'BTC > 1 Hora (Alerta Roja)',
+          badgeColor: 'rose',
+          wp_no: wp.wp_no,
+          wp_typ: typ,
+          wp_bname: user || 'Desconocido',
+          wp_report: report || 'Sin reporte',
+          wp_action: wp.wp_action || 'Batch en ejecución',
+          wp_table: table,
+          wp_eltime: eltime,
+          reason: `El proceso de fondo (BTC) acumula ${eltime}s (${Math.floor(eltime / 3600)}h ${Math.floor((eltime % 3600) / 60)}m) de ejecución continua (> 1 hora). Puede corresponder a un job atascado o con consumo desmedido de BD.`,
+          recommendation: `Verificar el estado del job en SM37/SM50 y coordinar su cancelación si no corresponde a una carga masiva autorizada.`
         });
       }
 
