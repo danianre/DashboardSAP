@@ -116,6 +116,9 @@ function initAlertTables() {
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_rule ON sap_alert_incidents(rule_key)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_severity ON sap_alert_incidents(severity)`);
 
+      // Normalizar cualquier incidente previo que no sea CRITICAL para garantizar que solo se alerte sobre críticas
+      db.run(`UPDATE sap_alert_incidents SET status = 'NORMALIZED' WHERE status IN ('ACTIVE', 'RECOVERING') AND severity != 'CRITICAL'`);
+
       db.run(`CREATE TABLE IF NOT EXISTS sap_alert_config (
         key TEXT PRIMARY KEY,
         value_json TEXT NOT NULL,
@@ -476,6 +479,25 @@ async function processRuleEvaluation({
     [ruleKey]
   );
 
+  // Principio fundamental solicitado: "Solo da alerta de las criticas"
+  // Exclusivamente las condiciones CRITICAL generan alertas activas en el dashboard.
+  if (candidateSeverity !== 'CRITICAL') {
+    if (existingActive) {
+      const totalDurationSec = Math.max(
+        existingActive.duration_seconds || 0,
+        Math.round((nowMs - new Date(existingActive.started_at).getTime()) / 1000)
+      );
+      await dbRun(
+        `UPDATE sap_alert_incidents
+         SET status = 'NORMALIZED', ended_at = ?, updated_at = ?, duration_seconds = ?
+         WHERE id = ?`,
+        [nowIso, nowIso, totalDurationSec, existingActive.id]
+      );
+      conditionTrackers.delete(ruleKey);
+    }
+    return;
+  }
+
   if (isBreached) {
     // Reiniciar temporizador de recuperación porque la condición sigue activa
     tracker.recoveryStartTs = null;
@@ -767,12 +789,10 @@ async function evaluateSystemAlerts(sapData) {
 
   // ==========================================================================
   // REGLA 1: SATURACIÓN SOSTENIDA DE PROCESOS BACKGROUND (BTC)
-  // No dispara por picos de segundos; exige permanencia >= 3 min (Grave) o >= 5 min al 100% (Crítico)
+  // Principio "Solo da alerta de las críticas": requiere 100% ocupado sostenido durante varios minutos
   // ==========================================================================
-  const btcTracker = conditionTrackers.get('BTC_SATURATION');
-  const currentBtcSustainedSec = btcTracker?.firstBreachTs ? Math.round((nowMs - btcTracker.firstBreachTs) / 1000) : 0;
-  const isBtcBreached = btcBusyPct >= th.btcSeverePct;
-  const isBtcCritical = btcBusyPct >= th.btcCriticalPct && currentBtcSustainedSec >= th.btcCriticalDurationSec;
+  const isBtcCritical = btcBusyPct >= th.btcCriticalPct;
+  const isBtcBreached = isBtcCritical;
   const topBtcJobs = activeBtcDetails
     .sort((a, b) => b.eltime - a.eltime)
     .slice(0, 3)
@@ -785,17 +805,15 @@ async function evaluateSystemAlerts(sapData) {
     component: 'Procesos Background (BTC)',
     isBreached: isBtcBreached,
     isBelowHysteresis: btcBusyPct < th.btcRecoveryPct,
-    candidateSeverity: isBtcCritical ? 'CRITICAL' : 'SEVERE',
-    sustainRequiredSec: th.btcSevereDurationSec,
+    candidateSeverity: 'CRITICAL',
+    sustainRequiredSec: th.btcCriticalDurationSec,
     metricName: 'Ocupación de Work Processes BTC',
     metricValue: btcBusyPct,
     metricUnit: '%',
-    thresholdValue: isBtcCritical ? th.btcCriticalPct : th.btcSeverePct,
+    thresholdValue: th.btcCriticalPct,
     relatedEntity: topBtcJobs,
-    title: isBtcCritical
-      ? `Saturación total sostenida de procesos BTC (${btcBusy}/${btcTotal} al ${btcBusyPct}%)`
-      : `Ocupación elevada y persistente de procesos BTC (${btcBusy}/${btcTotal} al ${btcBusyPct}%)`,
-    technicalDescription: `Los ${btcTotal} procesos de fondo (BTC) acumulan una ocupación sostenida de ${btcBusyPct}% (${btcTotal - btcBusy} libres). Procesos dominantes: ${topBtcJobs}.`,
+    title: `Saturación crítica sostenida de procesos BTC (${btcBusy}/${btcTotal} al ${btcBusyPct}%)`,
+    technicalDescription: `Los ${btcTotal} procesos de fondo (BTC) acumulan saturación del 100% (0 procesos libres) de forma sostenida. Procesos dominantes: ${topBtcJobs}.`,
     operationalImpact: 'Acumulación de trabajos pendientes en SM37, retraso en jobs críticos de facturación electrónica (eDocument), interfases CPI y cierres automáticos.',
     recommendedAction: 'Verificar en SM37/SM50 si algún job permanece ciclado o bloqueado en lectura de BD; evaluar reprogramación de extracciones masivas (ej. QLIK / reportes Z).',
     extraEvidence: { btcBusy, btcTotal, activeBtcDetails },
@@ -805,13 +823,12 @@ async function evaluateSystemAlerts(sapData) {
   });
 
   // ==========================================================================
-  // REGLA 2: SATURACIÓN SOSTENIDA DE PROCESOS DE DIÁLOGO (DIA)
+  // REGLA 2: SATURACIÓN CRÍTICA SOSTENIDA DE PROCESOS DE DIÁLOGO (DIA)
+  // Principio "Solo da alerta de las críticas": requiere ocupación crítica (>= 90% con <= 1 libre) sostenida
   // ==========================================================================
-  const diaTracker = conditionTrackers.get('DIA_SATURATION');
-  const currentDiaSustainedSec = diaTracker?.firstBreachTs ? Math.round((nowMs - diaTracker.firstBreachTs) / 1000) : 0;
-  const isDiaBreached = diaBusyPct >= th.diaSeverePct;
-  const isDiaCritical = diaBusyPct >= th.diaCriticalPct && currentDiaSustainedSec >= th.diaCriticalDurationSec;
   const freeDia = Math.max(0, diaTotal - diaBusy);
+  const isDiaCritical = diaBusyPct >= th.diaCriticalPct && freeDia <= 1;
+  const isDiaBreached = isDiaCritical;
 
   await processRuleEvaluation({
     ruleKey: 'DIA_SATURATION',
@@ -819,17 +836,15 @@ async function evaluateSystemAlerts(sapData) {
     component: 'Procesos de Diálogo (DIA)',
     isBreached: isDiaBreached,
     isBelowHysteresis: diaBusyPct < th.diaRecoveryPct,
-    candidateSeverity: isDiaCritical ? 'CRITICAL' : 'SEVERE',
-    sustainRequiredSec: th.diaSevereDurationSec,
+    candidateSeverity: 'CRITICAL',
+    sustainRequiredSec: th.diaCriticalDurationSec,
     metricName: 'Ocupación de Work Processes DIA',
     metricValue: diaBusyPct,
     metricUnit: '%',
-    thresholdValue: isDiaCritical ? th.diaCriticalPct : th.diaSeverePct,
+    thresholdValue: th.diaCriticalPct,
     relatedEntity: `${diaBusy}/${diaTotal} DIA ocupados (${freeDia} libres) · ${activeSessions} sesiones de usuario`,
-    title: isDiaCritical
-      ? `Agotamiento crítico de procesos de Diálogo DIA (${diaBusyPct}% ocupado, solo ${freeDia} libres)`
-      : `Saturación sostenida de procesos de Diálogo DIA (${diaBusy}/${diaTotal} ocupados)`,
-    technicalDescription: `El pool interactivo de Diálogo presenta ${diaBusy} de ${diaTotal} procesos ocupados de forma continua con ${activeSessions} sesiones conectadas.`,
+    title: `Agotamiento crítico de procesos de Diálogo DIA (${diaBusyPct}% ocupado, solo ${freeDia} libres)`,
+    technicalDescription: `El pool interactivo de Diálogo presenta ${diaBusy} de ${diaTotal} procesos ocupados al ${diaBusyPct}% de forma sostenida con ${activeSessions} sesiones conectadas.`,
     operationalImpact: 'Degradación directa del tiempo de respuesta en pantallas SAP GUI y riesgo de encolamiento generalizado en el Dispatcher para todos los usuarios.',
     recommendedAction: 'Inspeccionar en SM50 los procesos DIA con mayor tiempo transcurrido y cancelar consultas interactivas descontroladas.',
     extraEvidence: { diaBusy, diaTotal, freeDia, slowDiaProcesses },
@@ -840,14 +855,9 @@ async function evaluateSystemAlerts(sapData) {
 
   // ==========================================================================
   // REGLA 3: PROCESOS DIA COLGADOS / RIESGO DE TIME_OUT Y BLOQUEO DE HILOS
-  // Solo alerta cuando hay múltiples procesos lentos o un proceso crítico (>420s)
   // ==========================================================================
   const maxSlowDiaSec = slowDiaProcesses.length > 0 ? Math.max(...slowDiaProcesses.map(p => p.eltime)) : 0;
-  const isSlowDiaBreached =
-    slowDiaProcesses.length >= th.diaMinSlowProcessesForAlert ||
-    maxSlowDiaSec >= th.diaSlowProcessCriticalSec ||
-    (slowDiaProcesses.length === 1 && diaBusyPct >= 50);
-  const isSlowDiaCrit = maxSlowDiaSec >= th.diaSlowProcessCriticalSec || slowDiaProcesses.length >= 3;
+  const isSlowDiaCrit = maxSlowDiaSec >= th.diaSlowProcessCriticalSec || (slowDiaProcesses.length >= 3 && diaBusyPct >= 70);
   const slowSummary = slowDiaProcesses
     .map(p => `WP#${p.wp_no} (${p.user}: ${p.report || 'Transacción'} · ${p.eltime}s${p.table ? ` en ${p.table}` : ''})`)
     .join(', ');
@@ -856,19 +866,17 @@ async function evaluateSystemAlerts(sapData) {
     ruleKey: 'DIA_LONG_RUNNERS',
     category: 'DIA',
     component: 'Tiempos de Respuesta Diálogo / Dispatcher',
-    isBreached: isSlowDiaBreached,
+    isBreached: isSlowDiaCrit,
     isBelowHysteresis: slowDiaProcesses.length === 0,
-    candidateSeverity: isSlowDiaCrit ? 'CRITICAL' : 'SEVERE',
-    sustainRequiredSec: 45, // Confirmar en 3 lecturas que el proceso sigue reteniendo el hilo
+    candidateSeverity: 'CRITICAL',
+    sustainRequiredSec: 60,
     metricName: 'Tiempo máximo de ejecución en hilo DIA',
     metricValue: maxSlowDiaSec,
     metricUnit: 's',
-    thresholdValue: isSlowDiaCrit ? th.diaSlowProcessCriticalSec : th.diaSlowProcessSevereSec,
+    thresholdValue: th.diaSlowProcessCriticalSec,
     relatedEntity: slowSummary || 'Hilos de diálogo SAP',
-    title: isSlowDiaCrit
-      ? `Retención crítica de hilos de Diálogo (${slowDiaProcesses.length} procesos > ${th.diaSlowProcessSevereSec}s, máx ${maxSlowDiaSec}s)`
-      : `Procesos de Diálogo con tiempo de respuesta anormal (${maxSlowDiaSec}s en ejecución)`,
-    technicalDescription: `Se detectaron ${slowDiaProcesses.length} procesos DIA monopolizando hilos interactivos cerca del límite rdisp/max_wprun_time: ${slowSummary}.`,
+    title: `Retención crítica de hilos de Diálogo (${slowDiaProcesses.length} procesos > ${th.diaSlowProcessSevereSec}s, máx ${maxSlowDiaSec}s)`,
+    technicalDescription: `Se detectaron procesos DIA monopolizando hilos interactivos cerca del límite rdisp/max_wprun_time: ${slowSummary}.`,
     operationalImpact: 'Reducción de capacidad efectiva de atención del Dispatcher y generación inminente de Short Dumps TIME_OUT en ST22.',
     recommendedAction: 'Contactar al usuario ejecutor o cancelar el Work Process afectado desde la tabla de procesos activos si corresponde a una consulta sin filtros.',
     extraEvidence: { slowDiaProcesses },
@@ -878,26 +886,25 @@ async function evaluateSystemAlerts(sapData) {
   });
 
   // ==========================================================================
-  // REGLA 4: AGOTAMIENTO COMBINADO DE WORK PROCESSES (CAPACIDAD DE INSTANCIA)
+  // REGLA 4: AGOTAMIENTO SIMULTÁNEO CRÍTICO DE WORK PROCESSES (CAPACIDAD DE INSTANCIA)
   // ==========================================================================
-  const isWpExhausted = wpBusyPct >= th.wpExhaustionSeverePct;
   const isWpCrit = wpBusyPct >= th.wpExhaustionCriticalPct;
 
   await processRuleEvaluation({
     ruleKey: 'WP_GLOBAL_EXHAUSTION',
     category: 'WORK_PROCESSES',
     component: 'Capacidad Global de Work Processes (SM50)',
-    isBreached: isWpExhausted,
+    isBreached: isWpCrit,
     isBelowHysteresis: wpBusyPct < th.wpExhaustionRecoveryPct,
-    candidateSeverity: isWpCrit ? 'CRITICAL' : 'SEVERE',
+    candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.wpExhaustionDurationSec,
     metricName: 'Ocupación global de Work Processes (DIA+BTC+UPD)',
     metricValue: wpBusyPct,
     metricUnit: '%',
-    thresholdValue: isWpCrit ? th.wpExhaustionCriticalPct : th.wpExhaustionSeverePct,
+    thresholdValue: th.wpExhaustionCriticalPct,
     relatedEntity: `${totalBusy}/${totalWps} procesos totales activos (DIA: ${diaBusy}/${diaTotal}, BTC: ${btcBusy}/${btcTotal})`,
-    title: `Agotamiento simultáneo de Work Processes en la instancia (${wpBusyPct}% ocupado)`,
-    technicalDescription: `Saturación concurrente de múltiples tipos de procesos (${totalBusy} de ${totalWps} ocupados), dejando solo ${totalWps - totalBusy} procesos libres en toda la instancia.`,
+    title: `Agotamiento crítico de Work Processes en la instancia (${wpBusyPct}% ocupado)`,
+    technicalDescription: `Saturación concurrente crítica (${totalBusy} de ${totalWps} ocupados), dejando solo ${totalWps - totalBusy} procesos libres en toda la instancia.`,
     operationalImpact: 'Alto riesgo de congelamiento general de la instancia SAP y bloqueo de actualizaciones V1/V2 (SM13).',
     recommendedAction: 'Priorizar liberación inmediata de procesos DIA/BTC bloqueados y revisar colas de actualización en SM13 y bloqueos en SM12.',
     extraEvidence: { totalBusy, totalWps, diaBusy, diaTotal, btcBusy, btcTotal },
@@ -907,10 +914,9 @@ async function evaluateSystemAlerts(sapData) {
   });
 
   // ==========================================================================
-  // REGLA 5: ACUMULACIÓN ANORMAL DE BLOQUEOS SM12 Y ESPERAS ENQUEUE
+  // REGLA 5: CONTENCIÓN CRÍTICA DE BLOQUEOS SM12 Y ESPERAS ENQUEUE
   // ==========================================================================
   const sm12Count = Array.isArray(sapData.sm12_locks) ? sapData.sm12_locks.length : 0;
-  const isSm12Breached = sm12Count >= th.sm12SevereCount || lockWaitProcesses.length >= 2;
   const isSm12Crit = sm12Count >= th.sm12CriticalCount || lockWaitProcesses.length >= 4;
 
   // Identificar usuario o tabla con más bloqueos
@@ -925,20 +931,18 @@ async function evaluateSystemAlerts(sapData) {
     ruleKey: 'SM12_LOCK_CONTENTION',
     category: 'LOCKS_QUEUES',
     component: 'Servidor de Bloqueos Enqueue (SM12)',
-    isBreached: isSm12Breached,
+    isBreached: isSm12Crit,
     isBelowHysteresis: sm12Count < th.sm12RecoveryCount && lockWaitProcesses.length === 0,
-    candidateSeverity: isSm12Crit ? 'CRITICAL' : 'SEVERE',
+    candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.sm12SustainedDurationSec,
     metricName: 'Registros bloqueados en SM12',
     metricValue: sm12Count,
     metricUnit: 'bloqueos',
-    thresholdValue: isSm12Crit ? th.sm12CriticalCount : th.sm12SevereCount,
+    thresholdValue: th.sm12CriticalCount,
     relatedEntity: topLockUser
       ? `${sm12Count} bloqueos activos (Principal: ${topLockUser[0]} con ${topLockUser[1]} entradas)`
       : `${sm12Count} entradas en tabla de bloqueos`,
-    title: isSm12Crit
-      ? `Contención crítica de bloqueos SM12 (${sm12Count} bloqueos activos / colisión de objetos)`
-      : `Acumulación sostenida de bloqueos en SM12 (${sm12Count} entradas retenidas)`,
+    title: `Contención crítica de bloqueos SM12 (${sm12Count} bloqueos activos / colisión de objetos)`,
     technicalDescription: `La tabla de bloqueos Enqueue registra ${sm12Count} entradas persistentes${lockWaitProcesses.length ? ` y ${lockWaitProcesses.length} procesos en espera de bloqueo` : ''}.`,
     operationalImpact: 'Usuarios e interfases no pueden contabilizar documentos financieros, mover inventario ni modificar pedidos bloqueados por otras sesiones.',
     recommendedAction: 'Revisar en SM12 las entradas más antiguas y verificar en SM50/SM13 si existen sesiones huérfanas o actualizaciones retenidas.',
@@ -961,7 +965,6 @@ async function evaluateSystemAlerts(sapData) {
   const dumpsDelta10m = oldestInWindow && dumpsToday >= oldestInWindow.count
     ? (dumpsToday - oldestInWindow.count)
     : 0;
-  const isDumpStorm = dumpsDelta10m >= th.st22StormSevereDelta10m;
   const isDumpStormCrit = dumpsDelta10m >= th.st22StormCriticalDelta10m;
   const latestDump = Array.isArray(sapData.st22_dumps) && sapData.st22_dumps[0] ? sapData.st22_dumps[0] : null;
 
@@ -969,18 +972,18 @@ async function evaluateSystemAlerts(sapData) {
     ruleKey: 'ST22_DUMP_STORM',
     category: 'LOCKS_QUEUES',
     component: 'Motor ABAP / Short Dumps (ST22)',
-    isBreached: isDumpStorm,
+    isBreached: isDumpStormCrit,
     isBelowHysteresis: dumpsDelta10m <= 1,
-    candidateSeverity: isDumpStormCrit ? 'CRITICAL' : 'SEVERE',
+    candidateSeverity: 'CRITICAL',
     sustainRequiredSec: 30,
     metricName: 'Nuevos ABAP Dumps en ventana de 10 min',
     metricValue: dumpsDelta10m,
     metricUnit: 'dumps/10m',
-    thresholdValue: isDumpStormCrit ? th.st22StormCriticalDelta10m : th.st22StormSevereDelta10m,
+    thresholdValue: th.st22StormCriticalDelta10m,
     relatedEntity: latestDump
       ? `Último: ${latestDump.except || 'Excepción'} · Prog: ${latestDump.program || 'N/A'} · Usuario: ${latestDump.uname || 'N/A'}`
       : `Total acumulados hoy: ${dumpsToday}`,
-    title: `Ráfaga anormal de errores ABAP Short Dumps en ST22 (+${dumpsDelta10m} en 10 min)`,
+    title: `Tormenta crítica de errores ABAP Short Dumps en ST22 (+${dumpsDelta10m} en 10 min)`,
     technicalDescription: `Se han generado ${dumpsDelta10m} cancelaciones abruptas (Short Dumps) en los últimos 10 minutos (total hoy: ${dumpsToday}).`,
     operationalImpact: 'Cancelación repetitiva de transacciones o procesos de negocio activos con pérdida de trabajo en curso para los usuarios afectados.',
     recommendedAction: 'Inspeccionar inmediatamente en ST22 la excepción recurrente para determinar si responde a falta de memoria (TSV_TNEW_PAGE_ALLOC_FAILED), timeout o error de transporte.',
@@ -1014,25 +1017,22 @@ async function evaluateSystemAlerts(sapData) {
     const heapPct = Number(heapRow?.pctCurrent || 0);
     const memPeakPct = Math.max(emPct, heapPct);
 
-    const isMemBreached = emPct >= th.emSeverePct || heapPct >= th.heapSeverePct;
     const isMemCrit = emPct >= th.emCriticalPct || heapPct >= th.heapCriticalPct;
 
     await processRuleEvaluation({
       ruleKey: 'SAP_MEMORY_EXHAUSTION',
       category: 'MEMORY',
       component: 'Memoria SAP (Extended Memory / Heap ST02)',
-      isBreached: isMemBreached,
+      isBreached: isMemCrit,
       isBelowHysteresis: emPct < th.emRecoveryPct && heapPct < 50,
-      candidateSeverity: isMemCrit ? 'CRITICAL' : 'SEVERE',
+      candidateSeverity: 'CRITICAL',
       sustainRequiredSec: 60,
       metricName: 'Uso actual de Extended / Heap Memory',
       metricValue: memPeakPct,
       metricUnit: '%',
-      thresholdValue: isMemCrit ? th.emCriticalPct : th.emSeverePct,
+      thresholdValue: th.emCriticalPct,
       relatedEntity: `Extended Memory: ${emPct}% · Heap Memory (PRIV): ${heapPct}%`,
-      title: isMemCrit
-        ? `Agotamiento crítico de Memoria SAP (EM: ${emPct}% / Heap: ${heapPct}%)`
-        : `Consumo elevado de Memoria Extendida SAP (${emPct}% utilizado)`,
+      title: `Agotamiento crítico de Memoria SAP (EM: ${emPct}% / Heap: ${heapPct}%)`,
       technicalDescription: `El área de Extended Memory registra ${emPct}% de ocupación actual y Heap Memory ${heapPct}%. Cuando EM se agota, los Work Processes entran en modo PRIV consumiendo memoria privada.`,
       operationalImpact: 'Los procesos en modo PRIV quedan atados exclusivamente a un usuario, reduciendo los procesos DIA disponibles y provocando dumps TSV_TNEW_PAGE_ALLOC_FAILED.',
       recommendedAction: 'Identificar en SM04/ST02 las sesiones de usuario con mayor asignación de memoria EM/Heap y revisar reportes que cargan tablas internas masivas.',
@@ -1045,8 +1045,7 @@ async function evaluateSystemAlerts(sapData) {
     // Evaluar Buffers críticos de negocio (TABL, PXA, TTAB, FTAB)
     if (Array.isArray(cachedSt02Snapshot.buffers)) {
       const coreBuffers = cachedSt02Snapshot.buffers.filter(b => ['TABL', 'PXA', 'TTAB', 'FTAB'].includes(b.code));
-      const degradedCore = coreBuffers.filter(b => b.hitRatio < th.bufferHitRatioSeverePct || (b.pctFreeSp < 1.0 && b.swaps > 50000));
-      const worstBuf = degradedCore.sort((a, b) => a.hitRatio - b.hitRatio)[0];
+      const worstBuf = coreBuffers.filter(b => b.hitRatio < th.bufferHitRatioCriticalPct || (b.pctFreeSp < 1.0 && b.swaps > 100000)).sort((a, b) => a.hitRatio - b.hitRatio)[0];
 
       await processRuleEvaluation({
         ruleKey: 'SAP_CORE_BUFFER_DEGRADATION',
@@ -1054,20 +1053,20 @@ async function evaluateSystemAlerts(sapData) {
         component: 'Buffers Críticos SAP (ST02: PXA / TABL / NTAB)',
         isBreached: Boolean(worstBuf),
         isBelowHysteresis: !worstBuf,
-        candidateSeverity: (worstBuf && worstBuf.hitRatio < th.bufferHitRatioCriticalPct) ? 'CRITICAL' : 'SEVERE',
+        candidateSeverity: 'CRITICAL',
         sustainRequiredSec: 120,
         metricName: worstBuf ? `Hit Ratio Buffer ${worstBuf.code} (${worstBuf.label})` : 'Hit Ratio Buffers Críticos',
         metricValue: worstBuf ? worstBuf.hitRatio : 99.9,
         metricUnit: '%',
-        thresholdValue: th.bufferHitRatioSeverePct,
+        thresholdValue: th.bufferHitRatioCriticalPct,
         relatedEntity: worstBuf
           ? `Buffer ${worstBuf.code} (${worstBuf.parameter}): Hit Ratio ${worstBuf.hitRatio}% · Libre ${worstBuf.pctFreeSp}% · Swaps ${worstBuf.swaps.toLocaleString('es-CO')}`
           : 'PXA, TABL, TTAB, FTAB saludables (>99%)',
         title: worstBuf
-          ? `Degradación de eficiencia en Buffer crítico ${worstBuf.label} (${worstBuf.code}: ${worstBuf.hitRatio}%)`
+          ? `Degradación crítica en Buffer ${worstBuf.label} (${worstBuf.code}: ${worstBuf.hitRatio}%)`
           : 'Buffers críticos estables',
         technicalDescription: worstBuf
-          ? `El buffer ${worstBuf.code} (${worstBuf.label}) presenta un Hit Ratio de ${worstBuf.hitRatio}% con ${worstBuf.pctFreeSp}% de espacio libre y ${worstBuf.swaps.toLocaleString('es-CO')} swaps.`
+          ? `El buffer ${worstBuf.code} (${worstBuf.label}) presenta un Hit Ratio crítico de ${worstBuf.hitRatio}% con ${worstBuf.pctFreeSp}% de espacio libre y ${worstBuf.swaps.toLocaleString('es-CO')} swaps.`
           : 'Buffers normales.',
         operationalImpact: 'Incremento directo de accesos físicos a la base de datos Oracle por recarga constante de programas ABAP o tablas bufferizadas.',
         recommendedAction: worstBuf
@@ -1083,7 +1082,6 @@ async function evaluateSystemAlerts(sapData) {
 
   // Evaluar Base de Datos Oracle (DBACOCKPIT + Lecturas Secuenciales Pesadas en Vivo)
   const dbLockWaits = Number(cachedDbaSnapshot?.liveActivity?.lockWaitCount || 0);
-  const hasHeavyDbContention = dbLockWaits >= th.dbLockWaitSevereCount || heavySeqReadProcesses.length >= 2;
   const isDbCrit = dbLockWaits >= th.dbLockWaitCriticalCount || heavySeqReadProcesses.length >= 3;
   const dbEntityDesc = heavySeqReadProcesses.length > 0
     ? heavySeqReadProcesses.map(p => `WP#${p.wp_no} (${p.user} en tabla ${p.table}, ${p.eltime}s)`).join(' · ')
@@ -1093,19 +1091,17 @@ async function evaluateSystemAlerts(sapData) {
     ruleKey: 'DB_CONTENTION_AND_HEAVY_IO',
     category: 'DATABASE',
     component: 'Base de Datos Oracle 19c (DBACOCKPIT / I/O)',
-    isBreached: hasHeavyDbContention,
+    isBreached: isDbCrit,
     isBelowHysteresis: dbLockWaits === 0 && heavySeqReadProcesses.length === 0,
-    candidateSeverity: isDbCrit ? 'CRITICAL' : 'SEVERE',
+    candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.dbLockWaitDurationSec,
     metricName: dbLockWaits > 0 ? 'Sesiones Oracle en Lock Wait' : 'Lecturas secuenciales pesadas simultáneas',
     metricValue: dbLockWaits > 0 ? dbLockWaits : heavySeqReadProcesses.length,
     metricUnit: dbLockWaits > 0 ? 'sesiones' : 'procesos',
-    thresholdValue: isDbCrit ? th.dbLockWaitCriticalCount : th.dbLockWaitSevereCount,
+    thresholdValue: th.dbLockWaitCriticalCount,
     relatedEntity: dbEntityDesc,
-    title: isDbCrit
-      ? `Contención crítica en Base de Datos Oracle (${dbEntityDesc})`
-      : `Sobrecarga de consultas pesadas / espera de bloqueos en Oracle (${dbEntityDesc})`,
-    technicalDescription: `Se detectó contención activa en la capa de base de datos: ${dbLockWaits} sesiones en espera de bloqueo (Lock Wait) y ${heavySeqReadProcesses.length} procesos ejecutando lecturas prolongadas sobre tablas críticas (> ${th.dbSeqReadCriticalSec}s).`,
+    title: `Contención crítica en Base de Datos Oracle (${dbEntityDesc})`,
+    technicalDescription: `Se detectó contención crítica en la capa de base de datos: ${dbLockWaits} sesiones en espera de bloqueo (Lock Wait) y ${heavySeqReadProcesses.length} procesos ejecutando lecturas prolongadas sobre tablas críticas (> ${th.dbSeqReadCriticalSec}s).`,
     operationalImpact: 'Degradación generalizada de los tiempos de respuesta de base de datos y retención en cascada de procesos DIA y BTC.',
     recommendedAction: 'Verificar en el panel DBACOCKPIT las sesiones bloqueadoras y analizar el SQL_ID activo en V$SQLAREA.',
     extraEvidence: { dbLockWaits, heavySeqReadProcesses },
@@ -1147,15 +1143,13 @@ async function getAlertsDashboardState() {
     isInitialized = true;
   }
 
-  // Obtener únicamente alertas CRÍTICAS y GRAVES que estén ACTIVAS o EN RECUPERACIÓN
-  // (Las alertas INFORMATIVAS nunca se muestran de forma intrusiva en el banner superior)
+  // Principio "Solo da alerta de las críticas":
+  // Obtener exclusivamente alertas CRÍTICAS que estén ACTIVAS o EN RECUPERACIÓN
   const activeRows = await dbAll(`
     SELECT * FROM sap_alert_incidents
     WHERE status IN ('ACTIVE', 'RECOVERING')
-      AND severity IN ('CRITICAL', 'SEVERE')
-    ORDER BY
-      CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'SEVERE' THEN 2 ELSE 3 END ASC,
-      duration_seconds DESC
+      AND severity = 'CRITICAL'
+    ORDER BY duration_seconds DESC
   `);
 
   const statsRow = await dbGet(`
@@ -1167,26 +1161,21 @@ async function getAlertsDashboardState() {
     FROM sap_alert_incidents
   `);
 
-  const activeCritical = activeRows.filter(r => r.severity === 'CRITICAL' && r.status === 'ACTIVE').length;
-  const activeSevere = activeRows.filter(r => r.severity === 'SEVERE' && r.status === 'ACTIVE').length;
+  const activeCritical = activeRows.filter(r => r.status === 'ACTIVE').length;
   const recoveringCount = activeRows.filter(r => r.status === 'RECOVERING').length;
 
   let systemStatus = 'HEALTHY';
   let statusLabel = 'SISTEMA SAP ESTABLE';
-  let statusDescription = 'Vigilancia preventiva activa • Sin saturación sostenida ni bloqueos críticos que afecten la operación.';
+  let statusDescription = 'Vigilancia continua de alertas críticas SAP • Alerta exclusivamente ante situaciones críticas que afecten la operación.';
 
   if (activeCritical > 0) {
     systemStatus = 'CRITICAL';
     statusLabel = 'INCIDENTE CRÍTICO ACTIVO';
     statusDescription = `Se detectaron ${activeCritical} condición(es) crítica(s) sostenida(s) con afectación directa sobre la estabilidad o los usuarios de SAP.`;
-  } else if (activeSevere > 0) {
-    systemStatus = 'SEVERE';
-    statusLabel = 'ALERTA GRAVE DE RENDIMIENTO';
-    statusDescription = `Se detectaron ${activeSevere} anomalía(s) grave(s) persistente(s) que requieren atención antes de convertirse en una interrupción.`;
   } else if (recoveringCount > 0) {
     systemStatus = 'RECOVERING';
     statusLabel = 'INCIDENTE EN RECUPERACIÓN';
-    statusDescription = 'Las métricas críticas han descendido bajo el umbral y se encuentran en ventana de confirmación de estabilidad (histéresis).';
+    statusDescription = 'Las condiciones críticas han descendido bajo el umbral de seguridad y se confirma su estabilización.';
   }
 
   const formattedActive = activeRows.map(formatIncidentRow);
@@ -1198,7 +1187,7 @@ async function getAlertsDashboardState() {
     statusDescription,
     counts: {
       activeCritical,
-      activeSevere,
+      activeSevere: 0,
       recoveringCount,
       totalActiveVisible: activeRows.length,
       totalHistoryCount: statsRow?.totalHistory || 0,

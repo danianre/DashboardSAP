@@ -348,10 +348,10 @@
                 <span>Críticas: <b id="sysAlertCritCount" class="text-white">0</b></span>
               </span>
 
-              <!-- Contador Alertas Graves Activas (Naranja) -->
+              <!-- Contador Alertas Graves Activas (Oculto: se alerta exclusivamente sobre críticas) -->
               <span id="sysAlertSevBadge" onclick="openCriticalAlertsModal('history', 'SEVERE')"
-                class="cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-amber-500/50"
-                title="Alertas Graves Activas (Degradación persistente o tendencia crítica)">
+                class="hidden text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 items-center gap-1.5 transition hover:border-amber-500/50"
+                title="Alertas Graves">
                 <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-400"></i>
                 <span>Graves: <b id="sysAlertSevCount" class="text-white">0</b></span>
               </span>
@@ -364,7 +364,7 @@
               </span>
             </div>
             <p id="sysAlertDescription" class="text-xs text-gray-400 mt-1">
-              Vigilancia preventiva activa con filtro anti-falsas alarmas (evalúa persistencia, histéresis y capacidad real de instancia BOP).
+              Vigilancia continua de alertas críticas SAP • Alerta exclusivamente ante situaciones críticas que afecten la operación.
             </p>
           </div>
         </div>
@@ -3831,13 +3831,6 @@
         if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-600 text-white border border-rose-400 flex items-center gap-1.5 shadow';
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-white animate-ping';
         if (critBadge) critBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-rose-950/90 text-rose-200 border border-rose-500 flex items-center gap-1.5';
-      } else if (alertState.systemStatus === 'SEVERE') {
-        if (bar) bar.className = 'rounded-xl border-2 border-amber-500/80 bg-gradient-to-r from-amber-950/60 via-gray-900/95 to-amber-950/40 p-3.5 shadow-lg shadow-amber-950/30 transition-all duration-300';
-        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/60 flex items-center justify-center text-amber-400 shrink-0';
-        if (icon) icon.className = 'fa-solid fa-triangle-exclamation text-lg';
-        if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-amber-600 text-white border border-amber-400 flex items-center gap-1.5 shadow';
-        if (dot) dot.className = 'w-2 h-2 rounded-full bg-white animate-pulse';
-        if (sevBadge) sevBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-amber-950/90 text-amber-200 border border-amber-500 flex items-center gap-1.5';
       } else if (alertState.systemStatus === 'RECOVERING') {
         if (bar) bar.className = 'rounded-xl border border-cyan-500/50 bg-gradient-to-r from-cyan-950/40 via-gray-900/95 to-gray-900/95 p-3.5 shadow-lg transition-all duration-300';
         if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shrink-0';
@@ -3851,14 +3844,14 @@
         if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5';
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
         if (critBadge) critBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-rose-500/50';
-        if (sevBadge) sevBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-amber-500/50';
       }
 
       if (statusText) statusText.textContent = alertState.statusLabel || 'SISTEMA SAP ESTABLE';
       if (desc) desc.textContent = alertState.statusDescription || '';
 
-      // Renderizar tarjetas de incidentes críticos/graves activos en la parte superior
-      const activeAlerts = Array.isArray(alertState.activeAlerts) ? alertState.activeAlerts : [];
+      // Renderizar exclusivamente tarjetas de incidentes críticos activos en la parte superior
+      const activeAlerts = (Array.isArray(alertState.activeAlerts) ? alertState.activeAlerts : [])
+        .filter(inc => inc.severity === 'CRITICAL');
       if (!listContainer) return;
 
       if (activeAlerts.length === 0) {
@@ -3869,16 +3862,11 @@
 
       listContainer.classList.remove('hidden');
       listContainer.innerHTML = activeAlerts.map(inc => {
-        const isCrit = inc.severity === 'CRITICAL';
         const isRec = inc.status === 'RECOVERING';
         const cardBorder = isRec
           ? 'border-cyan-500/50 bg-cyan-950/20'
-          : isCrit
-            ? 'border-rose-500/70 bg-rose-950/35'
-            : 'border-amber-500/70 bg-amber-950/30';
-        const sevPill = isCrit
-          ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600 text-white uppercase">🔴 CRÍTICO</span>'
-          : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-600 text-white uppercase">🟠 GRAVE</span>';
+          : 'border-rose-500/70 bg-rose-950/35';
+        const sevPill = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600 text-white uppercase">🔴 CRÍTICO</span>';
         const statusPill = isRec
           ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-900/80 text-cyan-200 border border-cyan-500/40">EN RECUPERACIÓN (HISTÉRESIS)</span>'
           : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-black/50 text-gray-200 border border-white/10">ACTIVO</span>';
