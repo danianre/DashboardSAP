@@ -9,30 +9,25 @@ const DEFAULT_THRESHOLDS = {
   deepCheckIntervalSec: 120, // ST02 y DBACOCKPIT cada 2 min usando caché para 0 sobrecarga RFC
   recoveryConfirmSec: 30,    // Histéresis: segundos bajo el umbral de recuperación para dar por normalizado
 
-  // 1. Procesos BTC (Background)
-  btcSeverePct: 90,
+  // 1. Procesos BTC (Background) - Alerta crítica exclusivamente al 100% durante mucho tiempo
+  btcSeverePct: 95,
   btcCriticalPct: 100,
-  btcSevereDurationSec: 180,   // 3 minutos sostenidos >= 90%
-  btcCriticalDurationSec: 300, // 5 minutos sostenidos al 100%
-  btcRecoveryPct: 75,          // Histéresis de recuperación (< 75%)
+  btcSevereDurationSec: 180,
+  btcCriticalDurationSec: 300, // 5 minutos continuos al 100%
+  btcRecoveryPct: 80,          // Histéresis de recuperación (< 80%)
 
-  // 2. Procesos DIA (Diálogo)
-  diaSeverePct: 75,
-  diaCriticalPct: 90,
-  diaSevereDurationSec: 90,    // 1.5 minutos sostenidos >= 75%
-  diaCriticalDurationSec: 150, // 2.5 minutos sostenidos >= 90%
-  diaRecoveryPct: 60,          // Histéresis de recuperación (< 60%)
+  // 2. Procesos DIA (Diálogo) - Alerta crítica exclusivamente al 100% durante mucho tiempo
+  diaSeverePct: 95,
+  diaCriticalPct: 100,
+  diaSevereDurationSec: 120,
+  diaCriticalDurationSec: 180, // 3 minutos continuos al 100%
+  diaRecoveryPct: 80,          // Histéresis de recuperación (< 80%)
 
-  // 3. Procesos DIA Individuales colgados / Riesgo de TIME_OUT (rdisp/max_wprun_time)
-  diaSlowProcessSevereSec: 240,   // Proceso DIA >= 4 min con impacto en cola o lectura pesada
-  diaSlowProcessCriticalSec: 420, // Proceso DIA >= 7 min o múltiples procesos DIA bloqueados
-  diaMinSlowProcessesForAlert: 2, // O 1 si supera el umbral crítico o barre tabla gigante (BSEG/MSEG)
-
-  // 4. Work Processes Globales (Agotamiento combinado DIA + BTC)
-  wpExhaustionSeverePct: 85,
-  wpExhaustionCriticalPct: 95,
+  // 3. Work Processes Globales (Agotamiento combinado DIA + BTC)
+  wpExhaustionSeverePct: 90,
+  wpExhaustionCriticalPct: 98,
   wpExhaustionDurationSec: 120,
-  wpExhaustionRecoveryPct: 70,
+  wpExhaustionRecoveryPct: 80,
 
   // 5. Memoria SAP (Extended Memory / Heap PRIV)
   emSeverePct: 85,
@@ -116,8 +111,8 @@ function initAlertTables() {
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_rule ON sap_alert_incidents(rule_key)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_severity ON sap_alert_incidents(severity)`);
 
-      // Normalizar cualquier incidente previo que no sea CRITICAL para garantizar que solo se alerte sobre críticas
-      db.run(`UPDATE sap_alert_incidents SET status = 'NORMALIZED' WHERE status IN ('ACTIVE', 'RECOVERING') AND severity != 'CRITICAL'`);
+      // Normalizar cualquier incidente previo que no sea CRITICAL o que corresponda a demoras de procesos individuales (DIA/BTC)
+      db.run(`UPDATE sap_alert_incidents SET status = 'NORMALIZED', ended_at = datetime('now') WHERE status IN ('ACTIVE', 'RECOVERING') AND (severity != 'CRITICAL' OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS'))`);
 
       db.run(`CREATE TABLE IF NOT EXISTS sap_alert_config (
         key TEXT PRIMARY KEY,
@@ -788,11 +783,10 @@ async function evaluateSystemAlerts(sapData) {
   const activeSessions = Array.isArray(sapData.user_sessions) ? sapData.user_sessions.length : (sapData.active_users || 0);
 
   // ==========================================================================
-  // REGLA 1: SATURACIÓN SOSTENIDA DE PROCESOS BACKGROUND (BTC)
-  // Principio "Solo da alerta de las críticas": requiere 100% ocupado sostenido durante varios minutos
+  // REGLA 1: SATURACIÓN AL 100% DE PROCESOS BACKGROUND (BTC) DURANTE MUCHO TIEMPO
+  // No alerta por demoras individuales de jobs; alerta exclusivamente cuando el pool BTC permanece al 100%
   // ==========================================================================
-  const isBtcCritical = btcBusyPct >= th.btcCriticalPct;
-  const isBtcBreached = isBtcCritical;
+  const isBtc100Pct = btcTotal > 0 && btcBusy >= btcTotal && btcBusyPct >= 99.9;
   const topBtcJobs = activeBtcDetails
     .sort((a, b) => b.eltime - a.eltime)
     .slice(0, 3)
@@ -803,19 +797,19 @@ async function evaluateSystemAlerts(sapData) {
     ruleKey: 'BTC_SATURATION',
     category: 'BTC',
     component: 'Procesos Background (BTC)',
-    isBreached: isBtcBreached,
+    isBreached: isBtc100Pct,
     isBelowHysteresis: btcBusyPct < th.btcRecoveryPct,
     candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.btcCriticalDurationSec,
     metricName: 'Ocupación de Work Processes BTC',
     metricValue: btcBusyPct,
     metricUnit: '%',
-    thresholdValue: th.btcCriticalPct,
-    relatedEntity: topBtcJobs,
-    title: `Saturación crítica sostenida de procesos BTC (${btcBusy}/${btcTotal} al ${btcBusyPct}%)`,
-    technicalDescription: `Los ${btcTotal} procesos de fondo (BTC) acumulan saturación del 100% (0 procesos libres) de forma sostenida. Procesos dominantes: ${topBtcJobs}.`,
+    thresholdValue: 100,
+    relatedEntity: `${btcBusy}/${btcTotal} BTC al 100% · Dominantes: ${topBtcJobs}`,
+    title: `Saturación al 100% sostenida de procesos BTC (${btcBusy}/${btcTotal} ocupados durante más de ${Math.round(th.btcCriticalDurationSec / 60)} min)`,
+    technicalDescription: `Todos los ${btcTotal} procesos de fondo (BTC) acumulan saturación continua del 100% (0 procesos libres) de forma sostenida durante mucho tiempo. Procesos dominantes: ${topBtcJobs}.`,
     operationalImpact: 'Acumulación de trabajos pendientes en SM37, retraso en jobs críticos de facturación electrónica (eDocument), interfases CPI y cierres automáticos.',
-    recommendedAction: 'Verificar en SM37/SM50 si algún job permanece ciclado o bloqueado en lectura de BD; evaluar reprogramación de extracciones masivas (ej. QLIK / reportes Z).',
+    recommendedAction: 'Verificar en SM37/SM50 si algún job permanece ciclado o bloqueado en lectura de BD; evaluar reprogramación de extracciones masivas.',
     extraEvidence: { btcBusy, btcTotal, activeBtcDetails },
     diaBusyPct,
     btcBusyPct,
@@ -823,67 +817,37 @@ async function evaluateSystemAlerts(sapData) {
   });
 
   // ==========================================================================
-  // REGLA 2: SATURACIÓN CRÍTICA SOSTENIDA DE PROCESOS DE DIÁLOGO (DIA)
-  // Principio "Solo da alerta de las críticas": requiere ocupación crítica (>= 90% con <= 1 libre) sostenida
+  // REGLA 2: SATURACIÓN AL 100% DE PROCESOS DE DIÁLOGO (DIA) DURANTE MUCHO TIEMPO
+  // No alerta por demoras individuales; alerta exclusivamente cuando el pool DIA permanece al 100%
   // ==========================================================================
+  const isDia100Pct = diaTotal > 0 && diaBusy >= diaTotal && diaBusyPct >= 99.9;
   const freeDia = Math.max(0, diaTotal - diaBusy);
-  const isDiaCritical = diaBusyPct >= th.diaCriticalPct && freeDia <= 1;
-  const isDiaBreached = isDiaCritical;
 
   await processRuleEvaluation({
     ruleKey: 'DIA_SATURATION',
     category: 'DIA',
     component: 'Procesos de Diálogo (DIA)',
-    isBreached: isDiaBreached,
+    isBreached: isDia100Pct,
     isBelowHysteresis: diaBusyPct < th.diaRecoveryPct,
     candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.diaCriticalDurationSec,
     metricName: 'Ocupación de Work Processes DIA',
     metricValue: diaBusyPct,
     metricUnit: '%',
-    thresholdValue: th.diaCriticalPct,
-    relatedEntity: `${diaBusy}/${diaTotal} DIA ocupados (${freeDia} libres) · ${activeSessions} sesiones de usuario`,
-    title: `Agotamiento crítico de procesos de Diálogo DIA (${diaBusyPct}% ocupado, solo ${freeDia} libres)`,
-    technicalDescription: `El pool interactivo de Diálogo presenta ${diaBusy} de ${diaTotal} procesos ocupados al ${diaBusyPct}% de forma sostenida con ${activeSessions} sesiones conectadas.`,
-    operationalImpact: 'Degradación directa del tiempo de respuesta en pantallas SAP GUI y riesgo de encolamiento generalizado en el Dispatcher para todos los usuarios.',
+    thresholdValue: 100,
+    relatedEntity: `${diaBusy}/${diaTotal} DIA al 100% (0 libres) · ${activeSessions} sesiones de usuario`,
+    title: `Agotamiento al 100% sostenido de procesos de Diálogo DIA (0 libres durante más de ${Math.round(th.diaCriticalDurationSec / 60)} min)`,
+    technicalDescription: `Todos los ${diaTotal} procesos interactivos de diálogo se encuentran ocupados al 100% de forma ininterrumpida. No hay hilos libres en el Dispatcher para atender a los ${activeSessions} usuarios conectados.`,
+    operationalImpact: 'Degradación crítica y congelamiento del tiempo de respuesta en pantallas SAP GUI, riesgo de encolamiento generalizado en el Dispatcher para todos los usuarios.',
     recommendedAction: 'Inspeccionar en SM50 los procesos DIA con mayor tiempo transcurrido y cancelar consultas interactivas descontroladas.',
-    extraEvidence: { diaBusy, diaTotal, freeDia, slowDiaProcesses },
+    extraEvidence: { diaBusy, diaTotal, freeDia },
     diaBusyPct,
     btcBusyPct,
     activeSessions
   });
 
-  // ==========================================================================
-  // REGLA 3: PROCESOS DIA COLGADOS / RIESGO DE TIME_OUT Y BLOQUEO DE HILOS
-  // ==========================================================================
-  const maxSlowDiaSec = slowDiaProcesses.length > 0 ? Math.max(...slowDiaProcesses.map(p => p.eltime)) : 0;
-  const isSlowDiaCrit = maxSlowDiaSec >= th.diaSlowProcessCriticalSec || (slowDiaProcesses.length >= 3 && diaBusyPct >= 70);
-  const slowSummary = slowDiaProcesses
-    .map(p => `WP#${p.wp_no} (${p.user}: ${p.report || 'Transacción'} · ${p.eltime}s${p.table ? ` en ${p.table}` : ''})`)
-    .join(', ');
-
-  await processRuleEvaluation({
-    ruleKey: 'DIA_LONG_RUNNERS',
-    category: 'DIA',
-    component: 'Tiempos de Respuesta Diálogo / Dispatcher',
-    isBreached: isSlowDiaCrit,
-    isBelowHysteresis: slowDiaProcesses.length === 0,
-    candidateSeverity: 'CRITICAL',
-    sustainRequiredSec: 60,
-    metricName: 'Tiempo máximo de ejecución en hilo DIA',
-    metricValue: maxSlowDiaSec,
-    metricUnit: 's',
-    thresholdValue: th.diaSlowProcessCriticalSec,
-    relatedEntity: slowSummary || 'Hilos de diálogo SAP',
-    title: `Retención crítica de hilos de Diálogo (${slowDiaProcesses.length} procesos > ${th.diaSlowProcessSevereSec}s, máx ${maxSlowDiaSec}s)`,
-    technicalDescription: `Se detectaron procesos DIA monopolizando hilos interactivos cerca del límite rdisp/max_wprun_time: ${slowSummary}.`,
-    operationalImpact: 'Reducción de capacidad efectiva de atención del Dispatcher y generación inminente de Short Dumps TIME_OUT en ST22.',
-    recommendedAction: 'Contactar al usuario ejecutor o cancelar el Work Process afectado desde la tabla de procesos activos si corresponde a una consulta sin filtros.',
-    extraEvidence: { slowDiaProcesses },
-    diaBusyPct,
-    btcBusyPct,
-    activeSessions
-  });
+  // Limpiar cualquier rastreador de demoras de procesos individuales
+  conditionTrackers.delete('DIA_LONG_RUNNERS');
 
   // ==========================================================================
   // REGLA 4: AGOTAMIENTO SIMULTÁNEO CRÍTICO DE WORK PROCESSES (CAPACIDAD DE INSTANCIA)
@@ -1143,12 +1107,16 @@ async function getAlertsDashboardState() {
     isInitialized = true;
   }
 
+  // Normalizar de inmediato cualquier alerta de demora de proceso individual (DIA/BTC)
+  await dbRun("UPDATE sap_alert_incidents SET status = 'NORMALIZED', ended_at = datetime('now') WHERE status IN ('ACTIVE', 'RECOVERING') AND (severity != 'CRITICAL' OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS'))");
+
   // Principio "Solo da alerta de las críticas":
   // Obtener exclusivamente alertas CRÍTICAS que estén ACTIVAS o EN RECUPERACIÓN
   const activeRows = await dbAll(`
     SELECT * FROM sap_alert_incidents
     WHERE status IN ('ACTIVE', 'RECOVERING')
       AND severity = 'CRITICAL'
+      AND rule_key NOT IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS')
     ORDER BY duration_seconds DESC
   `);
 
