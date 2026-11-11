@@ -409,6 +409,7 @@ router.get('/dbacockpit', async (req, res) => {
 
 // Endpoint de Distribución y Control de Licencias SAP por Empresa
 const { getLicenseDistribution } = require('../services/licenseService');
+const { getReconciledUnusedRolesAudit } = require('../services/roleAuditService');
 router.get('/licenses/by-company', async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === 'true';
@@ -424,19 +425,12 @@ router.get('/licenses/by-company', async (req, res) => {
 });
 
 // Endpoint de Auditoría de Roles y Transacciones No Usadas (3m y 6m)
-let _unusedRolesCacheMem = null;
-router.get('/roles/unused-audit', (req, res) => {
+// Conciliado en tiempo real contra asignaciones activas en SAP (AGR_USERS)
+router.get('/roles/unused-audit', async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === 'true' || req.query.refresh === '1';
-    if (!_unusedRolesCacheMem || forceRefresh) {
-      const cachePath = path.join(__dirname, '..', 'data', 'unused_roles_audit.json');
-      if (!fs.existsSync(cachePath)) {
-        return res.status(404).json({ success: false, error: 'Caché de auditoría de roles no disponible.' });
-      }
-      const raw = fs.readFileSync(cachePath, 'utf8');
-      _unusedRolesCacheMem = JSON.parse(raw);
-    }
-    res.json({ success: true, ..._unusedRolesCacheMem });
+    const auditData = await getReconciledUnusedRolesAudit(forceRefresh);
+    res.json(auditData);
   } catch (error) {
     console.error('[ERROR ENDPOINT GET /api/roles/unused-audit]:', error);
     res.status(500).json({ success: false, error: error.message });

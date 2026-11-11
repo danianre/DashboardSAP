@@ -278,8 +278,8 @@
           <div class="text-xs font-mono font-bold text-emerald-300 flex items-center gap-1.5 mt-0.5" id="hrJobText">
             <span>ZHR_BLOQUEO_RETIROS_DIARIO: FINALIZADO OK</span>
           </div>
-          <div id="hrJobSubtext" class="text-[10px] text-emerald-400/70 font-sans flex items-center gap-1 group-hover:text-emerald-300 transition-colors">
-            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Clic para ver historial de bloqueos
+          <div id="hrJobSubtext" class="text-[10px] text-emerald-400/80 font-sans flex items-center gap-1 group-hover:text-emerald-300 transition-colors">
+            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> <span>Usuarios retirados por retiro (ver detalle)</span>
           </div>
         </div>
       </div>
@@ -340,15 +340,16 @@
         <span class="hidden sm:inline">Plataforma SAP</span>
       </a>
 
-      <button onclick="loadDashboard()"
-        class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-700 flex items-center gap-2 transition">
+      <button onclick="loadDashboard(); loadUnusedRolesAudit(true);"
+        class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-700 flex items-center gap-2 transition"
+        title="Refrescar métricas del sistema y conciliar roles en tiempo real con SAP">
         <i class="fa-solid fa-rotate"></i> Refrescar
       </button>
     </div>
   </header>
 
-  <!-- CINTA DE KPIS PRINCIPALES (TOP RIBBON) -->
-  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+  <!-- CINTA DE KPIS PRINCIPALES (TOP RIBBON - 6 TARJETAS BALANCEADAS) -->
+  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
     <div class="card p-4 flex flex-col justify-between cursor-pointer hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-950/20 transition-all group" id="kpiUserCard" onclick="openLicenseDistributionModal()" title="Clic para ver distribución de licencias SAP por empresa y cuotas">
       <div class="flex justify-between items-center text-gray-400 text-xs font-semibold uppercase">
         <span class="group-hover:text-blue-300 transition-colors">Licencias (Diálogo/Comun.)</span>
@@ -376,21 +377,32 @@
       </div>
     </div>
 
+    <!-- USUARIOS INACTIVOS (RESTABLECIDA A COMO ESTABA ANTES) -->
+    <div class="card p-4 border-amber-500/40">
+      <div class="flex justify-between items-center text-amber-300 text-xs font-semibold uppercase">
+        <span>Inactivos +30 Días</span>
+        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-amber-400 mt-2" id="kpiInactive30d">--</div>
+      <div class="text-xs text-gray-400 mt-1">Candidatos a bloqueo preventivo</div>
+    </div>
+
+    <!-- ROLES SIN USO (DEPURACIÓN 3M / 6M) -->
     <div class="card p-4 border-amber-500/40 cursor-pointer hover:border-amber-400/80 hover:shadow-lg hover:shadow-amber-950/20 transition-all group flex flex-col justify-between"
       onclick="openUnusedRolesModal()" title="Clic para abrir la ventana de roles sin uso por usuario en 3 y 6 meses">
       <div>
         <div class="flex justify-between items-center text-amber-300 text-xs font-semibold uppercase">
-          <span class="group-hover:text-amber-200 transition-colors">Inactivos y Roles Sin Uso</span>
+          <span class="group-hover:text-amber-200 transition-colors">Roles Sin Uso</span>
           <div class="flex items-center gap-1.5">
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30 group-hover:bg-amber-900 transition-colors">3m / 6m</span>
-            <i class="fa-solid fa-user-slash text-amber-400 group-hover:scale-110 transition-transform"></i>
+            <i class="fa-solid fa-user-xmark text-amber-400 group-hover:scale-110 transition-transform"></i>
           </div>
         </div>
-        <div class="text-2xl font-bold text-amber-400 mt-2 flex items-baseline gap-2">
-          <span id="kpiInactive30d">--</span>
-          <span class="text-xs text-amber-400/80 font-mono font-normal">| <span id="kpiUnusedRolesCount">1,391</span> roles</span>
+        <div class="text-2xl font-bold text-amber-400 mt-2 flex items-baseline gap-1.5">
+          <span id="kpiUnusedRolesCount">--</span>
+          <span class="text-xs text-amber-400/80 font-mono font-normal">roles</span>
         </div>
-        <div class="text-xs text-gray-400 mt-1">Usuarios inactivos y roles para eliminar</div>
+        <div class="text-xs text-gray-400 mt-1" id="kpiUnusedRolesSubtext">Roles con 0% uso a eliminar</div>
       </div>
       <div class="mt-2.5 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px]">
         <span class="text-amber-400 group-hover:text-amber-300 font-semibold flex items-center gap-1">
@@ -3129,6 +3141,14 @@
       if (kpiCount) {
         kpiCount.textContent = (m.totalRolesToRemove180 || 0).toLocaleString();
       }
+      const kpiSub = document.getElementById('kpiUnusedRolesSubtext');
+      if (kpiSub) {
+        if (m.totalRolesAlreadyRemoved180 > 0) {
+          kpiSub.innerHTML = `<span class="text-emerald-400 font-semibold font-mono">${m.totalRolesAlreadyRemoved180} depurados</span> • 0% de uso`;
+        } else {
+          kpiSub.textContent = 'Roles con 0% uso a eliminar';
+        }
+      }
       const b180 = document.getElementById('badgeTab180d');
       if (b180) b180.textContent = `${(m.totalRolesToRemove180 || 0).toLocaleString()} roles`;
       const b90 = document.getElementById('badgeTab90d');
@@ -3140,15 +3160,18 @@
       const btn180 = document.getElementById('btnTab180d');
       const btn90 = document.getElementById('btnTab90d');
       const bannerText = document.getElementById('unusedRolesBannerText');
+      const m = unusedRolesAuditData ? unusedRolesAuditData.metrics : null;
 
       if (w === '180d') {
         if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
         if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
-        if (bannerText) bannerText.innerHTML = '<strong>Ventana de 6 Meses activa:</strong> Roles con 0% de uso transaccional en todo el semestre (>180 días). <em class="text-emerald-300">Eliminación recomendada y segura.</em>';
+        const depTag = (m && m.totalRolesAlreadyRemoved180 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved180} roles ya depurados en SAP</span>` : '';
+        if (bannerText) bannerText.innerHTML = `<strong>Ventana de 6 Meses activa:</strong> Roles con 0% de uso transaccional en todo el semestre (>180 días). <em class="text-emerald-300">Eliminación recomendada y segura.</em>${depTag}`;
       } else {
         if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
         if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
-        if (bannerText) bannerText.innerHTML = '<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). <em class="text-amber-300">Incluye 36 roles con procesos semestrales que se aconseja validar antes de remover.</em>';
+        const depTag = (m && m.totalRolesAlreadyRemoved90 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved90} roles ya depurados en SAP</span>` : '';
+        if (bannerText) bannerText.innerHTML = `<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). <em class="text-amber-300">Incluye 36 roles con procesos semestrales que se aconseja validar antes de remover.</em>${depTag}`;
       }
       if (!unusedRolesAuditData) {
         loadUnusedRolesAudit();
@@ -6012,7 +6035,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         if (hrJob.status === 'F') {
           if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: FINALIZADO OK`;
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Clic para ver historial (${hrJob.blocked_today != null ? hrJob.blocked_today + ' bloqueados hoy' : 'ver detalle'})`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Usuarios retirados por retiro (${hrJob.blocked_today != null ? hrJob.blocked_today + ' bloqueados hoy' : 'ver detalle'})`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-emerald-500/40 bg-emerald-950/30 flex items-center gap-3 cursor-pointer hover:bg-emerald-900/40 hover:border-emerald-400/60 transition group active:scale-95 shadow-sm';
@@ -6021,7 +6044,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         } else if (hrJob.status === 'A') {
           if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: CANCELADO (REVISAR SM37)`;
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Fallo de ejecución • Clic para ver historial previo`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Usuarios retirados por retiro • Fallo de ejecución (ver historial)`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-rose-500 bg-rose-950/50 flex items-center gap-3 cursor-pointer hover:bg-rose-900/40 hover:border-rose-400 transition group active:scale-95 pulse-red';
@@ -6030,7 +6053,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         } else {
           if (hrText) hrText.textContent = `${hrJob.jobname || 'ZHR_BLOQUEO_RETIROS_DIARIO'}: ${hrJob.status || 'SIN EJECUCIÓN HOY'}`;
           if (hrSubtext) {
-            hrSubtext.innerHTML = `<i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Clic para ver historial de bloqueos`;
+            hrSubtext.innerHTML = `<i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Usuarios retirados por retiro (ver historial)`;
           }
           if (hrBadge) {
             hrBadge.className = 'px-3.5 py-2 rounded-lg border border-amber-500/40 bg-amber-950/30 flex items-center gap-3 cursor-pointer hover:bg-amber-900/40 hover:border-amber-400/60 transition group active:scale-95';
@@ -6222,6 +6245,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
     // ==========================================
     let dashboardPollTimer = null;
     let dbaPollTimer = null;
+    let unusedRolesPollTimer = null;
     let currentSapUser = null;
 
     // Interceptor global de fetch para adjuntar el token de sesión SAP y detectar expiración (401)
@@ -6274,6 +6298,10 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
         clearInterval(dbaPollTimer);
         dbaPollTimer = null;
       }
+      if (unusedRolesPollTimer) {
+        clearInterval(unusedRolesPollTimer);
+        unusedRolesPollTimer = null;
+      }
     }
 
     function startDashboardPolling() {
@@ -6283,6 +6311,7 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
       loadUnusedRolesAudit();
       dashboardPollTimer = setInterval(loadDashboard, 5000);
       dbaPollTimer = setInterval(() => loadDbacockpit(false), 30000);
+      unusedRolesPollTimer = setInterval(() => loadUnusedRolesAudit(false), 30000);
     }
 
     function showSapLoginGate(errorMessage = '') {
