@@ -321,6 +321,92 @@
     </div>
   </header>
 
+  <!-- SISTEMA INTELIGENTE DE ALERTAS CRÍTICAS Y VIGILANCIA PREVENTIVA SAP -->
+  <section id="intelligentAlertSystemSection" class="mb-6">
+    <div id="intelligentAlertSystemBar"
+      class="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-gray-900/95 via-gray-900/90 to-gray-900/95 p-3.5 shadow-lg transition-all duration-300">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <!-- Estado General del Sistema y Contadores de Severidad -->
+        <div class="flex items-start sm:items-center gap-3.5">
+          <div id="sysAlertIconBox"
+            class="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <i id="sysAlertIcon" class="fa-solid fa-shield-heart text-lg"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="sysAlertStatusPill"
+                class="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
+                <span id="sysAlertPulseDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span id="sysAlertStatusText">SISTEMA SAP ESTABLE</span>
+              </span>
+
+              <!-- Contador Alertas Críticas Activas (Rojo) -->
+              <span id="sysAlertCritBadge" onclick="openCriticalAlertsModal('history', 'CRITICAL')"
+                class="cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-rose-500/50"
+                title="Alertas Críticas Activas (Riesgo inmediato o afectación multi-usuario)">
+                <i class="fa-solid fa-circle-radiation text-[10px] text-rose-400"></i>
+                <span>Críticas: <b id="sysAlertCritCount" class="text-white">0</b></span>
+              </span>
+
+              <!-- Contador Alertas Graves Activas (Naranja) -->
+              <span id="sysAlertSevBadge" onclick="openCriticalAlertsModal('history', 'SEVERE')"
+                class="cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-amber-500/50"
+                title="Alertas Graves Activas (Degradación persistente o tendencia crítica)">
+                <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-400"></i>
+                <span>Graves: <b id="sysAlertSevCount" class="text-white">0</b></span>
+              </span>
+
+              <!-- Contador En Recuperación (Histéresis) -->
+              <span id="sysAlertRecBadge"
+                class="hidden text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-md bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 items-center gap-1.5">
+                <i class="fa-solid fa-arrow-trend-down text-[10px]"></i>
+                <span>En recuperación: <b id="sysAlertRecCount">0</b></span>
+              </span>
+            </div>
+            <p id="sysAlertDescription" class="text-xs text-gray-400 mt-1">
+              Vigilancia preventiva activa con filtro anti-falsas alarmas (evalúa persistencia, histéresis y capacidad real de instancia BOP).
+            </p>
+          </div>
+        </div>
+
+        <!-- Telemetría de Sostenimiento y Controles de Historial / Umbrales -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 justify-between lg:justify-end border-t lg:border-t-0 border-gray-800 pt-2.5 lg:pt-0">
+          <div class="hidden xl:flex items-center gap-2 text-[11px] font-mono bg-gray-950/80 px-3 py-1.5 rounded-lg border border-gray-800/90 text-gray-400"
+            title="Monitoreo continuo de ventanas de persistencia (Sustain Windows)">
+            <span>DIA: <b id="sysTelDia" class="text-gray-200">--%</b></span>
+            <span class="text-gray-700">|</span>
+            <span>BTC: <b id="sysTelBtc" class="text-gray-200">--%</b></span>
+            <span class="text-gray-700">|</span>
+            <span>WP Libres: <b id="sysTelWpFree" class="text-emerald-400">--%</b></span>
+            <span class="text-gray-700">|</span>
+            <span>EM: <b id="sysTelEm" class="text-gray-200">--%</b></span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="openCriticalAlertsModal('history')"
+              class="px-3 py-1.5 rounded-lg bg-gray-800/90 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-sm"
+              title="Consultar registro histórico de incidentes, causas, reincidencias y evolución de métricas">
+              <i class="fa-solid fa-clock-rotate-left text-blue-400"></i>
+              <span>Historial e Incidentes</span>
+              <span id="sysAlertHistoryBadge"
+                class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-950/90 text-blue-300 border border-blue-500/30">0</span>
+            </button>
+
+            <button onclick="openCriticalAlertsModal('thresholds')"
+              class="px-2.5 py-1.5 rounded-lg bg-gray-800/70 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/80 text-xs font-medium flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              title="Configurar umbrales de alerta, tiempos de persistencia e histéresis">
+              <i class="fa-solid fa-sliders text-amber-400"></i>
+              <span class="hidden sm:inline">Umbrales</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor Dinámico de Tarjetas de Alertas Críticas y Graves Activas -->
+      <div id="activeCriticalAlertsList" class="hidden mt-3.5 pt-3.5 border-t border-gray-800/90 space-y-2.5"></div>
+    </div>
+  </section>
+
   <!-- CINTA DE KPIS PRINCIPALES (TOP RIBBON - 6 TARJETAS BALANCEADAS) -->
   <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
     <div class="card p-4 flex flex-col justify-between cursor-pointer hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-950/20 transition-all group" id="kpiUserCard" onclick="openLicenseDistributionModal()" title="Clic para ver distribución de licencias SAP por empresa y cuotas">
@@ -2380,6 +2466,316 @@
     </div>
   </div>
 
+  <!-- MODAL: SISTEMA INTELIGENTE DE ALERTAS CRÍTICAS, HISTORIAL DE INCIDENTES Y UMBRALES -->
+  <div id="criticalAlertsModal" onclick="handleCriticalAlertsBackdropClick(event)"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-5">
+    <div class="card w-full max-w-6xl border-gray-700 bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <!-- Cabecera del Modal -->
+      <div class="px-6 py-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-950/90">
+        <div class="flex items-center gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+            <i class="fa-solid fa-bell-concierge text-lg"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-base font-bold text-white tracking-wide">Centro de Alertas Críticas, Auditoría e Historial de Incidentes SAP</h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-500/30">SAP ECC 6.0 · BOP (300)</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">Persistencia SQLite 24/7</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Trazabilidad técnica de eventos críticos, graves e informativos con filtro de persistencia, histéresis y correlación de causas.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-end sm:self-center">
+          <!-- Pestañas del Modal -->
+          <div class="flex items-center bg-gray-900 p-1 rounded-lg border border-gray-800">
+            <button id="btnAlertModalTabHistory" onclick="switchCriticalAlertsTab('history')"
+              class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-blue-600 text-white shadow-sm">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              <span>Historial y Análisis</span>
+            </button>
+            <button id="btnAlertModalTabThresholds" onclick="switchCriticalAlertsTab('thresholds')"
+              class="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition text-gray-400 hover:text-gray-200">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Umbrales y Reglas</span>
+            </button>
+          </div>
+
+          <button onclick="loadAlertHistoryData()" title="Actualizar historial de incidentes"
+            class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 transition">
+            <i id="alertHistoryRefreshIcon" class="fa-solid fa-rotate text-xs"></i>
+          </button>
+
+          <button onclick="closeCriticalAlertsModal()" title="Cerrar ventana"
+            class="p-2 rounded-lg bg-gray-800 hover:bg-rose-600/80 text-gray-400 hover:text-white border border-gray-700 transition">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- VISTA 1: HISTORIAL Y ANÁLISIS DE INCIDENTES -->
+      <div id="alertModalHistoryView" class="flex-1 overflow-y-auto p-5 space-y-5">
+        <!-- KPIs de Resumen del Historial -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="p-3 rounded-xl bg-gray-950/80 border border-gray-800">
+            <div class="text-[11px] text-gray-400 uppercase font-semibold">Total Registrados</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="histKpiTotal">0</div>
+            <div class="text-[10px] text-gray-500 mt-0.5">Eventos en rango seleccionado</div>
+          </div>
+          <div class="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30">
+            <div class="text-[11px] text-rose-300 uppercase font-semibold flex items-center justify-between">
+              <span>Críticos</span>
+              <i class="fa-solid fa-circle-radiation text-rose-400"></i>
+            </div>
+            <div class="text-xl font-bold text-rose-400 mt-1 font-mono" id="histKpiCritical">0</div>
+            <div class="text-[10px] text-rose-300/70 mt-0.5">Afectación operativa directa</div>
+          </div>
+          <div class="p-3 rounded-xl bg-amber-950/20 border border-amber-500/30">
+            <div class="text-[11px] text-amber-300 uppercase font-semibold flex items-center justify-between">
+              <span>Graves</span>
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+            </div>
+            <div class="text-xl font-bold text-amber-400 mt-1 font-mono" id="histKpiSevere">0</div>
+            <div class="text-[10px] text-amber-300/70 mt-0.5">Tendencia de degradación</div>
+          </div>
+          <div class="p-3 rounded-xl bg-blue-950/20 border border-blue-500/30">
+            <div class="text-[11px] text-blue-300 uppercase font-semibold flex items-center justify-between">
+              <span>Informativos</span>
+              <i class="fa-solid fa-circle-info text-blue-400"></i>
+            </div>
+            <div class="text-xl font-bold text-blue-400 mt-1 font-mono" id="histKpiInfo">0</div>
+            <div class="text-[10px] text-blue-300/70 mt-0.5">Registro técnico no intrusivo</div>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-950/80 border border-gray-800">
+            <div class="text-[11px] text-gray-400 uppercase font-semibold">Duración Prom. / Máx</div>
+            <div class="text-lg font-bold text-emerald-400 mt-1 font-mono">
+              <span id="histKpiAvgDur">0s</span> <span class="text-xs text-gray-500 font-normal">/</span> <span id="histKpiMaxDur" class="text-amber-300 text-sm">0s</span>
+            </div>
+            <div class="text-[10px] text-gray-500 mt-0.5">Tiempo hasta normalización</div>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros de Investigación -->
+        <div class="p-3.5 rounded-xl bg-gray-950/70 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Ventana de Tiempo</label>
+            <select id="filterAlertDays" onchange="loadAlertHistoryData()"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+              <option value="1">Últimas 24 horas</option>
+              <option value="7" selected>Últimos 7 días</option>
+              <option value="30">Últimos 30 días</option>
+              <option value="365">Todo el historial</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Nivel de Severidad</label>
+            <select id="filterAlertSeverity" onchange="loadAlertHistoryData()"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todas las severidades</option>
+              <option value="CRITICAL">🔴 Crítico</option>
+              <option value="SEVERE">🟠 Grave</option>
+              <option value="INFO">🔵 Informativo</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Componente / Categoría</label>
+            <select id="filterAlertCategory" onchange="loadAlertHistoryData()"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los componentes</option>
+              <option value="BTC">Procesos Background (BTC)</option>
+              <option value="DIA">Procesos de Diálogo (DIA)</option>
+              <option value="WORK_PROCESSES">Capacidad Global Work Processes</option>
+              <option value="MEMORY">Memoria SAP (EM / Heap)</option>
+              <option value="BUFFERS">Buffers SAP (ST02)</option>
+              <option value="DATABASE">Base de Datos Oracle (ST04)</option>
+              <option value="LOCKS_QUEUES">Colas SM12 y Dumps ST22</option>
+              <option value="CONNECTIVITY">Conectividad RFC</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Estado del Incidente</label>
+            <select id="filterAlertStatus" onchange="loadAlertHistoryData()"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los estados</option>
+              <option value="ACTIVE_GROUP">Activos / En Recuperación</option>
+              <option value="RESOLVED_GROUP">Normalizados / Cerrados</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Buscar (ID, Prog, Usuario, Tabla)</label>
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass text-gray-500 text-xs absolute left-2.5 top-2"></i>
+              <input id="filterAlertSearch" type="text" oninput="loadAlertHistoryData()"
+                placeholder="Ej. BTC, MSEG, QLIK, INC..."
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de Diagnóstico Analítico: Componentes Más Afectados, Reincidencias y Correlaciones -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="p-3.5 rounded-xl bg-gray-950/60 border border-gray-800">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 mb-2.5">
+              <i class="fa-solid fa-microchip text-rose-400"></i>
+              <span>Componentes Más Afectados</span>
+            </h4>
+            <div id="alertMostAffectedBox" class="space-y-2 text-xs text-gray-400">
+              Cargando análisis de componentes...
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-gray-950/60 border border-gray-800">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 mb-2.5">
+              <i class="fa-solid fa-repeat text-amber-400"></i>
+              <span>Detección de Eventos Recurrentes</span>
+            </h4>
+            <div id="alertRecurringBox" class="space-y-2 text-xs text-gray-400">
+              Cargando patrones de reincidencia...
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-gray-950/60 border border-gray-800">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 mb-2.5">
+              <i class="fa-solid fa-diagram-project text-purple-400"></i>
+              <span>Correlaciones y Causas Raíz</span>
+            </h4>
+            <div id="alertCorrelationsBox" class="space-y-2 text-xs text-gray-400">
+              Cargando correlaciones entre eventos...
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de Incidentes Registrados -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-list text-blue-400"></i>
+              <span>Registro de Auditoría de Incidentes SAP</span>
+            </h4>
+            <span id="alertHistoryCountLabel" class="text-[11px] font-mono text-gray-400">0 eventos</span>
+          </div>
+          <div id="alertHistoryListContainer" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- VISTA 2: CONFIGURACIÓN DE UMBRALES Y REGLAS INTELIGENTES -->
+      <div id="alertModalThresholdsView" class="hidden flex-1 overflow-y-auto p-5 space-y-5">
+        <div class="p-4 rounded-xl bg-blue-950/20 border border-blue-500/30 text-xs text-gray-300 flex items-start gap-3">
+          <i class="fa-solid fa-shield-halved text-blue-400 text-base mt-0.5"></i>
+          <div>
+            <div class="font-bold text-white mb-0.5">Principio de Cero Falsas Alarmas (Persistencia + Histéresis)</div>
+            <p class="text-gray-400">
+              Un proceso BTC o DIA que alcance el 100% durante unos segundos <strong>no genera alerta</strong>. El motor exige que la condición supere el umbral de consumo de forma continua durante el <strong>tiempo mínimo de persistencia (segundos)</strong> antes de activar un incidente, y aplica una banda de histéresis antes de darlo por normalizado.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Regla BTC -->
+          <div class="p-4 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div class="text-xs font-bold text-amber-300 uppercase flex items-center gap-2">
+              <i class="fa-solid fa-gears"></i> 1. Procesos Background (BTC)
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Ocupación BTC para Alerta GRAVE (%)</label>
+              <input id="th_btcSeverePct" type="number" min="50" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Persistencia mínima BTC GRAVE (segundos)</label>
+              <input id="th_btcSevereDurationSec" type="number" min="30" max="1800" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Ocupación BTC para Alerta CRÍTICA (%)</label>
+              <input id="th_btcCriticalPct" type="number" min="70" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Persistencia mínima BTC CRÍTICA (segundos)</label>
+              <input id="th_btcCriticalDurationSec" type="number" min="60" max="3600" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+          </div>
+
+          <!-- Regla DIA -->
+          <div class="p-4 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div class="text-xs font-bold text-rose-300 uppercase flex items-center gap-2">
+              <i class="fa-solid fa-users-viewfinder"></i> 2. Procesos de Diálogo (DIA)
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Ocupación DIA para Alerta GRAVE (%)</label>
+              <input id="th_diaSeverePct" type="number" min="40" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Persistencia mínima DIA GRAVE (segundos)</label>
+              <input id="th_diaSevereDurationSec" type="number" min="30" max="1800" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Ocupación DIA para Alerta CRÍTICA (%)</label>
+              <input id="th_diaCriticalPct" type="number" min="60" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Persistencia mínima DIA CRÍTICA (segundos)</label>
+              <input id="th_diaCriticalDurationSec" type="number" min="45" max="1800" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+          </div>
+
+          <!-- Regla Memoria, Bloqueos y Dumps -->
+          <div class="p-4 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div class="text-xs font-bold text-purple-300 uppercase flex items-center gap-2">
+              <i class="fa-solid fa-memory"></i> 3. Memoria, Bloqueos SM12 y ST22
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Extended Memory Crítica (%)</label>
+              <input id="th_emCriticalPct" type="number" min="70" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Bloqueos SM12 para Alerta GRAVE / CRÍTICA</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="th_sm12SevereCount" type="number" min="50" max="5000" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white" title="Umbral Grave">
+                <input id="th_sm12CriticalCount" type="number" min="100" max="10000" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white" title="Umbral Crítico">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Ráfaga Dumps ST22 en 10 min (Grave / Crítico)</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="th_st22StormSevereDelta10m" type="number" min="2" max="100" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+                <input id="th_st22StormCriticalDelta10m" type="number" min="5" max="200" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-400 mb-1">Confirmación de Recuperación / Histéresis (seg)</label>
+              <input id="th_recoveryConfirmSec" type="number" min="15" max="600" class="w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-xs font-mono text-white">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button onclick="saveAlertThresholdsForm()"
+            class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition active:scale-95 shadow">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Guardar Umbrales en Servidor</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pie del Modal -->
+      <div class="px-6 py-3 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-2 bg-gray-950/90 text-xs text-gray-400">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span>El recolector en segundo plano evalúa el estado cada 15s sin introducir sobrecarga RFC sobre SAP Productivo.</span>
+        </div>
+        <button onclick="closeCriticalAlertsModal()"
+          class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-semibold transition active:scale-95">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Notificación Toast -->
   <div id="toast"
     class="fixed bottom-5 right-5 hidden bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">
@@ -3358,6 +3754,506 @@
       showToast('Exportación CSV completada');
     }
 
+    // ==========================================
+    // SISTEMA INTELIGENTE DE ALERTAS CRÍTICAS SAP
+    // ==========================================
+    let latestCriticalAlertsState = null;
+
+    function renderIntelligentAlertSystem(alertState) {
+      if (!alertState || !alertState.counts) return;
+      latestCriticalAlertsState = alertState;
+
+      const bar = document.getElementById('intelligentAlertSystemBar');
+      const iconBox = document.getElementById('sysAlertIconBox');
+      const icon = document.getElementById('sysAlertIcon');
+      const pill = document.getElementById('sysAlertStatusPill');
+      const dot = document.getElementById('sysAlertPulseDot');
+      const statusText = document.getElementById('sysAlertStatusText');
+      const desc = document.getElementById('sysAlertDescription');
+
+      const critBadge = document.getElementById('sysAlertCritBadge');
+      const sevBadge = document.getElementById('sysAlertSevBadge');
+      const recBadge = document.getElementById('sysAlertRecBadge');
+
+      const critCount = document.getElementById('sysAlertCritCount');
+      const sevCount = document.getElementById('sysAlertSevCount');
+      const recCount = document.getElementById('sysAlertRecCount');
+      const histBadge = document.getElementById('sysAlertHistoryBadge');
+      const listContainer = document.getElementById('activeCriticalAlertsList');
+
+      const c = alertState.counts;
+      if (critCount) critCount.textContent = c.activeCritical || 0;
+      if (sevCount) sevCount.textContent = c.activeSevere || 0;
+      if (recCount) recCount.textContent = c.recoveringCount || 0;
+      if (histBadge) histBadge.textContent = c.totalHistoryCount || 0;
+
+      // Actualizar telemetría rápida de sostenimiento
+      const tel = alertState.currentTelemetry || {};
+      const elDia = document.getElementById('sysTelDia');
+      const elBtc = document.getElementById('sysTelBtc');
+      const elWpFree = document.getElementById('sysTelWpFree');
+      const elEm = document.getElementById('sysTelEm');
+
+      if (elDia) {
+        const dSust = tel.diaSustainedSec > 0 ? ` (${Math.round(tel.diaSustainedSec / 60)}m)` : '';
+        elDia.textContent = `${tel.diaBusyPct ?? 0}%${dSust}`;
+        elDia.className = (tel.diaBusyPct >= 75) ? 'text-amber-400 font-bold' : 'text-gray-200';
+      }
+      if (elBtc) {
+        const bSust = tel.btcSustainedSec > 0 ? ` (${Math.round(tel.btcSustainedSec / 60)}m)` : '';
+        elBtc.textContent = `${tel.btcBusyPct ?? 0}%${bSust}`;
+        elBtc.className = (tel.btcBusyPct >= 90) ? 'text-rose-400 font-bold' : 'text-gray-200';
+      }
+      if (elWpFree) {
+        elWpFree.textContent = `${tel.wpFreePct ?? 100}%`;
+        elWpFree.className = (tel.wpFreePct <= 15) ? 'text-rose-400 font-bold' : 'text-emerald-400';
+      }
+      if (elEm) {
+        elEm.textContent = `${tel.emUsagePct ?? 0}%`;
+        elEm.className = (tel.emUsagePct >= 85) ? 'text-amber-400 font-bold' : 'text-gray-200';
+      }
+
+      if (recBadge) {
+        if (c.recoveringCount > 0) {
+          recBadge.classList.remove('hidden');
+          recBadge.classList.add('flex');
+        } else {
+          recBadge.classList.add('hidden');
+          recBadge.classList.remove('flex');
+        }
+      }
+
+      // Estilo visual según severidad máxima activa (Rojo: Crítico, Naranja: Grave, Azul/Cian: Recuperación, Verde: Estable)
+      if (alertState.systemStatus === 'CRITICAL') {
+        if (bar) bar.className = 'rounded-xl border-2 border-rose-500/80 bg-gradient-to-r from-rose-950/70 via-gray-900/95 to-rose-950/50 p-3.5 shadow-xl shadow-rose-950/40 transition-all duration-300';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/60 flex items-center justify-center text-rose-400 shrink-0 pulse-red';
+        if (icon) icon.className = 'fa-solid fa-radiation text-lg animate-pulse';
+        if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-600 text-white border border-rose-400 flex items-center gap-1.5 shadow';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-white animate-ping';
+        if (critBadge) critBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-rose-950/90 text-rose-200 border border-rose-500 flex items-center gap-1.5';
+      } else if (alertState.systemStatus === 'SEVERE') {
+        if (bar) bar.className = 'rounded-xl border-2 border-amber-500/80 bg-gradient-to-r from-amber-950/60 via-gray-900/95 to-amber-950/40 p-3.5 shadow-lg shadow-amber-950/30 transition-all duration-300';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/60 flex items-center justify-center text-amber-400 shrink-0';
+        if (icon) icon.className = 'fa-solid fa-triangle-exclamation text-lg';
+        if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-amber-600 text-white border border-amber-400 flex items-center gap-1.5 shadow';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-white animate-pulse';
+        if (sevBadge) sevBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-amber-950/90 text-amber-200 border border-amber-500 flex items-center gap-1.5';
+      } else if (alertState.systemStatus === 'RECOVERING') {
+        if (bar) bar.className = 'rounded-xl border border-cyan-500/50 bg-gradient-to-r from-cyan-950/40 via-gray-900/95 to-gray-900/95 p-3.5 shadow-lg transition-all duration-300';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shrink-0';
+        if (icon) icon.className = 'fa-solid fa-heart-pulse text-lg';
+        if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-500/50 flex items-center gap-1.5';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-pulse';
+      } else {
+        if (bar) bar.className = 'rounded-xl border border-emerald-500/30 bg-gradient-to-r from-gray-900/95 via-gray-900/90 to-gray-900/95 p-3.5 shadow-lg transition-all duration-300';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0';
+        if (icon) icon.className = 'fa-solid fa-shield-heart text-lg';
+        if (pill) pill.className = 'text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (critBadge) critBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-rose-500/50';
+        if (sevBadge) sevBadge.className = 'cursor-pointer text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-gray-800/90 text-gray-400 border border-gray-700 flex items-center gap-1.5 transition hover:border-amber-500/50';
+      }
+
+      if (statusText) statusText.textContent = alertState.statusLabel || 'SISTEMA SAP ESTABLE';
+      if (desc) desc.textContent = alertState.statusDescription || '';
+
+      // Renderizar tarjetas de incidentes críticos/graves activos en la parte superior
+      const activeAlerts = Array.isArray(alertState.activeAlerts) ? alertState.activeAlerts : [];
+      if (!listContainer) return;
+
+      if (activeAlerts.length === 0) {
+        listContainer.classList.add('hidden');
+        listContainer.innerHTML = '';
+        return;
+      }
+
+      listContainer.classList.remove('hidden');
+      listContainer.innerHTML = activeAlerts.map(inc => {
+        const isCrit = inc.severity === 'CRITICAL';
+        const isRec = inc.status === 'RECOVERING';
+        const cardBorder = isRec
+          ? 'border-cyan-500/50 bg-cyan-950/20'
+          : isCrit
+            ? 'border-rose-500/70 bg-rose-950/35'
+            : 'border-amber-500/70 bg-amber-950/30';
+        const sevPill = isCrit
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600 text-white uppercase">🔴 CRÍTICO</span>'
+          : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-600 text-white uppercase">🟠 GRAVE</span>';
+        const statusPill = isRec
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-900/80 text-cyan-200 border border-cyan-500/40">EN RECUPERACIÓN (HISTÉRESIS)</span>'
+          : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-black/50 text-gray-200 border border-white/10">ACTIVO</span>';
+
+        return `
+          <div class="p-3.5 rounded-xl border ${cardBorder} flex flex-col lg:flex-row justify-between gap-3 transition">
+            <div class="space-y-1.5 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                ${sevPill}
+                ${statusPill}
+                <span class="text-xs font-mono font-bold text-white">${escapeHtml(inc.component)}</span>
+                <span class="text-[11px] font-mono text-gray-400">• ID: ${escapeHtml(inc.incidentUid)}</span>
+                <span class="text-[11px] font-mono text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-amber-500/20">
+                  <i class="fa-regular fa-clock mr-1"></i>Duración: <b>${escapeHtml(inc.durationFormatted)}</b>
+                </span>
+                <span class="text-[11px] font-mono text-gray-300">
+                  Detectado: ${escapeHtml(inc.startedAtFormatted)}
+                </span>
+              </div>
+
+              <div class="text-sm font-bold text-white">${escapeHtml(inc.title)}</div>
+              <div class="text-xs text-gray-300">${escapeHtml(inc.technicalDescription)}</div>
+
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] pt-1 text-gray-300">
+                <span><strong class="text-gray-400">Métrica:</strong> <code class="text-white font-mono">${inc.metricValue}${escapeHtml(inc.metricUnit)}</code> (Umbral: ${inc.thresholdValue}${escapeHtml(inc.metricUnit)} · Pico: ${inc.peakValue}${escapeHtml(inc.metricUnit)})</span>
+                <span><strong class="text-gray-400">Proceso/Recurso:</strong> <span class="font-mono text-amber-200">${escapeHtml(inc.relatedEntity || 'N/A')}</span></span>
+              </div>
+
+              <div class="text-[11px] text-rose-200/90 bg-black/30 px-2.5 py-1.5 rounded-lg border border-white/5 mt-1">
+                <strong class="text-white"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i>Impacto Operativo:</strong> ${escapeHtml(inc.operationalImpact)}
+              </div>
+            </div>
+
+            <div class="flex lg:flex-col justify-end gap-2 shrink-0">
+              <button onclick="openCriticalAlertsModal('history', 'ALL', '${escapeHtml(inc.incidentUid)}')"
+                class="px-3 py-1.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-200 border border-gray-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-magnifying-glass-chart text-blue-400"></i>
+                <span>Ver Evidencia</span>
+              </button>
+              <button onclick="closeAlertIncidentAction('${escapeHtml(inc.incidentUid)}')"
+                class="px-3 py-1.5 rounded-lg bg-gray-900/70 hover:bg-emerald-700 text-gray-300 hover:text-white border border-gray-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                title="Confirmar revisión y archivar en el historial">
+                <i class="fa-solid fa-check"></i>
+                <span>Dar por Revisado</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openCriticalAlertsModal(tab = 'history', severityFilter = 'ALL', searchUid = '') {
+      const modal = document.getElementById('criticalAlertsModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      const sevEl = document.getElementById('filterAlertSeverity');
+      if (sevEl && severityFilter) sevEl.value = severityFilter;
+
+      const searchEl = document.getElementById('filterAlertSearch');
+      if (searchEl) searchEl.value = searchUid || '';
+
+      switchCriticalAlertsTab(tab);
+    }
+
+    function closeCriticalAlertsModal() {
+      const modal = document.getElementById('criticalAlertsModal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleCriticalAlertsBackdropClick(event) {
+      if (event.target && event.target.id === 'criticalAlertsModal') {
+        closeCriticalAlertsModal();
+      }
+    }
+
+    function switchCriticalAlertsTab(tab) {
+      const histView = document.getElementById('alertModalHistoryView');
+      const thView = document.getElementById('alertModalThresholdsView');
+      const btnHist = document.getElementById('btnAlertModalTabHistory');
+      const btnTh = document.getElementById('btnAlertModalTabThresholds');
+
+      if (tab === 'thresholds') {
+        if (histView) histView.classList.add('hidden');
+        if (thView) thView.classList.remove('hidden');
+        if (btnTh) btnTh.className = 'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-blue-600 text-white shadow-sm';
+        if (btnHist) btnHist.className = 'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition text-gray-400 hover:text-gray-200';
+        loadAlertThresholdsForm();
+      } else {
+        if (thView) thView.classList.add('hidden');
+        if (histView) histView.classList.remove('hidden');
+        if (btnHist) btnHist.className = 'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-blue-600 text-white shadow-sm';
+        if (btnTh) btnTh.className = 'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition text-gray-400 hover:text-gray-200';
+        loadAlertHistoryData();
+      }
+    }
+
+    async function loadAlertHistoryData() {
+      const icon = document.getElementById('alertHistoryRefreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+
+      const days = document.getElementById('filterAlertDays')?.value || '7';
+      const severity = document.getElementById('filterAlertSeverity')?.value || 'ALL';
+      const category = document.getElementById('filterAlertCategory')?.value || 'ALL';
+      const status = document.getElementById('filterAlertStatus')?.value || 'ALL';
+      const search = document.getElementById('filterAlertSearch')?.value || '';
+
+      try {
+        const params = new URLSearchParams({ days, severity, category, status, search });
+        const res = await fetch(`/api/alerts/history?${params.toString()}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Error consultando historial');
+
+        const s = data.summary || {};
+        const elTot = document.getElementById('histKpiTotal');
+        const elCrit = document.getElementById('histKpiCritical');
+        const elSev = document.getElementById('histKpiSevere');
+        const elInfo = document.getElementById('histKpiInfo');
+        const elAvg = document.getElementById('histKpiAvgDur');
+        const elMax = document.getElementById('histKpiMaxDur');
+        const lblCount = document.getElementById('alertHistoryCountLabel');
+
+        if (elTot) elTot.textContent = s.total || 0;
+        if (elCrit) elCrit.textContent = s.criticalCount || 0;
+        if (elSev) elSev.textContent = s.severeCount || 0;
+        if (elInfo) elInfo.textContent = s.infoCount || 0;
+        if (elAvg) elAvg.textContent = s.avgDurationFormatted || '0s';
+        if (elMax) elMax.textContent = s.maxDurationFormatted || '0s';
+        if (lblCount) lblCount.textContent = `Mostrando ${(data.incidents || []).length} incidentes auditados`;
+
+        // 1. Componentes más afectados
+        const compBox = document.getElementById('alertMostAffectedBox');
+        if (compBox) {
+          const comps = data.mostAffectedComponents || [];
+          if (comps.length === 0) {
+            compBox.innerHTML = '<div class="text-gray-500 py-2">Sin componentes afectados en este filtro.</div>';
+          } else {
+            compBox.innerHTML = comps.slice(0, 4).map(c => `
+              <div class="flex items-center justify-between bg-gray-900/90 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                <div class="truncate pr-2">
+                  <div class="font-semibold text-gray-200 text-xs truncate">${escapeHtml(c.component)}</div>
+                  <div class="text-[10px] text-gray-500 font-mono">Acumulado: ${escapeHtml(c.totalDurationFormatted)}</div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                  ${c.criticalCount > 0 ? `<span class="px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-500/40">${c.criticalCount} crít</span>` : ''}
+                  <span class="px-1.5 py-0.2 rounded bg-gray-800 text-gray-300">${c.count} ev.</span>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+
+        // 2. Eventos recurrentes
+        const recBox = document.getElementById('alertRecurringBox');
+        if (recBox) {
+          const recs = data.recurringEvents || [];
+          if (recs.length === 0) {
+            recBox.innerHTML = '<div class="text-gray-500 py-2">No se detectan reincidencias repetitivas en el período.</div>';
+          } else {
+            recBox.innerHTML = recs.slice(0, 4).map(r => `
+              <div class="bg-gray-900/90 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-amber-300 text-xs truncate">${escapeHtml(r.component)}</span>
+                  <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-950/90 text-amber-300 border border-amber-500/30">
+                    Reincidencia ×${Math.max(r.occurrences, r.maxRecurrence)}
+                  </span>
+                </div>
+                <div class="text-[10px] text-gray-400 truncate mt-0.5">Pico máx: ${r.peakObserved}${escapeHtml(r.unit)} • Últ: ${escapeHtml(r.lastSeenFormatted)}</div>
+              </div>
+            `).join('');
+          }
+        }
+
+        // 3. Correlaciones
+        const corrBox = document.getElementById('alertCorrelationsBox');
+        if (corrBox) {
+          const corrs = data.correlations || [];
+          if (corrs.length === 0) {
+            corrBox.innerHTML = '<div class="text-gray-500 py-2">Eventos aislados (sin cascada simultánea detectada).</div>';
+          } else {
+            corrBox.innerHTML = corrs.slice(0, 3).map(cr => `
+              <div class="bg-gray-900/90 px-2.5 py-1.5 rounded-lg border border-purple-500/30">
+                <div class="text-[11px] font-mono font-bold text-purple-300 truncate">${escapeHtml(cr.components)}</div>
+                <div class="text-[10px] text-gray-400 mt-0.5 leading-snug">${escapeHtml(cr.explanation)}</div>
+              </div>
+            `).join('');
+          }
+        }
+
+        renderAlertHistoryList(data.incidents || []);
+      } catch (err) {
+        console.error('Error loadAlertHistoryData:', err);
+        showToast('Error al cargar historial de incidentes: ' + err.message);
+      } finally {
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }
+
+    function renderAlertHistoryList(incidents) {
+      const container = document.getElementById('alertHistoryListContainer');
+      if (!container) return;
+
+      if (incidents.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-gray-950/50 rounded-xl border border-gray-800 text-gray-400 text-xs">
+            <i class="fa-solid fa-shield-check text-2xl text-emerald-400 mb-2"></i>
+            <p class="font-semibold text-gray-200">No se encontraron incidentes con los criterios seleccionados.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = incidents.map((inc, idx) => {
+        const isCrit = inc.severity === 'CRITICAL';
+        const isSev = inc.severity === 'SEVERE';
+        const borderCol = isCrit
+          ? 'border-rose-500/50 bg-rose-950/10'
+          : isSev
+            ? 'border-amber-500/50 bg-amber-950/10'
+            : 'border-blue-500/30 bg-gray-950/70';
+
+        const sevBadge = isCrit
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600 text-white">🔴 CRÍTICO</span>'
+          : isSev
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-600 text-white">🟠 GRAVE</span>'
+            : '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-950 text-blue-300 border border-blue-500/40">🔵 INFORMATIVO</span>';
+
+        let statusBadge = '';
+        if (inc.status === 'ACTIVE') {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-500/40">ACTIVO</span>';
+        } else if (inc.status === 'RECOVERING') {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">EN RECUPERACIÓN</span>';
+        } else if (inc.status === 'NORMALIZED') {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">NORMALIZADO</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-gray-800 text-gray-300 border border-gray-700">CERRADO</span>';
+        }
+
+        const timeline = Array.isArray(inc.evidence?.timeline) ? inc.evidence.timeline : [];
+        const timelineHtml = timeline.length > 0
+          ? `<div class="mt-2 pt-2 border-t border-gray-800/80">
+               <div class="text-[10px] uppercase font-bold text-gray-400 mb-1.5">Evolución de Métrica Durante el Incidente (${timeline.length} muestras):</div>
+               <div class="flex flex-wrap gap-1.5">
+                 ${timeline.map(pt => `
+                   <span class="px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-[10px] font-mono text-gray-300">
+                     <span class="text-gray-500">${escapeHtml(pt.time || '')}:</span> <b class="text-amber-300">${pt.value}${escapeHtml(inc.metricUnit)}</b>
+                   </span>
+                 `).join('')}
+               </div>
+             </div>`
+          : '';
+
+        return `
+          <div class="p-4 rounded-xl border ${borderCol} transition hover:border-gray-600">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2 pb-2 border-b border-gray-800/80">
+              <div class="flex flex-wrap items-center gap-2">
+                ${sevBadge}
+                ${statusBadge}
+                <span class="text-xs font-mono font-bold text-white">${escapeHtml(inc.incidentUid)}</span>
+                <span class="text-xs font-semibold text-blue-300">${escapeHtml(inc.component)}</span>
+                ${inc.recurrenceCount > 1 ? `<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/30">Reincidencia #${inc.recurrenceCount}</span>` : ''}
+              </div>
+              <div class="flex flex-wrap items-center gap-3 text-[11px] font-mono text-gray-400">
+                <span><i class="fa-regular fa-calendar-check mr-1 text-gray-500"></i>Inicio: <b class="text-gray-200">${escapeHtml(inc.startedAtFormatted)}</b></span>
+                <span>Fin: <b class="text-gray-200">${escapeHtml(inc.endedAtFormatted || 'En curso')}</b></span>
+                <span class="px-2 py-0.5 rounded bg-gray-900 text-amber-300 border border-gray-700">Duración: <b>${escapeHtml(inc.durationFormatted)}</b></span>
+              </div>
+            </div>
+
+            <div class="mt-2.5 space-y-1.5">
+              <div class="text-sm font-bold text-white">${escapeHtml(inc.title)}</div>
+              <p class="text-xs text-gray-300 leading-relaxed">${escapeHtml(inc.technicalDescription)}</p>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-[11px]">
+                <div class="bg-gray-900/80 px-2.5 py-1.5 rounded border border-gray-800">
+                  <span class="text-gray-400">Métrica / Valor:</span>
+                  <div class="font-mono text-white font-bold mt-0.5">${escapeHtml(inc.metricName)}: ${inc.metricValue}${escapeHtml(inc.metricUnit)} <span class="text-gray-400 font-normal">(Umbral: ${inc.thresholdValue}${escapeHtml(inc.metricUnit)} | Pico: ${inc.peakValue}${escapeHtml(inc.metricUnit)})</span></div>
+                </div>
+                <div class="bg-gray-900/80 px-2.5 py-1.5 rounded border border-gray-800">
+                  <span class="text-gray-400">Proceso / Usuario / Recurso:</span>
+                  <div class="font-mono text-amber-200 mt-0.5 truncate" title="${escapeHtml(inc.relatedEntity)}">${escapeHtml(inc.relatedEntity || 'Instancia Central BOP')}</div>
+                </div>
+                <div class="bg-gray-900/80 px-2.5 py-1.5 rounded border border-gray-800">
+                  <span class="text-gray-400">Instancia SAP:</span>
+                  <div class="font-mono text-gray-200 mt-0.5">${escapeHtml(inc.sapInstance)}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 text-[11px]">
+                <div class="bg-black/30 px-2.5 py-1.5 rounded border border-gray-800/80 text-gray-300">
+                  <strong class="text-rose-300">Impacto Operativo:</strong> ${escapeHtml(inc.operationalImpact)}
+                </div>
+                <div class="bg-black/30 px-2.5 py-1.5 rounded border border-gray-800/80 text-gray-300">
+                  <strong class="text-emerald-300">Acción Recomendada Basis:</strong> ${escapeHtml(inc.recommendedAction)}
+                </div>
+              </div>
+
+              ${timelineHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function closeAlertIncidentAction(incidentUid) {
+      try {
+        const res = await fetch(`/api/alerts/incident/${encodeURIComponent(incidentUid)}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CLOSE', note: 'Revisado y cerrado desde el Centro de Monitoreo SAP' })
+        });
+        const state = await res.json();
+        if (state.success) {
+          renderIntelligentAlertSystem(state);
+          showToast(`Incidente ${incidentUid} marcado como revisado/cerrado en el historial`);
+        }
+      } catch (err) {
+        showToast('Error actualizando incidente: ' + err.message);
+      }
+    }
+
+    async function loadAlertThresholdsForm() {
+      try {
+        const res = await fetch('/api/alerts/thresholds');
+        const data = await res.json();
+        if (!data.success || !data.thresholds) return;
+        const t = data.thresholds;
+        const fields = [
+          'btcSeverePct', 'btcSevereDurationSec', 'btcCriticalPct', 'btcCriticalDurationSec',
+          'diaSeverePct', 'diaSevereDurationSec', 'diaCriticalPct', 'diaCriticalDurationSec',
+          'emCriticalPct', 'sm12SevereCount', 'sm12CriticalCount',
+          'st22StormSevereDelta10m', 'st22StormCriticalDelta10m', 'recoveryConfirmSec'
+        ];
+        fields.forEach(k => {
+          const el = document.getElementById(`th_${k}`);
+          if (el && t[k] !== undefined) el.value = t[k];
+        });
+      } catch (err) {
+        console.error('Error loadAlertThresholdsForm:', err);
+      }
+    }
+
+    async function saveAlertThresholdsForm() {
+      const fields = [
+        'btcSeverePct', 'btcSevereDurationSec', 'btcCriticalPct', 'btcCriticalDurationSec',
+        'diaSeverePct', 'diaSevereDurationSec', 'diaCriticalPct', 'diaCriticalDurationSec',
+        'emCriticalPct', 'sm12SevereCount', 'sm12CriticalCount',
+        'st22StormSevereDelta10m', 'st22StormCriticalDelta10m', 'recoveryConfirmSec'
+      ];
+      const payload = {};
+      fields.forEach(k => {
+        const el = document.getElementById(`th_${k}`);
+        if (el && el.value !== '') payload[k] = Number(el.value);
+      });
+
+      try {
+        const res = await fetch('/api/alerts/thresholds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Umbrales y ventanas de persistencia actualizados correctamente');
+        } else {
+          showToast('Error al guardar umbrales: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        showToast('Error de red al guardar umbrales');
+      }
+    }
+
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         closePasswordResetsModal();
@@ -3368,6 +4264,7 @@
         closeWsCpiModal();
         closeWhitelistModal();
         closeUnusedRolesModal();
+        closeCriticalAlertsModal();
       }
     });
 
@@ -5988,6 +6885,10 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
       try {
         const res = await fetch('/api/dashboard');
         const data = await res.json();
+
+        if (data.critical_alerts) {
+          renderIntelligentAlertSystem(data.critical_alerts);
+        }
 
         const banner = document.getElementById('modeBanner');
         banner.textContent = data.mode || 'CONECTADO A SAP';

@@ -191,6 +191,14 @@ async function runCollectorCycle() {
       ws_errors: wsErrors
     });
 
+    // Evaluar reglas inteligentes de alertas críticas y graves reutilizando sapData (0 sobrecarga RFC)
+    try {
+      const { evaluateSystemAlerts } = require('./criticalAlertService');
+      await evaluateSystemAlerts(sapData);
+    } catch (alertErr) {
+      console.error('[CRITICAL ALERT EVAL ERROR]:', alertErr.message);
+    }
+
     lastCollectedAt = new Date().toISOString();
     lastCollectorError = null;
     lastCollectedMetrics = {

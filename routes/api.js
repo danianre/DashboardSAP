@@ -247,8 +247,11 @@ router.get('/dashboard', async (req, res) => {
       btc_busy_pct: btcBusyPct
     });
 
+    const criticalAlerts = await getAlertsDashboardState();
+
     res.json({
       ...sapData,
+      critical_alerts: criticalAlerts,
       current_metrics: {
         dia_busy: diaBusy,
         dia_total: diaTotal,
@@ -410,6 +413,13 @@ router.get('/dbacockpit', async (req, res) => {
 // Endpoint de Distribución y Control de Licencias SAP por Empresa
 const { getLicenseDistribution } = require('../services/licenseService');
 const { getReconciledUnusedRolesAudit } = require('../services/roleAuditService');
+const {
+  getAlertsDashboardState,
+  getAlertHistory,
+  getAlertThresholds,
+  updateAlertThresholds,
+  updateIncidentStatus
+} = require('../services/criticalAlertService');
 router.get('/licenses/by-company', async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === 'true';
@@ -447,6 +457,70 @@ router.get('/roles/unused-audit/download-excel', (req, res) => {
     res.download(excelPath, 'Reporte_Transacciones_No_Usadas_SAP.xlsx');
   } catch (error) {
     res.status(500).send(error.message);
+  }
+});
+
+// ==========================================
+// SISTEMA INTELIGENTE DE ALERTAS CRÍTICAS SAP
+// ==========================================
+
+// Estado actual de alertas críticas/graves activas y telemetría de vigilancia
+router.get('/alerts/status', async (req, res) => {
+  try {
+    const state = await getAlertsDashboardState();
+    res.json(state);
+  } catch (error) {
+    console.error('[ERROR GET /api/alerts/status]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Historial persistente de incidentes, componentes afectados, reincidencia y correlaciones
+router.get('/alerts/history', async (req, res) => {
+  try {
+    const history = await getAlertHistory(req.query || {});
+    res.json(history);
+  } catch (error) {
+    console.error('[ERROR GET /api/alerts/history]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Consultar umbrales configurables de detección y ventanas de persistencia
+router.get('/alerts/thresholds', (req, res) => {
+  try {
+    res.json({ success: true, ...getAlertThresholds() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar umbrales configurables de detección
+router.post('/alerts/thresholds', async (req, res) => {
+  try {
+    const updated = await updateAlertThresholds(req.body || {});
+    res.json({
+      success: true,
+      message: 'Umbrales y ventanas de persistencia actualizados correctamente.',
+      thresholds: updated
+    });
+  } catch (error) {
+    console.error('[ERROR POST /api/alerts/thresholds]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Acción sobre un incidente (Cerrar manualmente / Agregar nota técnica de auditoría)
+router.post('/alerts/incident/:uid/action', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { action, note } = req.body || {};
+    const adminUser = req.sapSession?.username || 'ADMIN';
+    const state = await updateIncidentStatus(uid, action || 'CLOSE', adminUser, note || '');
+    res.json(state);
+  } catch (error) {
+    console.error('[ERROR POST /api/alerts/incident/:uid/action]:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
