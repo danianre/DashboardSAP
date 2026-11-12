@@ -12,50 +12,51 @@ const DEFAULT_THRESHOLDS = {
   // 1. Procesos BTC (Background) - Alerta crítica exclusivamente al 100% durante mucho tiempo
   btcSeverePct: 95,
   btcCriticalPct: 100,
-  btcSevereDurationSec: 180,
-  btcCriticalDurationSec: 300, // 5 minutos continuos al 100%
+  btcSevereDurationSec: 300,
+  btcCriticalDurationSec: 600, // 10 minutos continuos al 100%
   btcRecoveryPct: 80,          // Histéresis de recuperación (< 80%)
 
   // 2. Procesos DIA (Diálogo) - Alerta crítica exclusivamente al 100% durante mucho tiempo
   diaSeverePct: 95,
   diaCriticalPct: 100,
-  diaSevereDurationSec: 120,
-  diaCriticalDurationSec: 180, // 3 minutos continuos al 100%
+  diaSevereDurationSec: 180,
+  diaCriticalDurationSec: 300, // 5 minutos continuos al 100% (0 procesos libres)
   diaRecoveryPct: 80,          // Histéresis de recuperación (< 80%)
 
   // 3. Work Processes Globales (Agotamiento combinado DIA + BTC)
   wpExhaustionSeverePct: 90,
   wpExhaustionCriticalPct: 98,
-  wpExhaustionDurationSec: 120,
+  wpExhaustionDurationSec: 180,
   wpExhaustionRecoveryPct: 80,
 
   // 5. Memoria SAP (Extended Memory / Heap PRIV)
-  emSeverePct: 85,
-  emCriticalPct: 92,
-  emRecoveryPct: 78,
-  heapSeverePct: 75,
-  heapCriticalPct: 88,
+  emSeverePct: 90,
+  emCriticalPct: 95,
+  emRecoveryPct: 80,
+  heapSeverePct: 80,
+  heapCriticalPct: 90,
 
   // 6. Buffers SAP (ST02)
-  bufferFreeSpaceLowPct: 2.0,
-  bufferHitRatioSeverePct: 94.0,
-  bufferHitRatioCriticalPct: 88.0,
-  bufferSwapsPerDaySevere: 25000,
-  bufferSwapsPerDayCritical: 80000,
+  bufferFreeSpaceLowPct: 1.0,
+  bufferHitRatioSeverePct: 90.0,
+  bufferHitRatioCriticalPct: 85.0,
+  bufferSwapsPerDaySevere: 50000,
+  bufferSwapsPerDayCritical: 150000,
 
   // 7. Base de Datos Oracle (DBACOCKPIT / Contención I/O y Bloqueos BD)
-  dbLockWaitSevereCount: 2,
-  dbLockWaitCriticalCount: 4,
-  dbLockWaitDurationSec: 60,
-  dbSeqReadCriticalSec: 180,
+  // En ERPs de alta concurrencia, sesiones en Lock Wait son normales; solo alertar si hay afectación operativa real prolongada
+  dbLockWaitSevereCount: 10,
+  dbLockWaitCriticalCount: 20,
+  dbLockWaitDurationSec: 600, // 10 minutos continuos con afectación operativa
+  dbSeqReadCriticalSec: 300,  // Lectura secuencial > 5 min en tabla crítica
 
   // 8. Colas Enqueue (SM12) y Tormenta de ABAP Dumps (ST22)
-  sm12SevereCount: 400,
-  sm12CriticalCount: 600,
-  sm12SustainedDurationSec: 180,
-  sm12RecoveryCount: 320,
-  st22StormSevereDelta10m: 5,   // >= 5 nuevos dumps en 10 minutos
-  st22StormCriticalDelta10m: 10 // >= 10 nuevos dumps en 10 minutos
+  sm12SevereCount: 800,
+  sm12CriticalCount: 1500,
+  sm12SustainedDurationSec: 600, // 10 minutos
+  sm12RecoveryCount: 500,
+  st22StormSevereDelta10m: 6,    // >= 6 nuevos dumps en 10 minutos
+  st22StormCriticalDelta10m: 12  // >= 12 nuevos dumps en 10 minutos
 };
 
 let currentThresholds = { ...DEFAULT_THRESHOLDS };
@@ -111,8 +112,9 @@ function initAlertTables() {
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_rule ON sap_alert_incidents(rule_key)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_alert_severity ON sap_alert_incidents(severity)`);
 
-      // Normalizar cualquier incidente previo que no sea CRITICAL o que corresponda a demoras de procesos individuales (DIA/BTC)
-      db.run(`UPDATE sap_alert_incidents SET status = 'NORMALIZED', ended_at = datetime('now') WHERE status IN ('ACTIVE', 'RECOVERING') AND (severity != 'CRITICAL' OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS'))`);
+      // Normalizar cualquier incidente previo que no sea CRITICAL, que corresponda a demoras individuales (DIA/BTC),
+      // o que sea contención de BD sin afectación operativa real demostrada
+      db.run(`UPDATE sap_alert_incidents SET status = 'NORMALIZED', ended_at = datetime('now') WHERE status IN ('ACTIVE', 'RECOVERING') AND (severity != 'CRITICAL' OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS') OR (rule_key = 'DB_CONTENTION_AND_HEAVY_IO' AND metric_value < 20))`);
 
       db.run(`CREATE TABLE IF NOT EXISTS sap_alert_config (
         key TEXT PRIMARY KEY,
@@ -134,6 +136,22 @@ function loadThresholdsFromDb() {
       if (!err && row && row.value_json) {
         try {
           const parsed = JSON.parse(row.value_json);
+          // Migrar umbrales rígidos antiguos hacia los nuevos valores realistas orientados a impacto operativo
+          if (parsed.dbLockWaitCriticalCount && parsed.dbLockWaitCriticalCount < 15) {
+            parsed.dbLockWaitCriticalCount = DEFAULT_THRESHOLDS.dbLockWaitCriticalCount;
+          }
+          if (parsed.dbLockWaitDurationSec && parsed.dbLockWaitDurationSec < 300) {
+            parsed.dbLockWaitDurationSec = DEFAULT_THRESHOLDS.dbLockWaitDurationSec;
+          }
+          if (parsed.btcCriticalDurationSec && parsed.btcCriticalDurationSec < 600) {
+            parsed.btcCriticalDurationSec = DEFAULT_THRESHOLDS.btcCriticalDurationSec;
+          }
+          if (parsed.diaCriticalDurationSec && parsed.diaCriticalDurationSec < 300) {
+            parsed.diaCriticalDurationSec = DEFAULT_THRESHOLDS.diaCriticalDurationSec;
+          }
+          if (parsed.sm12CriticalCount && parsed.sm12CriticalCount < 1000) {
+            parsed.sm12CriticalCount = DEFAULT_THRESHOLDS.sm12CriticalCount;
+          }
           currentThresholds = { ...DEFAULT_THRESHOLDS, ...parsed };
         } catch (e) {
           console.error('[CRITICAL ALERT CONFIG PARSE ERROR]:', e.message);
@@ -879,9 +897,16 @@ async function evaluateSystemAlerts(sapData) {
 
   // ==========================================================================
   // REGLA 5: CONTENCIÓN CRÍTICA DE BLOQUEOS SM12 Y ESPERAS ENQUEUE
+  // Principio de flexibilidad y afectación operativa:
+  // Cientos de entradas en SM12 son normales en procesos batch o interfaces.
+  // Solo es CRÍTICO si la tabla de bloqueos está cerca del agotamiento (>= 1500)
+  // o si hay acumulación alta (>= 800) CON afectación operativa demostrable en SAP (procesos esperando o DIA saturado).
   // ==========================================================================
   const sm12Count = Array.isArray(sapData.sm12_locks) ? sapData.sm12_locks.length : 0;
-  const isSm12Crit = sm12Count >= th.sm12CriticalCount || lockWaitProcesses.length >= 4;
+  const hasMassiveSm12Locks = sm12Count >= (th.sm12CriticalCount || 1500);
+  const hasSm12WithOperationalImpact = sm12Count >= 800 && (lockWaitProcesses.length >= 3 || wpBusyPct >= 70 || freeDia <= 2);
+  const isSm12Crit = (hasMassiveSm12Locks || hasSm12WithOperationalImpact)
+    && !(wpFreePct >= 70 && lockWaitProcesses.length === 0);
 
   // Identificar usuario o tabla con más bloqueos
   const lockByUser = {};
@@ -896,7 +921,7 @@ async function evaluateSystemAlerts(sapData) {
     category: 'LOCKS_QUEUES',
     component: 'Servidor de Bloqueos Enqueue (SM12)',
     isBreached: isSm12Crit,
-    isBelowHysteresis: sm12Count < th.sm12RecoveryCount && lockWaitProcesses.length === 0,
+    isBelowHysteresis: !isSm12Crit || (sm12Count < th.sm12RecoveryCount && lockWaitProcesses.length === 0),
     candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.sm12SustainedDurationSec,
     metricName: 'Registros bloqueados en SM12',
@@ -1044,9 +1069,32 @@ async function evaluateSystemAlerts(sapData) {
     }
   }
 
-  // Evaluar Base de Datos Oracle (DBACOCKPIT + Lecturas Secuenciales Pesadas en Vivo)
+  // ==========================================================================
+  // REGLA 7: CONTENCIÓN EN BASE DE DATOS ORACLE (DBACOCKPIT + LECTURAS PESADAS)
+  // Principio fundamental: En Oracle 19c con alta concurrencia, que existan
+  // sesiones en Lock Wait (e.g. 4 a 10 sesiones esperando registros de fila)
+  // es parte de la operación transaccional habitual de SAP.
+  // NO representa un incidente crítico si el sistema SAP tiene sus Work Processes
+  // libres (> 70%) y los usuarios no están bloqueados.
+  // Solo se alerta como CRÍTICO si:
+  // 1) Hay un bloqueo masivo generalizado en la BD (>= 25 sesiones en Lock Wait), O
+  // 2) Existe contención notable (>= 15 sesiones o >= 3 lecturas pesadas) Y
+  //    ADEMÁS hay degradación operativa real comprobada en SAP (procesos DIA saturados,
+  //    menos de 2 DIA libres, o >= 2 procesos SAP atascados esperando en BD).
+  // 3) La condición debe persistir de forma continua durante mucho tiempo (>= 10 min).
+  // ==========================================================================
   const dbLockWaits = Number(cachedDbaSnapshot?.liveActivity?.lockWaitCount || 0);
-  const isDbCrit = dbLockWaits >= th.dbLockWaitCriticalCount || heavySeqReadProcesses.length >= 3;
+  const hasMassiveDbLockTree = dbLockWaits >= 25;
+  const hasDbImpactWithSapDegradation = (dbLockWaits >= (th.dbLockWaitCriticalCount || 20) || heavySeqReadProcesses.length >= 3)
+    && (wpBusyPct >= 60 || freeDia <= 2 || lockWaitProcesses.length >= 2);
+  const hasMultipleSapProcessesStalledInDb = lockWaitProcesses.length >= 3 || heavySeqReadProcesses.length >= 4;
+
+  // Si SAP tiene más del 70% de procesos libres y ningún proceso SAP está esperando en BD, NO hay afectación operativa
+  const isDbCrit = (hasMassiveDbLockTree || hasDbImpactWithSapDegradation || hasMultipleSapProcessesStalledInDb)
+    && !(wpFreePct >= 70 && lockWaitProcesses.length === 0 && heavySeqReadProcesses.length === 0);
+
+  const isDbBelowHysteresis = !isDbCrit || (wpFreePct >= 70 && lockWaitProcesses.length === 0);
+
   const dbEntityDesc = heavySeqReadProcesses.length > 0
     ? heavySeqReadProcesses.map(p => `WP#${p.wp_no} (${p.user} en tabla ${p.table}, ${p.eltime}s)`).join(' · ')
     : `${dbLockWaits} sesiones Oracle en Lock Wait`;
@@ -1056,7 +1104,7 @@ async function evaluateSystemAlerts(sapData) {
     category: 'DATABASE',
     component: 'Base de Datos Oracle 19c (DBACOCKPIT / I/O)',
     isBreached: isDbCrit,
-    isBelowHysteresis: dbLockWaits === 0 && heavySeqReadProcesses.length === 0,
+    isBelowHysteresis: isDbBelowHysteresis,
     candidateSeverity: 'CRITICAL',
     sustainRequiredSec: th.dbLockWaitDurationSec,
     metricName: dbLockWaits > 0 ? 'Sesiones Oracle en Lock Wait' : 'Lecturas secuenciales pesadas simultáneas',
@@ -1065,10 +1113,10 @@ async function evaluateSystemAlerts(sapData) {
     thresholdValue: th.dbLockWaitCriticalCount,
     relatedEntity: dbEntityDesc,
     title: `Contención crítica en Base de Datos Oracle (${dbEntityDesc})`,
-    technicalDescription: `Se detectó contención crítica en la capa de base de datos: ${dbLockWaits} sesiones en espera de bloqueo (Lock Wait) y ${heavySeqReadProcesses.length} procesos ejecutando lecturas prolongadas sobre tablas críticas (> ${th.dbSeqReadCriticalSec}s).`,
-    operationalImpact: 'Degradación generalizada de los tiempos de respuesta de base de datos y retención en cascada de procesos DIA y BTC.',
-    recommendedAction: 'Verificar en el panel DBACOCKPIT las sesiones bloqueadoras y analizar el SQL_ID activo en V$SQLAREA.',
-    extraEvidence: { dbLockWaits, heavySeqReadProcesses },
+    technicalDescription: `Se detectó contención en la base de datos Oracle: ${dbLockWaits} sesiones en espera de bloqueo (Lock Wait) y ${heavySeqReadProcesses.length} procesos ejecutando lecturas prolongadas sobre tablas críticas (> ${th.dbSeqReadCriticalSec}s).`,
+    operationalImpact: 'Degradación comprobada de los tiempos de respuesta de base de datos con retención de procesos SAP afectando la operación.',
+    recommendedAction: 'Verificar en DBACOCKPIT las sesiones bloqueadoras y analizar el SQL_ID activo en V$SQLAREA.',
+    extraEvidence: { dbLockWaits, heavySeqReadProcesses, wpFreePct, lockWaitProcesses: lockWaitProcesses.length },
     diaBusyPct,
     btcBusyPct,
     activeSessions
@@ -1107,8 +1155,25 @@ async function getAlertsDashboardState() {
     isInitialized = true;
   }
 
-  // Normalizar de inmediato cualquier alerta de demora de proceso individual (DIA/BTC)
-  await dbRun("UPDATE sap_alert_incidents SET status = 'NORMALIZED', ended_at = datetime('now') WHERE status IN ('ACTIVE', 'RECOVERING') AND (severity != 'CRITICAL' OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS'))");
+  // Normalizar de inmediato cualquier alerta de demora de proceso individual (DIA/BTC) o contención BD sin impacto operativo
+  await dbRun(`
+    UPDATE sap_alert_incidents
+    SET status = 'NORMALIZED', ended_at = datetime('now')
+    WHERE status IN ('ACTIVE', 'RECOVERING')
+      AND (
+        severity != 'CRITICAL'
+        OR rule_key IN ('DIA_LONG_RUNNERS', 'BTC_LONG_RUNNERS')
+        OR (rule_key = 'DB_CONTENTION_AND_HEAVY_IO' AND metric_value < 20)
+      )
+  `);
+
+  // Limpiar rastreadores en memoria si no cumplen las condiciones críticas
+  conditionTrackers.delete('DIA_LONG_RUNNERS');
+  conditionTrackers.delete('BTC_LONG_RUNNERS');
+  const dbTracker = conditionTrackers.get('DB_CONTENTION_AND_HEAVY_IO');
+  if (dbTracker && dbTracker.peakValue < 20) {
+    conditionTrackers.delete('DB_CONTENTION_AND_HEAVY_IO');
+  }
 
   // Principio "Solo da alerta de las críticas":
   // Obtener exclusivamente alertas CRÍTICAS que estén ACTIVAS o EN RECUPERACIÓN
