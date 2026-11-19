@@ -2360,8 +2360,9 @@
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950/70 text-blue-300 border border-blue-500/30">SAP ECC 6.0 (BOP:300)</span>
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-500/30">Telemetría ST03N + SE97</span>
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/30">Eliminación Segura</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-500/30" title="Cuentas técnicas de comunicación excluidas"><i class="fa-solid fa-filter text-[9px] mr-1"></i>Sin Comunicación</span>
             </div>
-            <p class="text-xs text-gray-400 mt-0.5">Identificación de roles con 0% de uso transaccional (directo e indirecto) para remoción en <code class="text-amber-300 font-mono">SU10</code> o <code class="text-amber-300 font-mono">PFCG</code>.</p>
+            <p class="text-xs text-gray-400 mt-0.5">Identificación de roles con 0% de uso transaccional (directo e indirecto) para remoción en <code class="text-amber-300 font-mono">SU10</code> o <code class="text-amber-300 font-mono">PFCG</code> (excluye cuentas técnicas de comunicación RFC/APIs).</p>
           </div>
         </div>
 
@@ -2399,13 +2400,13 @@
             class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm">
             <i class="fa-solid fa-shield-check"></i>
             <span>6 Meses (>180 días)</span>
-            <span id="badgeTab180d" class="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-200 text-[10px] font-mono border border-amber-400/40">1,391 roles</span>
+            <span id="badgeTab180d" class="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-200 text-[10px] font-mono border border-amber-400/40">1,383 roles</span>
           </button>
           <button id="btnTab90d" onclick="setUnusedRolesWindow('90d')"
             class="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60">
             <i class="fa-solid fa-calendar-days"></i>
             <span>3 Meses (>90 días)</span>
-            <span id="badgeTab90d" class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 text-[10px] font-mono border border-gray-700">1,427 roles</span>
+            <span id="badgeTab90d" class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 text-[10px] font-mono border border-gray-700">1,418 roles</span>
           </button>
         </div>
 
@@ -2430,12 +2431,12 @@
       <div id="unusedRolesWindowBanner" class="px-6 py-2.5 bg-amber-950/20 border-b border-amber-500/20 flex flex-wrap items-center justify-between text-xs text-amber-300/90 gap-2">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
-          <span id="unusedRolesBannerText"><strong>Ventana de 6 Meses activa:</strong> 1,391 roles identificados con 0% de uso transaccional en todo el semestre. <em class="text-emerald-300">Eliminación recomendada y segura.</em></span>
+          <span id="unusedRolesBannerText"><strong>Ventana de 6 Meses activa:</strong> 1,383 roles identificados con 0% de uso transaccional en todo el semestre. <em class="text-emerald-300">Eliminación recomendada y segura (excluye usuarios de comunicación).</em></span>
         </div>
         <div class="flex items-center gap-3 text-[11px] font-mono text-gray-400">
-          <span>Usuarios con roles a eliminar: <strong id="lblUsersCount" class="text-amber-300">272</strong></span>
+          <span>Usuarios con roles a eliminar: <strong id="lblUsersCount" class="text-amber-300">266</strong></span>
           <span>•</span>
-          <span>Roles a eliminar: <strong id="lblRolesCount" class="text-amber-300">1,391</strong></span>
+          <span>Roles a eliminar: <strong id="lblRolesCount" class="text-amber-300">1,383</strong></span>
         </div>
       </div>
 
@@ -3430,6 +3431,19 @@
     let unusedRolesAuditData = null;
     let currentUnusedRolesWindow = '180d'; // '180d' o '90d'
 
+    // Cuentas técnicas de comunicación en SAP (tipo C / RFC) que no deben incluirse en la depuración
+    const KNOWN_COMM_USERS_CLIENT = new Set([
+      'CSMREG', 'CONEXION', 'SAPCPIC', 'DHR', 'INT_ODATA', 'WSCON_MM', 'USERLOG', 'SPOLO', 'SAPO', 'TIMESOFT'
+    ]);
+    function isCommunicationUserClient(u) {
+      if (!u) return false;
+      const uname = String(u.username || u.bname || '').toUpperCase().trim();
+      if (KNOWN_COMM_USERS_CLIENT.has(uname)) return true;
+      const type = String(u.userType || u.ustyp || '').toUpperCase().trim();
+      if (type === 'C' || type === 'RFC' || type.includes('COMUNIC') || type.includes('COMMUNIC')) return true;
+      return false;
+    }
+
     function openUnusedRolesModal() {
       const modal = document.getElementById('unusedRolesModal');
       if (!modal) return;
@@ -3568,6 +3582,7 @@
       const is180 = currentUnusedRolesWindow === '180d';
 
       const filtered = unusedRolesAuditData.users.filter(u => {
+        if (isCommunicationUserClient(u)) return false;
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;
@@ -3695,6 +3710,7 @@
       const is180 = currentUnusedRolesWindow === '180d';
 
       const filtered = unusedRolesAuditData.users.filter(u => {
+        if (isCommunicationUserClient(u)) return false;
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;
@@ -3729,6 +3745,7 @@
       const windowLabel = is180 ? '6 Meses (>180 dias)' : '3 Meses (>90 dias)';
 
       const filtered = unusedRolesAuditData.users.filter(u => {
+        if (isCommunicationUserClient(u)) return false;
         const rolesList = is180 ? u.roles180 : u.roles90;
         if (!rolesList || rolesList.length === 0) return false;
         if (!q) return true;

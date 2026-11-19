@@ -7,6 +7,26 @@ let _liveAuditCache = null;
 let _liveAuditLastFetch = 0;
 const CACHE_TTL_MS = 30 * 1000; // 30 segundos de caché para navegación ágil
 
+// Cuentas técnicas de comunicación conocidas en SAP (tipo C / RFC)
+const KNOWN_COMMUNICATION_USERS = new Set([
+  'CSMREG', 'CONEXION', 'SAPCPIC', 'DHR', 'INT_ODATA', 'WSCON_MM', 'USERLOG', 'SPOLO', 'SAPO', 'TIMESOFT'
+]);
+
+/**
+ * Determina si un usuario es de comunicación (tipo C / RFC) para excluirlo
+ * de la depuración de roles inactivos de usuarios.
+ */
+function isCommunicationUser(u) {
+  if (!u) return false;
+  const username = String(u.username || u.bname || '').toUpperCase().trim();
+  if (KNOWN_COMMUNICATION_USERS.has(username)) return true;
+  const type = String(u.userType || u.ustyp || '').toUpperCase().trim();
+  if (type === 'C' || type === 'RFC' || type.includes('COMUNIC') || type.includes('COMMUNIC')) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Consulta las asignaciones vigentes de roles en SAP (tabla AGR_USERS)
  * y concilia con la línea base de la auditoría de transacciones no usadas.
@@ -70,6 +90,11 @@ async function getReconciledUnusedRolesAudit(forceRefresh = false) {
   const reconciledUsers = [];
 
   baseline.users.forEach(u => {
+    // Excluir usuarios de comunicación de la depuración de roles inactivos
+    if (isCommunicationUser(u)) {
+      return;
+    }
+
     totalBaseline180 += (u.roles180 || []).length;
     totalBaseline90 += (u.roles90 || []).length;
 
@@ -113,15 +138,15 @@ async function getReconciledUnusedRolesAudit(forceRefresh = false) {
   // Re-ordenar por cantidad de roles pendientes en 180d descendente
   reconciledUsers.sort((a, b) => b.roles180.length - a.roles180.length || b.roles90.length - a.roles90.length);
 
-  const totalRolesToRemove180 = isLiveSap ? (totalBaseline180 - totalRemoved180) : (baseline.metrics.totalRolesToRemove180 || 0);
-  const totalRolesToRemove90 = isLiveSap ? (totalBaseline90 - totalRemoved90) : (baseline.metrics.totalRolesToRemove90 || 0);
+  const totalRolesToRemove180 = isLiveSap ? (totalBaseline180 - totalRemoved180) : (baseline.metrics.totalRolesToRemove180 || totalBaseline180);
+  const totalRolesToRemove90 = isLiveSap ? (totalBaseline90 - totalRemoved90) : (baseline.metrics.totalRolesToRemove90 || totalBaseline90);
 
   const result = {
     success: true,
     isLiveSap,
     lastUpdated: new Date().toISOString(),
     metrics: {
-      totalActiveUsers: baseline.metrics.totalActiveUsers || 338,
+      totalActiveUsers: baseline.metrics.totalActiveUsers || 331,
       usersWithZeroRoles180: reconciledUsers.filter(u => u.roles180.length > 0).length,
       usersWithZeroRoles90: reconciledUsers.filter(u => u.roles90.length > 0).length,
       totalRolesToRemove180,
@@ -130,7 +155,7 @@ async function getReconciledUnusedRolesAudit(forceRefresh = false) {
       totalRolesAlreadyRemoved90: totalRemoved90,
       totalBaseline180,
       totalBaseline90,
-      totalRolesSeasonalValidation: baseline.metrics.totalRolesSeasonalValidation || 36
+      totalRolesSeasonalValidation: Math.max(0, totalRolesToRemove90 - totalRolesToRemove180)
     },
     users: reconciledUsers
   };

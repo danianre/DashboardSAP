@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-11-10T21:52:57.759Z",
+  "generatedAt": "2026-11-19T19:27:53.471Z",
   "system": {
     "sid": "BOP",
     "client": "300",
     "host": "10.0.0.100"
   },
   "metrics": {
-    "totalActiveUsers": 338,
-    "usersWithZeroRoles90": 274,
-    "usersWithZeroRoles180": 272,
-    "totalRolesToRemove90": 1427,
-    "totalRolesToRemove180": 1391,
-    "totalRolesSeasonalValidation": 36
+    "totalActiveUsers": 331,
+    "usersWithZeroRoles90": 268,
+    "usersWithZeroRoles180": 266,
+    "totalRolesToRemove90": 1418,
+    "totalRolesToRemove180": 1383,
+    "totalRolesSeasonalValidation": 35
   },
   "users": [
     {
@@ -24450,100 +24450,6 @@
       ]
     },
     {
-      "username": "USERLOG",
-      "fullName": "USER LOGS",
-      "userType": "RFC",
-      "assignedRolesCount": 2,
-      "zeroRoles90Count": 2,
-      "zeroRoles180Count": 2,
-      "redundantRolesCount": 0,
-      "lastLogin": "10/11/2026",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_DEBUG",
-          "totalTcodes": 2,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 2,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        },
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 14,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_DEBUG",
-          "totalTcodes": 2,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 2,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        },
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 14,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
-      "username": "WSCON_MM",
-      "fullName": "WEB SERVICES MM CONSUMER",
-      "userType": "RFC",
-      "assignedRolesCount": 8,
-      "zeroRoles90Count": 2,
-      "zeroRoles180Count": 2,
-      "redundantRolesCount": 2,
-      "lastLogin": "10/11/2026",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 1,
-          "exclusiveToRole": 13,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        },
-        {
-          "role": "Z_MM_R2_DA66_C+_COMPRAS",
-          "totalTcodes": 5,
-          "sharedWithOtherRoles": 5,
-          "exclusiveToRole": 0,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 1,
-          "exclusiveToRole": 13,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        },
-        {
-          "role": "Z_MM_R2_DA66_C+_COMPRAS",
-          "totalTcodes": 5,
-          "sharedWithOtherRoles": 5,
-          "exclusiveToRole": 0,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
       "username": "SHERNANDEZ",
       "fullName": "SANDRITH CAROLINA HERNANDEZ BAYONA",
       "userType": "Diálogo",
@@ -24617,45 +24523,6 @@
           "totalTcodes": 2,
           "sharedWithOtherRoles": 0,
           "exclusiveToRole": 2,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
-      "username": "INT_ODATA",
-      "fullName": "ODATA INTEGRACION",
-      "userType": "RFC",
-      "assignedRolesCount": 2,
-      "zeroRoles90Count": 2,
-      "zeroRoles180Count": 1,
-      "redundantRolesCount": 0,
-      "lastLogin": "10/11/2026",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 14,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        },
-        {
-          "role": "Z_SI_DA25_C+_PROVEEDOR",
-          "totalTcodes": 3,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 3,
-          "isUnused180": false,
-          "action": "Validar Cierre/Proceso Semestral antes de Remover"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_SAP_BC_ENDUSER",
-          "totalTcodes": 14,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 14,
           "isUnused180": true,
           "action": "Remover Rol (Inactivo >180d)"
         }
@@ -24848,37 +24715,6 @@
       ]
     },
     {
-      "username": "CSMREG",
-      "fullName": "CCMS Service User",
-      "userType": "RFC",
-      "assignedRolesCount": 2,
-      "zeroRoles90Count": 1,
-      "zeroRoles180Count": 1,
-      "redundantRolesCount": 0,
-      "lastLogin": "25/06/2018",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
       "username": "AHERRERA",
       "fullName": "ANA BEATRIZ HERRERA",
       "userType": "Diálogo",
@@ -24904,37 +24740,6 @@
           "totalTcodes": 4,
           "sharedWithOtherRoles": 0,
           "exclusiveToRole": 4,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
-      "username": "DHR",
-      "fullName": "INTERFACES DESARROLLO HUMANO",
-      "userType": "RFC",
-      "assignedRolesCount": 1,
-      "zeroRoles90Count": 1,
-      "zeroRoles180Count": 1,
-      "redundantRolesCount": 0,
-      "lastLogin": "10/11/2026",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
           "isUnused180": true,
           "action": "Remover Rol (Inactivo >180d)"
         }
@@ -25865,37 +25670,6 @@
           "totalTcodes": 4,
           "sharedWithOtherRoles": 3,
           "exclusiveToRole": 1,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ]
-    },
-    {
-      "username": "SAPCPIC",
-      "fullName": "SAP",
-      "userType": "RFC",
-      "assignedRolesCount": 1,
-      "zeroRoles90Count": 1,
-      "zeroRoles180Count": 1,
-      "redundantRolesCount": 0,
-      "lastLogin": "03/09/1996",
-      "auditStatus": "Crítico (≥90% sin uso)",
-      "roles90": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
-          "isUnused180": true,
-          "action": "Remover Rol (Inactivo >180d)"
-        }
-      ],
-      "roles180": [
-        {
-          "role": "Z_MM_R3_S+_C+_ALM_VISUAL",
-          "totalTcodes": 6,
-          "sharedWithOtherRoles": 0,
-          "exclusiveToRole": 6,
           "isUnused180": true,
           "action": "Remover Rol (Inactivo >180d)"
         }
