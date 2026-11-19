@@ -3536,26 +3536,39 @@
       if (b180) b180.textContent = `${(m.totalRolesToRemove180 || 0).toLocaleString()} roles`;
       const b90 = document.getElementById('badgeTab90d');
       if (b90) b90.textContent = `${(m.totalRolesToRemove90 || 0).toLocaleString()} roles`;
+      updateUnusedRolesBanner();
+    }
+
+    function updateUnusedRolesBanner() {
+      const bannerText = document.getElementById('unusedRolesBannerText');
+      if (!bannerText) return;
+      const m = unusedRolesAuditData ? unusedRolesAuditData.metrics : null;
+      if (currentUnusedRolesWindow === '180d') {
+        const depTag = (m && m.totalRolesAlreadyRemoved180 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved180} roles ya depurados en SAP</span>` : '';
+        bannerText.innerHTML = `<strong>Ventana de 6 Meses activa:</strong> Roles con 0% de uso transaccional en todo el semestre (>180 días). <em class="text-emerald-300">Eliminación recomendada y segura (excluye usuarios de comunicación).</em>${depTag}`;
+      } else {
+        const depTag = (m && m.totalRolesAlreadyRemoved90 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved90} roles ya depurados en SAP</span>` : '';
+        const seasonalCount = m ? (m.totalRolesSeasonalValidation || 0) : 0;
+        const seasonalMsg = seasonalCount > 0
+          ? `<em class="text-amber-300">Incluye ${seasonalCount} rol(es) con procesos semestrales que se aconseja validar antes de remover.</em>`
+          : `<em class="text-emerald-300">Sin roles adicionales de uso estacional (excluye usuarios de comunicación).</em>`;
+        bannerText.innerHTML = `<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). ${seasonalMsg}${depTag}`;
+      }
     }
 
     function setUnusedRolesWindow(w) {
       currentUnusedRolesWindow = w;
       const btn180 = document.getElementById('btnTab180d');
       const btn90 = document.getElementById('btnTab90d');
-      const bannerText = document.getElementById('unusedRolesBannerText');
-      const m = unusedRolesAuditData ? unusedRolesAuditData.metrics : null;
 
       if (w === '180d') {
         if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
         if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
-        const depTag = (m && m.totalRolesAlreadyRemoved180 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved180} roles ya depurados en SAP</span>` : '';
-        if (bannerText) bannerText.innerHTML = `<strong>Ventana de 6 Meses activa:</strong> Roles con 0% de uso transaccional en todo el semestre (>180 días). <em class="text-emerald-300">Eliminación recomendada y segura.</em>${depTag}`;
       } else {
         if (btn90) btn90.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-amber-600 text-white shadow-sm';
         if (btn180) btn180.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-gray-200 hover:bg-gray-800/60';
-        const depTag = (m && m.totalRolesAlreadyRemoved90 > 0) ? ` <span class="ml-2 px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono">✅ ${m.totalRolesAlreadyRemoved90} roles ya depurados en SAP</span>` : '';
-        if (bannerText) bannerText.innerHTML = `<strong>Ventana de 3 Meses activa:</strong> Roles sin uso en el último trimestre (>90 días). <em class="text-amber-300">Incluye 36 roles con procesos semestrales que se aconseja validar antes de remover.</em>${depTag}`;
       }
+      updateUnusedRolesBanner();
       if (!unusedRolesAuditData) {
         loadUnusedRolesAudit();
       } else {

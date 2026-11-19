@@ -51,19 +51,38 @@ async function getReconciledUnusedRolesAudit(forceRefresh = false) {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
   let activeRolesMap = null;
+  let liveCommUsers = new Set(KNOWN_COMMUNICATION_USERS);
   let isLiveSap = false;
 
   try {
-    // Consultar tabla AGR_USERS en vivo desde SAP
-    const resAgr = await executeRfc('RFC_READ_TABLE', {
-      QUERY_TABLE: 'AGR_USERS',
-      DELIMITER: '|',
-      FIELDS: [
-        { FIELDNAME: 'UNAME' },
-        { FIELDNAME: 'AGR_NAME' },
-        { FIELDNAME: 'TO_DAT' }
-      ]
-    });
+    // Consultar tabla AGR_USERS y USR02 (tipo C = Comunicación) en vivo desde SAP
+    const [resAgr, resComm] = await Promise.all([
+      executeRfc('RFC_READ_TABLE', {
+        QUERY_TABLE: 'AGR_USERS',
+        DELIMITER: '|',
+        FIELDS: [
+          { FIELDNAME: 'UNAME' },
+          { FIELDNAME: 'AGR_NAME' },
+          { FIELDNAME: 'TO_DAT' }
+        ]
+      }),
+      executeRfc('RFC_READ_TABLE', {
+        QUERY_TABLE: 'USR02',
+        DELIMITER: '|',
+        FIELDS: [
+          { FIELDNAME: 'BNAME' },
+          { FIELDNAME: 'USTYP' }
+        ],
+        OPTIONS: [{ TEXT: "USTYP = 'C'" }]
+      }).catch(() => null)
+    ]);
+
+    if (resComm && Array.isArray(resComm.DATA)) {
+      resComm.DATA.forEach(row => {
+        const bname = String(row.WA.split('|')[0] || '').toUpperCase().trim();
+        if (bname) liveCommUsers.add(bname);
+      });
+    }
 
     if (resAgr && Array.isArray(resAgr.DATA)) {
       activeRolesMap = new Set();
@@ -90,8 +109,9 @@ async function getReconciledUnusedRolesAudit(forceRefresh = false) {
   const reconciledUsers = [];
 
   baseline.users.forEach(u => {
-    // Excluir usuarios de comunicación de la depuración de roles inactivos
-    if (isCommunicationUser(u)) {
+    // Excluir usuarios de comunicación (tanto de línea base como detectados en vivo en USR02)
+    const unameUpper = String(u.username || u.bname || '').toUpperCase().trim();
+    if (isCommunicationUser(u) || liveCommUsers.has(unameUpper)) {
       return;
     }
 
