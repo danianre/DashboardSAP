@@ -798,6 +798,7 @@ async function evaluateSystemAlerts(sapData) {
   const diaBusyPct = diaTotal > 0 ? Number(((diaBusy / diaTotal) * 100).toFixed(1)) : 0;
   const btcBusyPct = btcTotal > 0 ? Number(((btcBusy / btcTotal) * 100).toFixed(1)) : 0;
   const wpBusyPct = totalWps > 0 ? Number(((totalBusy / totalWps) * 100).toFixed(1)) : 0;
+  const wpFreePct = Number((100 - wpBusyPct).toFixed(1));
   const activeSessions = Array.isArray(sapData.user_sessions) ? sapData.user_sessions.length : (sapData.active_users || 0);
 
   // ==========================================================================
