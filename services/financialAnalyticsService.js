@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { executeRfc, SAP_CONFIG } = require('../config/sap');
+const { SAP_CONFIG } = require('../config/sap');
 const { getOrSyncDataset } = require('./salesAnalyticsService');
 
 const FIN_CACHE_FILE_PATH = path.join(__dirname, '..', 'financial_analytics_cache.json.gz');
@@ -384,239 +384,22 @@ function classifyPucAccount(racct, accountText = '') {
 }
 
 /**
- * Extrae los datos contables reales de SAP ECC 6.0 (FAGLFLEXT, SKAT, T001, CEPCT, CSKT)
- * en lotes paralelos de ancho < 512 bytes.
+ * [DESACTIVADO]: Lectura directa vía RFC_READ_TABLE desactivada para este módulo oculto.
+ * Utiliza caché persistido en disco sin consultar tablas de base de datos.
  */
 async function extractLiveSapFinancialDataset() {
-  const tStart = Date.now();
-  console.log('[FINANCIAL ANALYTICS] Iniciando extracción en vivo desde SAP FI/CO (Mandante 300)...');
-
-  const sociedadesMap = { ...DEFAULT_SOCIEDADES_MAP };
-  const prctrMap = { ...DEFAULT_PRCTR_MAP };
-  const kostlMap = { ...DEFAULT_KOSTL_MAP };
-  const accountMap = {};
-
-  // 1. Catálogos maestros: T001 (Sociedades), CEPCT (Centros de Beneficio), CSKT (Centros de Costo), SKAT (Plan de Cuentas PUC)
-  try {
-    const [t001Res, cepctRes, csktRes, skat4Res, skat5Res, skat6Res, skat7Res] = await Promise.all([
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'T001',
-        DELIMITER: '|',
-        ROWCOUNT: 200,
-        OPTIONS: [{ TEXT: "KTOPL = 'PUC'" }],
-        FIELDS: [{ FIELDNAME: 'BUKRS' }, { FIELDNAME: 'BUTXT' }, { FIELDNAME: 'WAERS' }, { FIELDNAME: 'KTOPL' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'CEPCT',
-        DELIMITER: '|',
-        ROWCOUNT: 500,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KOKRS = 'DA01'" }],
-        FIELDS: [{ FIELDNAME: 'PRCTR' }, { FIELDNAME: 'KTEXT' }, { FIELDNAME: 'LTEXT' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'CSKT',
-        DELIMITER: '|',
-        ROWCOUNT: 800,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KOKRS = 'DA01'" }],
-        FIELDS: [{ FIELDNAME: 'KOSTL' }, { FIELDNAME: 'KTEXT' }, { FIELDNAME: 'LTEXT' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'SKAT',
-        DELIMITER: '|',
-        ROWCOUNT: 1500,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KTOPL = 'PUC' AND SAKNR LIKE '4%'" }],
-        FIELDS: [{ FIELDNAME: 'SAKNR' }, { FIELDNAME: 'TXT20' }, { FIELDNAME: 'TXT50' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'SKAT',
-        DELIMITER: '|',
-        ROWCOUNT: 2500,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KTOPL = 'PUC' AND SAKNR LIKE '5%'" }],
-        FIELDS: [{ FIELDNAME: 'SAKNR' }, { FIELDNAME: 'TXT20' }, { FIELDNAME: 'TXT50' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'SKAT',
-        DELIMITER: '|',
-        ROWCOUNT: 2000,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KTOPL = 'PUC' AND SAKNR LIKE '6%'" }],
-        FIELDS: [{ FIELDNAME: 'SAKNR' }, { FIELDNAME: 'TXT20' }, { FIELDNAME: 'TXT50' }]
-      }),
-      executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'SKAT',
-        DELIMITER: '|',
-        ROWCOUNT: 2000,
-        OPTIONS: [{ TEXT: "SPRAS = 'S' AND KTOPL = 'PUC' AND SAKNR LIKE '7%'" }],
-        FIELDS: [{ FIELDNAME: 'SAKNR' }, { FIELDNAME: 'TXT20' }, { FIELDNAME: 'TXT50' }]
-      })
-    ]);
-
-    (t001Res.DATA || []).forEach(r => {
-      const [bukrs, butxt, waers] = (r.WA || '').split('|').map(s => s.trim());
-      if (bukrs && butxt) {
-        sociedadesMap[bukrs] = {
-          name: sociedadesMap[bukrs]?.name || butxt,
-          unit: sociedadesMap[bukrs]?.unit || 'Unidad Operativa Empresarial',
-          currency: waers || 'COP'
-        };
-      }
-    });
-
-    (cepctRes.DATA || []).forEach(r => {
-      const [prctr, ktext, ltext] = (r.WA || '').split('|').map(s => s.trim());
-      if (prctr && (ltext || ktext)) {
-        prctrMap[prctr] = ltext || ktext;
-      }
-    });
-
-    (csktRes.DATA || []).forEach(r => {
-      const [kostl, ktext, ltext] = (r.WA || '').split('|').map(s => s.trim());
-      if (kostl && (ltext || ktext)) {
-        kostlMap[kostl] = ltext || ktext;
-      }
-    });
-
-    [skat4Res, skat5Res, skat6Res, skat7Res].forEach(res => {
-      (res.DATA || []).forEach(r => {
-        const [saknr, txt20, txt50] = (r.WA || '').split('|').map(s => s.trim());
-        if (saknr) {
-          accountMap[saknr] = txt50 || txt20 || `Cuenta ${saknr}`;
-        }
-      });
-    });
-  } catch (err) {
-    console.warn('[FINANCIAL ANALYTICS] Advertencia en lectura de catálogos maestros FI/CO:', err.message);
-  }
-
-  // 2. Extracción del Libro Mayor General (FAGLFLEXT) para 2024, 2025 y 2026
-  // Ancho total de los 18 campos: 339 bytes (< 512 límite de RFC_READ_TABLE)
-  const faglFields = [
-    { FIELDNAME: 'RYEAR' },
-    { FIELDNAME: 'RBUKRS' },
-    { FIELDNAME: 'RACCT' },
-    { FIELDNAME: 'PRCTR' },
-    { FIELDNAME: 'RCNTR' },
-    { FIELDNAME: 'DRCRK' },
-    { FIELDNAME: 'HSL01' },
-    { FIELDNAME: 'HSL02' },
-    { FIELDNAME: 'HSL03' },
-    { FIELDNAME: 'HSL04' },
-    { FIELDNAME: 'HSL05' },
-    { FIELDNAME: 'HSL06' },
-    { FIELDNAME: 'HSL07' },
-    { FIELDNAME: 'HSL08' },
-    { FIELDNAME: 'HSL09' },
-    { FIELDNAME: 'HSL10' },
-    { FIELDNAME: 'HSL11' },
-    { FIELDNAME: 'HSL12' }
-  ];
-
-  async function fetchFaglBatch(year, acctLow, acctHigh, maxRows = 25000) {
+  console.log('[FINANCIAL ANALYTICS] RFC_READ_TABLE desactivado para este módulo. Usando caché local.');
+  if (_finMemoryStore) return _finMemoryStore;
+  if (fs.existsSync(FIN_CACHE_FILE_PATH)) {
     try {
-      const res = await executeRfc('RFC_READ_TABLE', {
-        QUERY_TABLE: 'FAGLFLEXT',
-        DELIMITER: '|',
-        ROWCOUNT: maxRows,
-        OPTIONS: [
-          { TEXT: `RYEAR = '${year}'` },
-          { TEXT: `AND RACCT >= '${acctLow}' AND RACCT <= '${acctHigh}'` }
-        ],
-        FIELDS: faglFields
-      });
-      return res.DATA || [];
-    } catch (e) {
-      console.warn(`[FINANCIAL ANALYTICS] Error leyendo lote ${year} (${acctLow}-${acctHigh}):`, e.message);
-      return [];
-    }
+      const compressed = fs.readFileSync(FIN_CACHE_FILE_PATH);
+      return JSON.parse(zlib.gunzipSync(compressed).toString('utf8'));
+    } catch (_) {}
   }
-
-  // Ejecutamos por año y por clase contable para evitar truncamiento de ROWCOUNT y mantener baja latencia
-  const years = ['2024', '2025', '2026'];
-  const rawBatches = [];
-  for (const yr of years) {
-    const [b45, b6, b7] = await Promise.all([
-      fetchFaglBatch(yr, '4000000000', '5999999999', 20000),
-      fetchFaglBatch(yr, '6000000000', '6999999999', 20000),
-      fetchFaglBatch(yr, '7100000000', '7499999999', 20000)
-    ]);
-    rawBatches.push(...b45, ...b6, ...b7);
-  }
-
-  // Agregamos en cubos multidimensionales compactos:
-  // Clave: year|month|bukrs|prctr|kostl|racct
-  const aggregatedEntriesMap = new Map();
-
-  for (const item of rawBatches) {
-    const parts = (item.WA || '').split('|').map(s => s.trim());
-    if (parts.length < 18) continue;
-
-    const ryear = parts[0];
-    const rbukrs = parts[1];
-    const racct = parts[2];
-    const prctr = parts[3] || 'SIN_CEBE';
-    const rcntr = parts[4] || 'SIN_CECO';
-
-    const socInfo = sociedadesMap[rbukrs];
-    // Filtramos sociedades operativas en COP del Plan de Cuentas PUC
-    if (!socInfo || socInfo.currency !== 'COP') continue;
-
-    const classification = classifyPucAccount(racct, accountMap[racct]);
-    if (!classification) continue;
-
-    for (let m = 1; m <= 12; m++) {
-      const rawHsl = parseSapNumber(parts[5 + m]);
-      if (Math.abs(rawHsl) < 0.005) continue;
-
-      // En SAP TCURX, COP tiene 0 decimales y se almacena dividido por 100
-      const amountCop = rawHsl * 100 * classification.signMultiplier;
-      if (Math.abs(amountCop) < 1) continue;
-
-      const monthStr = String(m).padStart(2, '0');
-      const key = `${ryear}|${monthStr}|${rbukrs}|${prctr}|${rcntr}|${racct}`;
-      const prev = aggregatedEntriesMap.get(key) || 0;
-      aggregatedEntriesMap.set(key, prev + amountCop);
-    }
-  }
-
-  const entries = [];
-  for (const [key, amountCop] of aggregatedEntriesMap.entries()) {
-    if (Math.abs(amountCop) < 100) continue;
-    const [year, month, bukrs, prctr, kostl, racct] = key.split('|');
-    entries.push({
-      year,
-      month,
-      bukrs,
-      prctr,
-      kostl,
-      racct,
-      amountCop: Math.round(amountCop)
-    });
-  }
-
-  const dataset = {
-    extractedAt: new Date().toISOString(),
-    elapsedMs: Date.now() - tStart,
-    sapSystem: 'SAP ECC 6.0 — Mandante 300 (Productivo)',
-    controllingArea: 'DA01 — Grupo Empresarial Daabon',
-    chartOfAccounts: 'Plan Único de Cuentas (Colombia)',
-    baseCurrency: 'COP',
-    rawRowsProcessed: rawBatches.length,
-    aggregatedEntriesCount: entries.length,
-    sociedadesMap,
-    prctrMap,
-    kostlMap,
-    accountMap,
-    entries
+  return {
+    meta: { isLive: false, extractedAt: new Date().toISOString() },
+    entries: []
   };
-
-  try {
-    const compressed = zlib.gzipSync(Buffer.from(JSON.stringify(dataset), 'utf8'));
-    fs.writeFileSync(FIN_CACHE_FILE_PATH, compressed);
-  } catch (e) {
-    console.warn('[FINANCIAL ANALYTICS] No se pudo guardar caché en disco:', e.message);
-  }
-
-  console.log(`[FINANCIAL ANALYTICS] Extracción completada en ${dataset.elapsedMs}ms (${entries.length} cubos contables de ${rawBatches.length} registros).`);
-  return dataset;
 }
 
 /**
@@ -635,15 +418,6 @@ async function getOrSyncFinancialDataset(forceRefresh = false) {
       if (parsed && Array.isArray(parsed.entries) && parsed.entries.length > 0) {
         _finMemoryStore = parsed;
         _lastFinSyncTimestamp = fs.statSync(FIN_CACHE_FILE_PATH).mtimeMs;
-        if (now - _lastFinSyncTimestamp >= CACHE_TTL_MS && !_finSyncInProgress) {
-          _finSyncInProgress = extractLiveSapFinancialDataset()
-            .then(ds => {
-              _finMemoryStore = ds;
-              _lastFinSyncTimestamp = Date.now();
-            })
-            .catch(err => console.error('[FINANCIAL ANALYTICS] Error en refresco background:', err.message))
-            .finally(() => { _finSyncInProgress = null; });
-        }
         return _finMemoryStore;
       }
     } catch (e) {

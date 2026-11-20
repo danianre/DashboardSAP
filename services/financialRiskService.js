@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { executeRfc, SAP_CONFIG } = require('../config/sap');
+const { SAP_CONFIG } = require('../config/sap');
 
 const RISK_CACHE_FILE_PATH = path.join(__dirname, '..', 'financial_risk_cache.json.gz');
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutos
@@ -125,36 +125,21 @@ function parseSapNumber(str) {
   return parseFloat(s) || 0;
 }
 
+/**
+ * [DESACTIVADO]: Lectura directa vía RFC_READ_TABLE desactivada para este módulo oculto.
+ * Retorna lista vacía para no consultar tablas de base de datos directamente.
+ */
 async function readSapTableSafe(tableName, fields, options = [], rowCount = 200) {
-  try {
-    const res = await executeRfc('RFC_READ_TABLE', {
-      QUERY_TABLE: tableName,
-      DELIMITER: '|',
-      ROWCOUNT: rowCount,
-      FIELDS: fields.map(f => ({ FIELDNAME: f })),
-      OPTIONS: options.map(TEXT => ({ TEXT: String(TEXT).slice(0, 72) }))
-    });
-    const meta = res.Fields || res.FIELDS || [];
-    const rows = res.DATA || [];
-    return rows.map(r => {
-      const parts = String(r.WA || '').split('|');
-      const obj = {};
-      meta.forEach((f, idx) => {
-        obj[f.FIELDNAME] = (parts[idx] || '').trim();
-      });
-      return obj;
-    });
-  } catch (err) {
-    return [];
-  }
+  return [];
 }
 
 /**
- * Sincroniza los datos de Cuentas por Cobrar (BSID, BSAD), Gestión de Crédito (KNKK, T014),
- * Condiciones de Pago (KNB1), Cuentas por Pagar (BSIK) y Tipos de Cambio (TCURR) desde SAP ECC 6.0.
+ * Sincroniza el portafolio de gestión de crédito y análisis de riesgos financieros.
+ * (Lectura directa vía RFC_READ_TABLE desactivada).
  */
 async function syncFinancialRiskDatasetFromSap() {
   const syncStartedAt = Date.now();
+  console.log('[FINANCIAL RISK] RFC_READ_TABLE desactivado para este módulo. Usando portafolio/modelo local.');
   let sapConnected = false;
   const sapStats = {
     openReceivablesRead: 0,

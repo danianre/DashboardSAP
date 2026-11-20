@@ -24,8 +24,7 @@ const {
 } = require('./services/inventoryService');
 const {
   getOrSyncDataset,
-  computeSalesAnalytics,
-  triggerBackgroundSync
+  computeSalesAnalytics
 } = require('./services/salesAnalyticsService');
 const {
   getOrSyncFinancialDataset,
@@ -662,9 +661,4 @@ app.listen(PORT, () => {
 
   // Iniciar servicio demonio de recolección continua 24/7 en segundo plano (cada 15 segundos)
   startSnapshotDaemon(15000);
-
-  // Pre-calentar caché de Analítica de Ventas SAP SD en segundo plano tras el arranque
-  setTimeout(() => {
-    triggerBackgroundSync();
-  }, 3500);
 });

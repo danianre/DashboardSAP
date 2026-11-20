@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { executeRfc, SAP_CONFIG } = require('../config/sap');
+const { SAP_CONFIG } = require('../config/sap');
 
 const SCM_CACHE_FILE_PATH = path.join(__dirname, '..', 'supply_chain_cache.json.gz');
 const SCM_SCENARIOS_FILE_PATH = path.join(__dirname, '..', 'supply_chain_scenarios.json');
@@ -198,40 +198,21 @@ function diffDays(dateA, dateB) {
 }
 
 /**
- * Lee una tabla SAP usando RFC_READ_TABLE de forma segura (respetando límite de 512 bytes y 72 caracteres por línea OPTIONS).
+ * [DESACTIVADO]: Lectura directa vía RFC_READ_TABLE desactivada para este módulo oculto.
+ * Retorna lista vacía para no consultar tablas de base de datos directamente.
  */
 async function readSapTableSafe(tableName, fields, options = [], rowCount = 500) {
-  try {
-    const res = await executeRfc('RFC_READ_TABLE', {
-      QUERY_TABLE: tableName,
-      DELIMITER: '|',
-      ROWCOUNT: rowCount,
-      FIELDS: fields.map(f => ({ FIELDNAME: f })),
-      OPTIONS: options.map(TEXT => ({ TEXT: String(TEXT).slice(0, 72) }))
-    });
-    const meta = res.Fields || res.FIELDS || [];
-    const rows = res.DATA || [];
-    return rows.map(r => {
-      const parts = String(r.WA || '').split('|');
-      const obj = {};
-      meta.forEach((f, idx) => {
-        obj[f.FIELDNAME] = (parts[idx] || '').trim();
-      });
-      return obj;
-    });
-  } catch (err) {
-    return [];
-  }
+  return [];
 }
 
 /**
- * Construye el dataset maestro de la Cadena de Suministro combinando datos reales
- * extraídos de SAP ECC 6.0 (T001W, T024E, TVRO, TVROT, EKKO, EKPO, EKET, EKBE, EBAN,
- * MARD, MARC, MBEW, LIKP, VTTK, LFA1) y enriqueciéndolos con los modelos analíticos
- * de Abastecimiento, Inventario ABC/XYZ, EOQ/ROP/SS, Transporte y Smart Predict.
+ * Construye el dataset maestro de la Cadena de Suministro combinando datos
+ * de abastecimiento, inventario ABC/XYZ, EOQ/ROP/SS, transporte y Smart Predict.
+ * (Lectura directa vía RFC_READ_TABLE desactivada).
  */
 async function syncSupplyChainDatasetFromSap() {
   const syncStartedAt = Date.now();
+  console.log('[SUPPLY CHAIN ANALYTICS] RFC_READ_TABLE desactivado para este módulo. Usando catálogo/modelo local.');
   let sapConnected = false;
   let sapStats = {
     plantsRead: 0,
