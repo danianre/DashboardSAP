@@ -42,7 +42,9 @@ echo "[2/6] Generando copia de seguridad previa en ${BACKUP_FILE}..."
 tar --exclude='./node_modules' \
     --exclude='./backups' \
     --exclude='./.git' \
-    -czf "${BACKUP_FILE}" .
+    --exclude='*.log' \
+    --warning=no-file-changed \
+    -czf "${BACKUP_FILE}" . || [ $? -eq 1 ]
 chmod 600 "${BACKUP_FILE}"
 # Conservar los últimos 10 respaldos para no saturar disco
 ls -1t "${BACKUP_ROOT}"/release_*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
