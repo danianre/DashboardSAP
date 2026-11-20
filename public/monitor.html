@@ -4906,6 +4906,25 @@
       if (!modal) return;
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+
+      // Sincronizar inmediatamente los KPIs superiores con el valor actual del dashboard
+      const activeUsersEl = document.getElementById('kpiActiveUsers');
+      const limitEl = document.getElementById('kpiLimit');
+      if (activeUsersEl && activeUsersEl.textContent !== '--') {
+        const activeUsers = parseInt(activeUsersEl.textContent, 10);
+        const limit = parseInt(limitEl?.textContent || '334', 10) || 334;
+        if (!isNaN(activeUsers)) {
+          const kpiTotalActive = document.getElementById('licKpiTotalActive');
+          const kpiTotalLimit = document.getElementById('licKpiTotalLimit');
+          const kpiUsagePct = document.getElementById('licKpiUsagePct');
+          const kpiAvailableGlobal = document.getElementById('licKpiAvailableGlobal');
+          if (kpiTotalActive) kpiTotalActive.textContent = activeUsers;
+          if (kpiTotalLimit) kpiTotalLimit.textContent = limit;
+          if (kpiUsagePct) kpiUsagePct.textContent = `${((activeUsers / limit) * 100).toFixed(1)}%`;
+          if (kpiAvailableGlobal) kpiAvailableGlobal.textContent = Math.max(0, limit - activeUsers);
+        }
+      }
+
       loadLicenseDistribution(true);
     }
 
@@ -4922,7 +4941,7 @@
       }
     }
 
-    async function loadLicenseDistribution(forceRefresh = false) {
+    async function loadLicenseDistribution(forceRefresh = false, silent = false) {
       const loading = document.getElementById('licLoadingState');
       const tableContainer = document.getElementById('licTableContainer');
       const emptyState = document.getElementById('licEmptyState');
@@ -4933,9 +4952,11 @@
         return;
       }
 
-      if (loading) loading.classList.remove('hidden');
-      if (tableContainer) tableContainer.classList.add('hidden');
-      if (emptyState) emptyState.classList.add('hidden');
+      if (!silent) {
+        if (loading) loading.classList.remove('hidden');
+        if (tableContainer) tableContainer.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+      }
       if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
       try {
@@ -4949,11 +4970,13 @@
         renderLicenseData(data);
       } catch (err) {
         console.error('Error cargando distribución de licencias:', err);
-        if (loading) loading.classList.add('hidden');
-        if (emptyState) {
-          emptyState.classList.remove('hidden');
-          emptyState.querySelector('h4').textContent = 'Error al cargar distribución de licencias';
-          emptyState.querySelector('p').textContent = err.message || 'Verifica la conexión con el servidor.';
+        if (!silent) {
+          if (loading) loading.classList.add('hidden');
+          if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.querySelector('h4').textContent = 'Error al cargar distribución de licencias';
+            emptyState.querySelector('p').textContent = err.message || 'Verifica la conexión con el servidor.';
+          }
         }
       } finally {
         if (refreshIcon) refreshIcon.classList.remove('fa-spin');
@@ -5214,6 +5237,7 @@
                                 <span class="px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-[10px]">
                                   ${u.bname}
                                 </span>
+                                ${u.lockStatus ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-950/70 text-amber-300 border border-amber-500/40 ml-1.5" title="Usuario con validez activa pero con bloqueo en SAP">${u.lockStatus}</span>` : ''}
                               </td>
                               <td class="py-1.5 px-2 font-medium text-white">${u.fullName || '-'}</td>
                               <td class="py-1.5 px-2 font-mono text-cyan-300/90 text-[10px]">${u.department || '<span class="text-gray-500 italic">Sin departamento</span>'}</td>
@@ -7039,6 +7063,17 @@ Dictamen: La herramienta reduce drásticamente las solicitudes operativas en la 
           userBar.className = 'bg-blue-500 h-1.5 rounded-full';
           userCard.classList.remove('border-rose-500/50', 'border-amber-500/50', 'bg-rose-950/20');
           alertText.classList.add('hidden');
+        }
+
+        // Sincronizar en tiempo real el modal de licencias por empresa si está visible o desfasado
+        const licModal = document.getElementById('licenseDistributionModal');
+        const isLicModalOpen = licModal && !licModal.classList.contains('hidden');
+        if (isLicModalOpen) {
+          const cachedActive = _licenseDataCache?.summary?.total_active_users;
+          const needsForce = cachedActive !== undefined && cachedActive !== activeUsers;
+          loadLicenseDistribution(needsForce, true);
+        } else if (_licenseDataCache?.summary?.total_active_users !== undefined && _licenseDataCache.summary.total_active_users !== activeUsers) {
+          _licenseDataCache = null;
         }
 
         const elInactive = document.getElementById('kpiInactive30d');

@@ -32,7 +32,7 @@ const COMPANIES_CONFIG = [
 
 let _cachedLicenseData = null;
 let _cachedTimestamp = 0;
-const CACHE_TTL_MS = 60 * 1000; // 60 segundos de caché en memoria
+const CACHE_TTL_MS = 15 * 1000; // 15 segundos de caché en memoria (sincronizado con el monitoreo en vivo)
 
 /**
  * Localiza el archivo Excel de exportación de usuarios en la raíz del proyecto (modo respaldo)
@@ -181,16 +181,29 @@ async function fetchUsersFromSapLive() {
     const isNotExpired = gltgb >= today || gltgb === '00000000';
     const isDialogOrComm = ustyp === 'A' || ustyp === 'C';
 
-    if (isDialogOrComm && isNotExpired && uflag === 0) {
+    // En licenciamiento SAP (LAW/USMM), todo usuario con validez activa consume licencia nombrada
+    // aun cuando tenga un bloqueo transitorio (uflag != 0). Solo expiran al superar GLTGB o eliminarse.
+    if (isDialogOrComm && isNotExpired) {
       let formattedDate = '31.12.9999';
       if (gltgb && gltgb !== '00000000' && gltgb.length === 8) {
         formattedDate = `${gltgb.slice(6, 8)}.${gltgb.slice(4, 6)}.${gltgb.slice(0, 4)}`;
       }
+
+      let lockStatus = '';
+      if (uflag === 128) {
+        lockStatus = 'Bloqueo Clave';
+      } else if (uflag === 64) {
+        lockStatus = 'Bloqueo Admin';
+      } else if (uflag !== 0) {
+        lockStatus = 'Bloqueado';
+      }
+
       activeUsersMap.set(bname, {
         bname,
         validTo: formattedDate,
         userType: ustyp === 'A' ? 'A Diálogo' : (ustyp === 'C' ? 'C Comunicación' : ustyp),
-        lockStatus: '',
+        lockStatus,
+        isLocked: uflag !== 0,
         department: '',
         fullName: bname
       });
@@ -230,7 +243,7 @@ async function fetchUsersFromSapLive() {
       { FIELDNAME: 'PERSNUMBER' },
       { FIELDNAME: 'DEPARTMENT' }
     ],
-    OPTIONS: [{ TEXT: "ADDRNUMBER = '0000023396'" }],
+    OPTIONS: [{ TEXT: "ADDRNUMBER = '0000023396' OR ADDRNUMBER = '0000119050'" }],
     DELIMITER: '|'
   });
 
